@@ -54,13 +54,13 @@ async def breakk(ctx, membre: discord.Member):
         await ctx.send(f"{membre.mention} n'a pas le rôle {role_to_remove_malus.mention}. ❌")
     else:
         await membre.remove_roles(role_to_remove_malus)
-        await ctx.send(f"Le rôle {role_to_remove_malus.mention} a été enlevé. 🎉")
+        await ctx.send(f"Le rôle {role_to_remove_malus.mention} a été enlevé. :fete:")
 
 
     # Retirer le rôle à l'exécutant
     if role_to_remove in ctx.author.roles:
         await ctx.author.remove_roles(role_to_remove)
-        await ctx.send(f"Le rôle {role_to_remove.mention} vous a été retiré. ✅")
+        await ctx.send(f"Le rôle {role_to_remove.mention} vous a été retiré. :fete:")
     else:
         await ctx.send(f"{ctx.author.mention}, vous n'aviez pas le rôle {role_to_remove.mention}. ❌")
 
