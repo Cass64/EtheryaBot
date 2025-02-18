@@ -107,6 +107,16 @@ async def malus(ctx, membre: discord.Member):
     await membre.remove_roles(role_to_add_malus)
     await ctx.send(f"Le rôle {role_to_add_malus.mention} a été retiré de {membre.mention} après 1 jour. ⏳")
 
+#------------------------------------------------------------------------- Ignorer les messages des autres bots
+
+@bot.event
+async def on_message(message):
+    # Ignorer les messages envoyés par d'autres bots
+    if message.author.bot:
+        return
+
+    # Assurez-vous que le bot continue de traiter les commandes
+    await bot.process_commands(message)
 #------------------------------------------------------------------------- Lancement du bot
 keep_alive()
 bot.run(token)
