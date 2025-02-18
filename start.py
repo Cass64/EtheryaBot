@@ -47,14 +47,15 @@ async def breakk(ctx, membre: discord.Member):
         return await ctx.send("❌ L'un des rôles spécifiés n'existe pas.")
 
     if role_required not in ctx.author.roles:
-        return await ctx.send("❌ Vous n'avez pas la permission d'utiliser cette commande.")
+      return await ctx.send("❌ Vous n'avez pas la permission d'utiliser cette commande.")
 
-    # Ajouter le rôle à l'utilisateur ciblé
-    if role_to_remove_malus in membre.roles:
-        await ctx.send(f"{membre.mention} n'a pas le rôle {role_to_remove_malus.mention}. ✅")
+# Vérifie si le membre a le rôle avant de le retirer
+    if role_to_remove_malus not in membre.roles:
+        await ctx.send(f"{membre.mention} n'a pas le rôle {role_to_remove_malus.mention}. ❌")
     else:
         await membre.remove_roles(role_to_remove_malus)
         await ctx.send(f"Le rôle {role_to_remove_malus.mention} a été enlevé à {membre.mention}. 🎉")
+
 
     # Retirer le rôle à l'exécutant
     if role_to_remove in ctx.author.roles:
