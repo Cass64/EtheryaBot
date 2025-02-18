@@ -30,31 +30,31 @@ from discord.ext import commands
 AUTHORIZED_ROLES = ["″ [𝑺ץ] Perm Anti Protect"]
 
 @bot.command(name="break")
-async def assignrole(ctx, membre: discord.Member):
+async def breakk(ctx, membre: discord.Member):
     """Ajoute un rôle fixe à un utilisateur et retire un autre rôle fixe à l'exécutant.
        Seuls ceux ayant '[𝑺ץ] Perm Anti Protect' peuvent utiliser cette commande.
     """
 
     ROLE_REQUIRED = "″ [𝑺ץ] Perm Anti Protect"  # Rôle requis pour exécuter la commande
-    ROLE_TO_ADD = "″ [𝑺ץ] Protect !!rob"       # Rôle à ajouter au membre ciblé
+    ROLE_TO_REMOVE_MALUS = "″ [𝑺ץ] Protect !!rob"       # Rôle à ajouter au membre ciblé
     ROLE_TO_REMOVE = "″ [𝑺ץ] Perm Anti Protect"     # Rôle à retirer à l'exécutant
 
     role_required = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED)
-    role_to_add = discord.utils.get(ctx.guild.roles, name=ROLE_TO_ADD)
+    role_to_add = discord.utils.get(ctx.guild.roles, name=ROLE_TO_REMOVE_MALUS)
     role_to_remove = discord.utils.get(ctx.guild.roles, name=ROLE_TO_REMOVE)
 
-    if not role_required or not role_to_add or not role_to_remove:
+    if not role_required or not role_to_remove_malus or not role_to_remove:
         return await ctx.send("❌ L'un des rôles spécifiés n'existe pas.")
 
     if role_required not in ctx.author.roles:
         return await ctx.send("❌ Vous n'avez pas la permission d'utiliser cette commande.")
 
     # Ajouter le rôle à l'utilisateur ciblé
-    if role_to_add in membre.roles:
-        await ctx.send(f"{membre.mention} a déjà le rôle {role_to_add.mention}. ✅")
+    if role_to_remove_malus in membre.roles:
+        await ctx.send(f"{membre.mention} n'a pas le rôle {role_to_remove_malus.mention}. ✅")
     else:
-        await membre.add_roles(role_to_add)
-        await ctx.send(f"Le rôle {role_to_add.mention} a été ajouté à {membre.mention}. 🎉")
+        await membre.remove_roles(role_to_remove_malus)
+        await ctx.send(f"Le rôle {role_to_remove_malus.mention} a été enlevé à {membre.mention}. 🎉")
 
     # Retirer le rôle à l'exécutant
     if role_to_remove in ctx.author.roles:
