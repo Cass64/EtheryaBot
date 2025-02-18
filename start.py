@@ -40,7 +40,7 @@ async def breakk(ctx, membre: discord.Member):
     ROLE_TO_REMOVE = "″ [𝑺ץ] Perm Anti Protect"     # Rôle à retirer à l'exécutant
 
     role_required = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED)
-    role_to_add = discord.utils.get(ctx.guild.roles, name=ROLE_TO_REMOVE_MALUS)
+    role_to_remove_malus = discord.utils.get(ctx.guild.roles, name=ROLE_TO_REMOVE_MALUS)
     role_to_remove = discord.utils.get(ctx.guild.roles, name=ROLE_TO_REMOVE)
 
     if not role_required or not role_to_remove_malus or not role_to_remove:
