@@ -79,9 +79,9 @@ async def malus(ctx, membre: discord.Member):
     ROLE_TO_ADD_MALUS = "″ [𝑺ץ] Malus"  # Le rôle temporaire à ajouter
     ROLE_TO_REMOVE_MALUS = "″ [𝑺ץ] Perm Ajout Malus"  # Rôle à retirer à l'exécutant
 
-    role_required = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED_MALUS)
-    role_to_add = discord.utils.get(ctx.guild.roles, name=ROLE_TO_ADD_MALUS)
-    role_to_remove = discord.utils.get(ctx.guild.roles, name=ROLE_TO_REMOVE_MALUS)
+    role_required_malus = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED_MALUS)
+    role_to_add_malus = discord.utils.get(ctx.guild.roles, name=ROLE_TO_ADD_MALUS)
+    role_to_remove_malus = discord.utils.get(ctx.guild.roles, name=ROLE_TO_REMOVE_MALUS)
 
     if not role_required_malus or not role_to_add_malus or not role_to_remove_malus:
         return await ctx.send("❌ L'un des rôles spécifiés n'existe pas.")
