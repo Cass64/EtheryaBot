@@ -96,7 +96,7 @@ async def malus(ctx, membre: discord.Member):
     # Retirer le rôle à l'exécutant
     if role_to_remove_malus in ctx.author.roles:
         await ctx.author.remove_roles(role_to_remove_malus)
-        await ctx.send(f"Le rôle {role_to_remove_malus.mention} a été retiré. <a:fete:1172810362261880873>")
+        await ctx.send(f"Le rôle {role_to_remove_malus.mention} a été retiré. <a:emoji:1341500461475168369>")
     else:
         await ctx.send(f"{ctx.author.mention}, vous n'aviez pas le rôle {role_to_remove_malus.mention}. <:haram:1176229029796380702>")
 
