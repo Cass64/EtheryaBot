@@ -184,7 +184,7 @@ async def on_message(message):
     # Vérifie si le message mentionne le bot
     if bot.user.mentioned_in(message):
         # Envoie un message avec le préfixe du bot
-        await message.channel.send(f"Mon préfixe est: {bot.command_prefix}")
+        await message.channel.send(f"<a:piece:1289678641982210059> Mon préfixe sur ce serveur est: {bot.command_prefix}" <:dab:1168325108595687434> !)
 
     # Assurez-vous que le bot continue de traiter les commandes
     await bot.process_commands(message)
