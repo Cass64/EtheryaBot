@@ -76,7 +76,7 @@ async def malus(ctx, membre: discord.Member):
     """
 
     ROLE_REQUIRED_MALUS = "″ [𝑺ץ] Perm Ajout Malus"  # Rôle requis pour exécuter la commande
-    ROLE_TO_ADD_MALUS = "″ [𝑺ץ] Malus"  # Le rôle temporaire à ajouter
+    ROLE_TO_ADD_MALUS = "″ [𝑺ץ] Malus Temporelle"  # Le rôle temporaire à ajouter
     ROLE_TO_REMOVE_MALUS = "″ [𝑺ץ] Perm Ajout Malus"  # Rôle à retirer à l'exécutant
 
     role_required_malus = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED_MALUS)
@@ -106,6 +106,40 @@ async def malus(ctx, membre: discord.Member):
     # Retirer le rôle après le délai
     await membre.remove_roles(role_to_add_malus)
     await ctx.send(f"Le rôle {role_to_add_malus.mention} a été retiré de {membre.mention} après 1 jour. ⏳")
+
+#------------------------------------------------------------------------- Commandes d'économie : !!annihilation
+
+@bot.command(name="annihilation")
+async def annihilation(ctx, membre: discord.Member):
+    """Ajoute le rôle 'Cible D'anéantissement' à un utilisateur si l'exécutant a le rôle 'Perm Crystal D'anéantissement'.
+       Un message est envoyé automatiquement dans un salon spécifique et l'exécutant perd son rôle 'Perm Crystal D'anéantissement'.
+    """
+    
+    ROLE_REQUIRED = "″ [𝑺ץ] Perm Crystal D'anéantissement"  # Rôle requis pour exécuter la commande
+    ROLE_TO_ADD = "″ [𝑺ץ] Cible D'anéantissement"  # Rôle à ajouter
+    CHANNEL_ID = 1341844144032714833  # ID du salon où envoyer le message
+
+    role_required = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED)
+    role_to_add = discord.utils.get(ctx.guild.roles, name=ROLE_TO_ADD)
+    channel = bot.get_channel(CHANNEL_ID)
+
+    if not role_required or not role_to_add or not channel:
+        return await ctx.send("❌ L'un des rôles ou le salon spécifié n'existe pas.")
+
+    if role_required not in ctx.author.roles:
+        return await ctx.send("❌ Vous n'avez pas la permission d'utiliser cette commande.")
+
+    # Ajouter le rôle à la cible
+    await membre.add_roles(role_to_add)
+    await ctx.send(f"Le rôle {role_to_add.mention} a été ajouté à {membre.mention}. ☠️")
+
+    # Retirer le rôle de l'exécutant
+    await ctx.author.remove_roles(role_required)
+    await ctx.send(f"Le rôle {role_required.mention} vous a été retiré, vous ne pouvez plus utiliser cette commande. ❌")
+
+    # Envoyer un message dans le salon spécifié
+    await channel.send(f"{membre.mention} a été ciblé par un anéantissement <@&⁂       　Pôle Directionnel　　　⁂>. ⚡")
+
 
 #------------------------------------------------------------------------- Ignorer les messages des autres bots
 
