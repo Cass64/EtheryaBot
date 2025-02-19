@@ -259,6 +259,48 @@ async def heal(ctx):
     await ctx.author.remove_roles(role_required)
     await ctx.send(f"🔻 {ctx.author.mention}, votre **antidote** a été retiré après utilisation.")
 
+#------------------------------------------------------------------------- Commandes d'économie : !!protect
+
+@bot.command(name="protect")
+async def spatial(ctx):
+    """Ajoute temporairement le rôle '[𝑺ץ] Spatial' si l'utilisateur a '[𝑺ץ] Perm Spatial',
+       et applique un cooldown de 24 heures.
+    """
+    ROLE_REQUIRED = "″ [𝑺ץ] Perm Protect !!rob"  # Rôle requis pour exécuter la commande
+    ROLE_TO_ADD = "″ [𝑺ץ] Protect !!rob"  # Rôle à ajouter temporairement
+    COOLDOWN_DURATION = 172800  # 24 heures en secondes
+    TEMP_ROLE_DURATION = 172800  # 1 heure en secondes
+
+    role_required = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED)
+    role_to_add = discord.utils.get(ctx.guild.roles, name=ROLE_TO_ADD)
+
+    if not role_required or not role_to_add:
+        return await ctx.send("❌ L'un des rôles spécifiés n'existe pas.")
+
+    if role_required not in ctx.author.roles:
+        return await ctx.send("❌ Vous n'avez pas la permission d'utiliser cette commande.")
+
+    now = datetime.datetime.utcnow().timestamp()
+
+    # Vérifier si l'utilisateur est en cooldown
+    if ctx.author.id in cooldowns:
+        time_since_last_use = now - cooldowns[ctx.author.id]
+        if time_since_last_use < COOLDOWN_DURATION:
+            remaining_time = int((COOLDOWN_DURATION - time_since_last_use) / 3600)
+            return await ctx.send(f"❌ Vous devez attendre encore {remaining_time} heure(s) avant de réutiliser cette commande.")
+
+    # Ajouter le rôle temporaire
+    await ctx.author.add_roles(role_to_add)
+    await ctx.send(f"Le rôle {role_to_add.mention} vous a été attribué pour 2 jours. 🚀")
+
+    # Enregistrer l'heure d'utilisation pour le cooldown
+    cooldowns[ctx.author.id] = now
+
+    # Supprimer le rôle après 1 heure
+    await asyncio.sleep(TEMP_ROLE_DURATION)
+    await ctx.author.remove_roles(role_to_add)
+    await ctx.send(f"Le rôle {role_to_add.mention} vous a été retiré après 2 jours heure. ⏳")
+
 
 #------------------------------------------------------------------------- Ignorer les messages des autres bots
 
@@ -282,6 +324,7 @@ async def on_message(message):
         embed.add_field(name="🌌 `!!gravity`", value="Ajoute le rôle 'Gravité Forte' à un membre.", inline=False)
         embed.add_field(name="🚀 `!!spatial`", value="Ajoute temporairement le rôle 'Spatial'.", inline=False)
         embed.add_field(name="🏥 `!!heal`", value="Retire les malus et soigne l'utilisateur.", inline=False)
+        embed.add_field(name="🛡️ `!!protect", value="Te protège des rob temporairement.", inlinne=False)
 
         embed.set_thumbnail(url="../images_etherya/etheryaBot_profil.png")  # Remplace par l'URL de l'image en haut à droite
         embed.set_footer(text="Utilise ces commandes avec sagesse !", icon_url="../images_etherya/etheryaBot_banniere.png")  # Remplace par l'URL de l'image en bas
