@@ -315,7 +315,7 @@ async def on_message(message):
         embed = discord.Embed(
             title="📜 Liste des Commandes",
             description="Voici la liste des commandes disponibles :",
-            color=discord.Color.white()
+            color=discord.Color(0xFFFFFF))
         )
 
         embed.add_field(name="💥 `!!break`", value="Retire un rôle spécifique à un membre.", inline=False)
