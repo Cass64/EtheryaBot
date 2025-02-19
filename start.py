@@ -118,10 +118,12 @@ async def annihilation(ctx, membre: discord.Member):
     ROLE_REQUIRED = "″ [𝑺ץ] Perm Crystal D'anéantissement"  # Rôle requis pour exécuter la commande
     ROLE_TO_ADD = "″ [𝑺ץ] Cible D'anéantissement"  # Rôle à ajouter
     CHANNEL_ID = 1341844144032714833  # ID du salon où envoyer le message
+    ROLE_PING = 792755123587645461
 
     role_required = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED)
     role_to_add = discord.utils.get(ctx.guild.roles, name=ROLE_TO_ADD)
     channel = bot.get_channel(CHANNEL_ID)
+    role_ping = discord.utils.get(ctx.guild.roles, name=ROLE_PING)
 
     if not role_required or not role_to_add or not channel:
         return await ctx.send("❌ L'un des rôles ou le salon spécifié n'existe pas.")
@@ -138,7 +140,7 @@ async def annihilation(ctx, membre: discord.Member):
     await ctx.send(f"Le rôle {role_required.mention} vous a été retiré, vous ne pouvez plus utiliser cette commande. ❌")
 
     # Envoyer un message dans le salon spécifié
-    await channel.send(f"{membre.mention} a été ciblé par un anéantissement <@&⁂       　Pôle Directionnel　　　⁂>. ⚡")
+    await channel.send(f"{membre.mention} a été ciblé par un anéantissement <@{ROLE_PING}>. ⚡")
 
 #------------------------------------------------------------------------- Commandes d'économie : !!gravity
 
