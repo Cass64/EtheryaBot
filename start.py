@@ -283,8 +283,8 @@ async def on_message(message):
         embed.add_field(name="🚀 `!!spatial`", value="Ajoute temporairement le rôle 'Spatial'.", inline=False)
         embed.add_field(name="🏥 `!!heal`", value="Retire les malus et soigne l'utilisateur.", inline=False)
 
-        embed.set_thumbnail(url="../images_etherya/")  # Remplace par l'URL de l'image en haut à droite
-        embed.set_footer(text="Utilise ces commandes avec sagesse !", icon_url="../images_etherya/")  # Remplace par l'URL de l'image en bas
+        embed.set_thumbnail(url="../images_etherya/etheryaBot_profil.png")  # Remplace par l'URL de l'image en haut à droite
+        embed.set_footer(text="Utilise ces commandes avec sagesse !", icon_url="../images_etherya/etheryaBot_banniere.png")  # Remplace par l'URL de l'image en bas
 
         await message.channel.send(embed=embed)
 
