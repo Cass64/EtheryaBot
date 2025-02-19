@@ -257,7 +257,7 @@ async def heal(ctx):
 
     # Retirer le rôle "Perm Anti-Dote" après l'utilisation
     await ctx.author.remove_roles(role_required)
-    await ctx.send(f"🔻 {ctx.author.mention}, votre **{role_required.name}** a été retiré après utilisation.")
+    await ctx.send(f"🔻 {ctx.author.mention}, votre **antidote** a été retiré après utilisation.")
 
 
 #------------------------------------------------------------------------- Ignorer les messages des autres bots
