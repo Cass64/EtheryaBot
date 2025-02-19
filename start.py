@@ -7,10 +7,11 @@ import random
 from keep_alive import keep_alive
 import json
 import asyncio
+import datetime
 
 
 load_dotenv()
-
+cooldowns = {}
 
 token = os.getenv('TOKEN_BOT_DISCORD')
 
@@ -173,6 +174,47 @@ async def gravity(ctx, membre: discord.Member):
     else:
         await ctx.send(f"{ctx.author.mention}, vous n'aviez pas le rôle {role_to_remove.mention}. ❌")
 
+#------------------------------------------------------------------------- Commandes d'économie : !!spatial
+
+@bot.command(name="spatial")
+async def spatial(ctx):
+    """Ajoute temporairement le rôle '[𝑺ץ] Spatial' si l'utilisateur a '[𝑺ץ] Perm Spatial',
+       et applique un cooldown de 24 heures.
+    """
+    ROLE_REQUIRED = "″ [𝑺ץ] Perm Spatial"  # Rôle requis pour exécuter la commande
+    ROLE_TO_ADD = "″ [𝑺ץ] Spatial"  # Rôle à ajouter temporairement
+    COOLDOWN_DURATION = 86400  # 24 heures en secondes
+    TEMP_ROLE_DURATION = 3600  # 1 heure en secondes
+
+    role_required = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED)
+    role_to_add = discord.utils.get(ctx.guild.roles, name=ROLE_TO_ADD)
+
+    if not role_required or not role_to_add:
+        return await ctx.send("❌ L'un des rôles spécifiés n'existe pas.")
+
+    if role_required not in ctx.author.roles:
+        return await ctx.send("❌ Vous n'avez pas la permission d'utiliser cette commande.")
+
+    now = datetime.datetime.utcnow().timestamp()
+
+    # Vérifier si l'utilisateur est en cooldown
+    if ctx.author.id in cooldowns:
+        time_since_last_use = now - cooldowns[ctx.author.id]
+        if time_since_last_use < COOLDOWN_DURATION:
+            remaining_time = int((COOLDOWN_DURATION - time_since_last_use) / 3600)
+            return await ctx.send(f"❌ Vous devez attendre encore {remaining_time} heure(s) avant de réutiliser cette commande.")
+
+    # Ajouter le rôle temporaire
+    await ctx.author.add_roles(role_to_add)
+    await ctx.send(f"Le rôle {role_to_add.mention} vous a été attribué pour 1 heure. 🚀")
+
+    # Enregistrer l'heure d'utilisation pour le cooldown
+    cooldowns[ctx.author.id] = now
+
+    # Supprimer le rôle après 1 heure
+    await asyncio.sleep(TEMP_ROLE_DURATION)
+    await ctx.author.remove_roles(role_to_add)
+    await ctx.send(f"Le rôle {role_to_add.mention} vous a été retiré après 1 heure. ⏳")
 #------------------------------------------------------------------------- Ignorer les messages des autres bots
 
 @bot.event
