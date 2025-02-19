@@ -324,7 +324,7 @@ async def on_message(message):
         embed.add_field(name="🌌 `!!gravity`", value="Ajoute le rôle 'Gravité Forte' à un membre.", inline=False)
         embed.add_field(name="🚀 `!!spatial`", value="Ajoute temporairement le rôle 'Spatial'.", inline=False)
         embed.add_field(name="🏥 `!!heal`", value="Retire les malus et soigne l'utilisateur.", inline=False)
-        embed.add_field(name="🛡️ `!!protect", value="Te protège des rob temporairement.", inline=False)
+        embed.add_field(name="🛡️ `!!protect`", value="Te protège des rob temporairement.", inline=False)
 
 
         embed.set_thumbnail(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/etheryBot_profil.jpg?raw=true")  # Remplace par l'URL de l'image en haut à droite
