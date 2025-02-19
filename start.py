@@ -220,18 +220,17 @@ async def spatial(ctx):
 
 @bot.command(name="heal")
 async def heal(ctx):
-    """Supprime les rôles `[𝑺ץ] Gravité Forte` et `[𝑺ץ] Malus Temporelle` si l'utilisateur les possède.
-       Nécessite `[𝑺ץ] Perm Anti-Dote`, qui sera retiré après utilisation.
-    """
-    ROLE_REQUIRED = "″ [𝑺ץ] Perm Anti-Dote"
-    ROLE_GRAVITY = "″ [𝑺ץ] Gravité Forte"
-    ROLE_MALUS = "″ [𝑺ץ] Malus Temporelle"
+    """Supprime les rôles de malus et retire le rôle permettant d'utiliser la commande."""
+    
+    ROLE_REQUIRED = "″ [𝑺ץ] Perm Anti-Dote"  # Rôle requis pour exécuter la commande
+    ROLE_TO_REMOVE_1 = "″ [𝑺ץ] Gravité Forte"  # Premier rôle à enlever
+    ROLE_TO_REMOVE_2 = "″ [𝑺ץ] Malus Temporelle"  # Deuxième rôle à enlever
 
     role_required = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED)
-    role_gravity = discord.utils.get(ctx.guild.roles, name=ROLE_GRAVITY)
-    role_malus = discord.utils.get(ctx.guild.roles, name=ROLE_MALUS)
+    role_to_remove_1 = discord.utils.get(ctx.guild.roles, name=ROLE_TO_REMOVE_1)
+    role_to_remove_2 = discord.utils.get(ctx.guild.roles, name=ROLE_TO_REMOVE_2)
 
-    if not role_required or not role_gravity or not role_malus:
+    if not role_required or not role_to_remove_1 or not role_to_remove_2:
         return await ctx.send("❌ L'un des rôles spécifiés n'existe pas.")
 
     if role_required not in ctx.author.roles:
@@ -239,25 +238,27 @@ async def heal(ctx):
 
     roles_removed = []
     
-    if role_gravity in ctx.author.roles:
-        await ctx.author.remove_roles(role_gravity)
-        roles_removed.append("Gravité Forte")
+    # Vérifier et retirer les rôles si présents
+    if role_to_remove_1 in ctx.author.roles:
+        await ctx.author.remove_roles(role_to_remove_1)
+        roles_removed.append(role_to_remove_1.name)
 
-    if role_malus in ctx.author.roles:
-        await ctx.author.remove_roles(role_malus)
-        roles_removed.append("Malus Temporelle")
+    if role_to_remove_2 in ctx.author.roles:
+        await ctx.author.remove_roles(role_to_remove_2)
+        roles_removed.append(role_to_remove_2.name)
 
-    # Gestion des messages de confirmation
+    # Message en fonction du nombre de rôles supprimés
     if len(roles_removed) == 2:
-        await ctx.send(f"✨ {ctx.author.mention}, vous avez été **totalement purgé** de vos malédictions ! <a:fete:1172810362261880873>")
+        await ctx.send(f"✨ {ctx.author.mention}, vous avez été totalement purgé de vos blessures et malédictions ! Plus rien ne vous entrave. 🏥")
     elif len(roles_removed) == 1:
-        await ctx.send(f"🩹 {ctx.author.mention}, vous avez été guéri(e) de **{roles_removed[0]}** !")
+        await ctx.send(f"🌿 {ctx.author.mention}, vous avez été guéri de **{roles_removed[0]}** ! Encore un petit effort pour être totalement rétabli. 💊")
     else:
-        await ctx.send(f"😂 {ctx.author.mention}, t'essayes de te soigner alors que t'as **aucun malus** ? T'es un clown 🤡.")
+        await ctx.send(f"😂 {ctx.author.mention}, tu essaies de te soigner alors que tu n'as rien ? C'est du placebo ou quoi ?")
 
-    # Retirer le rôle de permission après utilisation
+    # Retirer le rôle "Perm Anti-Dote" après l'utilisation
     await ctx.author.remove_roles(role_required)
-    await ctx.send(f"❌ {ctx.author.mention}, le rôle {role_required.mention} vous a été retiré après utilisation.")
+    await ctx.send(f"🔻 {ctx.author.mention}, votre **{role_required.name}** a été retiré après utilisation.")
+
 
 #------------------------------------------------------------------------- Ignorer les messages des autres bots
 
