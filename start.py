@@ -253,7 +253,7 @@ async def heal(ctx):
     elif len(roles_removed) == 1:
         await ctx.send(f"🌿 {ctx.author.mention}, vous avez été guéri de **{roles_removed[0]}** ! Encore un petit effort pour être totalement rétabli. 💊")
     else:
-        await ctx.send(f"😂 {ctx.author.mention}, tu essaies de te soigner alors que tu n'as rien ? C'est du placebo ou quoi ?")
+        await ctx.send(f"😂 {ctx.author.mention}, tu essaies de te soigner alors que tu n'as rien ? T'es un clown !? 🤡")
 
     # Retirer le rôle "Perm Anti-Dote" après l'utilisation
     await ctx.author.remove_roles(role_required)
