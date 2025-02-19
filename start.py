@@ -215,6 +215,50 @@ async def spatial(ctx):
     await asyncio.sleep(TEMP_ROLE_DURATION)
     await ctx.author.remove_roles(role_to_add)
     await ctx.send(f"Le rôle {role_to_add.mention} vous a été retiré après 1 heure. ⏳")
+
+#------------------------------------------------------------------------- Commandes d'économie : !!heal
+
+@bot.command(name="heal")
+async def heal(ctx):
+    """Supprime les rôles `[𝑺ץ] Gravité Forte` et `[𝑺ץ] Malus Temporelle` si l'utilisateur les possède.
+       Nécessite `[𝑺ץ] Perm Anti-Dote`, qui sera retiré après utilisation.
+    """
+    ROLE_REQUIRED = "″ [𝑺ץ] Perm Anti-Dote"
+    ROLE_GRAVITY = "″ [𝑺ץ] Gravité Forte"
+    ROLE_MALUS = "″ [𝑺ץ] Malus Temporelle"
+
+    role_required = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED)
+    role_gravity = discord.utils.get(ctx.guild.roles, name=ROLE_GRAVITY)
+    role_malus = discord.utils.get(ctx.guild.roles, name=ROLE_MALUS)
+
+    if not role_required or not role_gravity or not role_malus:
+        return await ctx.send("❌ L'un des rôles spécifiés n'existe pas.")
+
+    if role_required not in ctx.author.roles:
+        return await ctx.send("❌ Vous n'avez pas la permission d'utiliser cette commande.")
+
+    roles_removed = []
+    
+    if role_gravity in ctx.author.roles:
+        await ctx.author.remove_roles(role_gravity)
+        roles_removed.append("Gravité Forte")
+
+    if role_malus in ctx.author.roles:
+        await ctx.author.remove_roles(role_malus)
+        roles_removed.append("Malus Temporelle")
+
+    # Gestion des messages de confirmation
+    if len(roles_removed) == 2:
+        await ctx.send(f"✨ {ctx.author.mention}, vous avez été **totalement purgé** de vos malédictions ! <a:fete:1172810362261880873>")
+    elif len(roles_removed) == 1:
+        await ctx.send(f"🩹 {ctx.author.mention}, vous avez été guéri(e) de **{roles_removed[0]}** !")
+    else:
+        await ctx.send(f"😂 {ctx.author.mention}, t'essayes de te soigner alors que t'as **aucun malus** ? T'es un clown 🤡.")
+
+    # Retirer le rôle de permission après utilisation
+    await ctx.author.remove_roles(role_required)
+    await ctx.send(f"❌ {ctx.author.mention}, le rôle {role_required.mention} vous a été retiré après utilisation.")
+
 #------------------------------------------------------------------------- Ignorer les messages des autres bots
 
 @bot.event
