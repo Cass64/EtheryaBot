@@ -315,7 +315,7 @@ async def on_message(message):
         embed = discord.Embed(
             title="📜 Liste des Commandes",
             description="Voici la liste des commandes disponibles :",
-            color=discord.Color.blue()
+            color=discord.Color.white()
         )
 
         embed.add_field(name="💥 `!!break`", value="Retire un rôle spécifique à un membre.", inline=False)
@@ -328,7 +328,8 @@ async def on_message(message):
 
 
         embed.set_thumbnail(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/etheryBot_profil.jpg?raw=true")  # Remplace par l'URL de l'image en haut à droite
-        embed.set_footer(text="Utilise ces commandes avec sagesse !", icon_url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/etheryaBot_banniere.png?raw=true")  # Remplace par l'URL de l'image en bas
+        embed.set_footer(text="Utilise ces commandes avec sagesse !")
+        embed.set_image(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/etheryaBot_banniere.png?raw=true")
 
         await message.channel.send(embed=embed)
 
