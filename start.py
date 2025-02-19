@@ -268,14 +268,28 @@ async def on_message(message):
     if message.author.bot:
         return
 
-    # Vérifie si le message mentionne le bot
-    if bot.user.mentioned_in(message):
-        # Envoie un message avec le préfixe du bot
-      await message.channel.send(f"<a:piece:1289678641982210059> Mon préfixe sur ce serveur est: {bot.command_prefix} <:dab:1168325108595687434> !")
+    # Vérifie si le message mentionne le bot seul
+    if bot.user.mentioned_in(message) and message.content.strip() == f"<@{bot.user.id}>":
+        embed = discord.Embed(
+            title="📜 Liste des Commandes",
+            description="Voici la liste des commandes disponibles :",
+            color=discord.Color.blue()
+        )
+
+        embed.add_field(name="💥 `!!break`", value="Retire un rôle spécifique à un membre.", inline=False)
+        embed.add_field(name="⏳ `!!malus`", value="Ajoute un rôle temporaire à un membre.", inline=False)
+        embed.add_field(name="☠️ `!!annihilation`", value="Cible un membre pour l'anéantissement.", inline=False)
+        embed.add_field(name="🌌 `!!gravity`", value="Ajoute le rôle 'Gravité Forte' à un membre.", inline=False)
+        embed.add_field(name="🚀 `!!spatial`", value="Ajoute temporairement le rôle 'Spatial'.", inline=False)
+        embed.add_field(name="🏥 `!!heal`", value="Retire les malus et soigne l'utilisateur.", inline=False)
+
+        embed.set_thumbnail(url="URL_IMAGE_HAUT_DROITE")  # Remplace par l'URL de l'image en haut à droite
+        embed.set_footer(text="Utilise ces commandes avec sagesse !", icon_url="URL_IMAGE_BAS")  # Remplace par l'URL de l'image en bas
+
+        await message.channel.send(embed=embed)
 
     # Assurez-vous que le bot continue de traiter les commandes
     await bot.process_commands(message)
-    
 #------------------------------------------------------------------------- Lancement du bot
 keep_alive()
 bot.run(token)
