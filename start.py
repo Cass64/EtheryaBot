@@ -34,7 +34,6 @@ async def breakk(ctx, membre: discord.Member):
     """Ajoute un rôle fixe à un utilisateur et retire un autre rôle fixe à l'exécutant.
        Seuls ceux ayant '[𝑺ץ] Perm Anti Protect' peuvent utiliser cette commande.
     """
-
     ROLE_REQUIRED = "″ [𝑺ץ] Perm Anti Protect"  # Rôle requis pour exécuter la commande
     ROLE_TO_REMOVE_BREAK = "″ [𝑺ץ] Protect !!rob"       # Rôle à ajouter au membre ciblé
     ROLE_TO_REMOVE = "″ [𝑺ץ] Perm Anti Protect"     # Rôle à retirer à l'exécutant
@@ -140,6 +139,39 @@ async def annihilation(ctx, membre: discord.Member):
     # Envoyer un message dans le salon spécifié
     await channel.send(f"{membre.mention} a été ciblé par un anéantissement <@&⁂       　Pôle Directionnel　　　⁂>. ⚡")
 
+#------------------------------------------------------------------------- Commandes d'économie : !!gravity
+
+@bot.command(name="gravity")
+async def gravity(ctx, membre: discord.Member):
+    """Ajoute le rôle '″ [𝑺ץ] Gravité Forte' à un utilisateur, retire le rôle '″ [𝑺ץ] Perm Gravité Forte' de l'exécutant,
+       et envoie un message confirmant l'opération.
+       Seuls ceux ayant le rôle '″ [𝑺ץ] Perm Gravité Forte' peuvent utiliser cette commande.
+    """
+
+    ROLE_REQUIRED = "″ [𝑺ץ] Perm Gravité Forte"  # Rôle requis pour exécuter la commande
+    ROLE_TO_ADD = "″ [𝑺ץ] Gravité Forte"  # Rôle à ajouter
+    ROLE_TO_REMOVE = "″ [𝑺ץ] Perm Gravité Forte"  # Rôle à retirer à l'exécutant
+
+    role_required = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED)
+    role_to_add = discord.utils.get(ctx.guild.roles, name=ROLE_TO_ADD)
+    role_to_remove = discord.utils.get(ctx.guild.roles, name=ROLE_TO_REMOVE)
+
+    if not role_required or not role_to_add or not role_to_remove:
+        return await ctx.send("❌ L'un des rôles spécifiés n'existe pas.")
+
+    if role_required not in ctx.author.roles:
+        return await ctx.send("❌ Vous n'avez pas la permission d'utiliser cette commande.")
+
+    # Ajouter le rôle à la cible
+    await membre.add_roles(role_to_add)
+    await ctx.send(f"Le rôle {role_to_add.mention} a été ajouté à {membre.mention}. 🌌")
+
+    # Retirer le rôle à l'exécutant
+    if role_to_remove in ctx.author.roles:
+        await ctx.author.remove_roles(role_to_remove)
+        await ctx.send(f"Le rôle {role_to_remove.mention} vous a été retiré. ❌")
+    else:
+        await ctx.send(f"{ctx.author.mention}, vous n'aviez pas le rôle {role_to_remove.mention}. ❌")
 
 #------------------------------------------------------------------------- Ignorer les messages des autres bots
 
