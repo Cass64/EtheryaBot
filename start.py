@@ -331,20 +331,23 @@ async def protect(ctx):
 
 #------------------------------------------------------------------------- Commandes d'économie : /embed
 
-@bot.tree.command(name="embed", description="Envoie un texte formaté avec une image")
-async def customtext(interaction: discord.Interaction, texte: str, image: str = None):
+@bot.tree.command(name="embed")
+async def custom_embed(interaction: discord.Interaction, image_url: str):
+    texte = "Premier texte ici.\nDeuxième ligne avec un saut de ligne.\nTroisième ligne encore avec un saut."
+
+    # URL de l'image prédéfinie
+    predefined_image_url = "https://example.com/predefined_image.jpg"  # Remplace par l'URL de ton image prédéfinie
+
     # Crée un embed
-    embed = discord.Embed(description=texte.replace("\n", "  \n"), color=discord.Color.green())
+    embed = discord.Embed(description=texte, color=discord.Color.green())
 
-    # Ajoute l'image fournie (s'il y en a une)
-    if image:
-        embed.set_image(url=image)
-
-    # Ajoute l'image fixe en haut à droite (thumbnail)
-    embed.set_thumbnail(url=fixed_image_url)
+    # Définir les deux images
+    embed.set_thumbnail(url=https://thumbs.dreamstime.com/b/beau-paysage-mer-nature-ext%C3%A9rieure-panorama-magnifique-plage-coucher-de-soleil-l-oc%C3%A9an-temps-d-%C3%A9t%C3%A9-fond-beaut%C3%A9-naturelle-asie-244989155.jpg)  # Image prédéfinie
+    embed.set_image(url=image_url)  # Image choisie par l'utilisateur
 
     # Répondre avec l'embed
     await interaction.response.send_message(embed=embed)
+
 
 
 #------------------------------------------------------------------------- Commandes classiques pour les prêts
