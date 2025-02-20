@@ -303,7 +303,51 @@ async def spatial(ctx):
     await ctx.author.remove_roles(role_to_add)
     await ctx.send(f"Le rôle {role_to_add.mention} vous a été retiré après 2 jours heure. ⏳")
 
+#------------------------------------------------------------------------- Commandes d'économie : !!frag
+
+@bot.command(name="frags")
+async def frags(ctx, membre: discord.Member):
+    """Ajoute le rôle 'Frags Quotidien' à un utilisateur si l'exécutant a le rôle 'Gestion & Finance Team'.
+       Un message est envoyé dans un salon spécifique et le rôle est retiré automatiquement après 24h.
+    """
+
+    ROLE_REQUIRED = "″ [𝑺ץ] Gestion & Finance Team"  # Rôle requis pour exécuter la commande
+    ROLE_TO_ADD = "″ [𝑺ץ] Frags Quotidien"  # Rôle temporaire (24h)
+    CHANNEL_ID = 1341671012109914173  # ID du salon où envoyer le message
+
+    role_required = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED)
+    role_to_add = discord.utils.get(ctx.guild.roles, name=ROLE_TO_ADD)
+    channel = bot.get_channel(CHANNEL_ID)
+
+    if not role_required or not role_to_add or not channel:
+        return await ctx.send("❌ L'un des rôles ou le salon spécifié n'existe pas.")
+
+    if role_required not in ctx.author.roles:
+        return await ctx.send("❌ Vous n'avez pas la permission d'utiliser cette commande.")
+
+    # Ajouter le rôle à la cible
+    await membre.add_roles(role_to_add)
+    await ctx.send(f"✅ {membre.mention} a reçu le rôle {role_to_add.mention} pour 24 heures !")
+
+    # Envoyer un message dans le salon spécifié
+    await channel.send(f"{membre.mention} a vendu ses fragments de Veryon Quotidien.")
+
+    # Attendre 24h puis retirer le rôle
+    await asyncio.sleep(86400)  # 24 heures en secondes
+
+    # Vérifier si la personne a toujours le rôle avant de le retirer
+    if role_to_add in membre.roles:
+        await membre.remove_roles(role_to_add)
+        await ctx.send(f"❌ Le rôle {role_to_add.mention} a été retiré de {membre.mention} après 24 heures.")
+
 #------------------------------------------------------------------------- !!pret
+
+import asyncio
+import discord
+from discord.ext import commands
+
+# Dictionnaire pour stocker les prêts en cours
+prets_en_cours = {}
 
 @bot.command(name="pret10k")
 async def pret10k(ctx, membre: discord.Member):
@@ -313,18 +357,18 @@ async def pret10k(ctx, membre: discord.Member):
 @bot.command(name="pret25k")
 async def pret25k(ctx, membre: discord.Member):
     """Enregistre un prêt de 25k avec détails dans un salon staff."""
-    await enregistrer_pret(ctx, membre, montant=25000, montant_rendu=28750, duree="1 Semaines")
+    await enregistrer_pret(ctx, membre, montant=25000, montant_rendu=28750, duree="1 Semaine")
 
 @bot.command(name="pret50k")
 async def pret50k(ctx, membre: discord.Member):
     """Enregistre un prêt de 50k avec détails dans un salon staff."""
-    await enregistrer_pret(ctx, membre, montant=50000, montant_rendu=57500, duree="1 Semaines")
+    await enregistrer_pret(ctx, membre, montant=50000, montant_rendu=57500, duree="1 Semaine")
 
 async def enregistrer_pret(ctx, membre, montant, montant_rendu, duree):
     """Enregistre un prêt avec détails et envoie un message dans le salon staff."""
-    CHANNEL_ID =  1340674704964583455 # Remplace par l'ID du salon staff
-
+    CHANNEL_ID = 1340674704964583455  # Remplace par l'ID du salon staff
     salon_staff = bot.get_channel(CHANNEL_ID)
+
     if not salon_staff:
         return await ctx.send("❌ Le salon staff n'a pas été trouvé.")
 
@@ -337,8 +381,42 @@ async def enregistrer_pret(ctx, membre, montant, montant_rendu, duree):
     embed.add_field(name="🔄 Statut", value="En Cours", inline=True)
     embed.set_footer(text=f"Prêt enregistré par {ctx.author.display_name}")
 
+    # Sauvegarde du prêt dans le dictionnaire
+    prets_en_cours[membre.id] = {"montant": montant, "montant_rendu": montant_rendu}
+
     await salon_staff.send(embed=embed)
     await ctx.send(f"✅ Prêt de {montant:,} crédits accordé à {membre.mention}. Détails envoyés aux staff.")
+
+@bot.command(name="terminer")
+async def terminer(ctx, membre: discord.Member):
+    """Marque un prêt comme 'Payé' si l'utilisateur avait un prêt en cours."""
+    CHANNEL_ID = 1340674704964583455  # Remplace par l'ID du salon staff
+    salon_staff = bot.get_channel(CHANNEL_ID)
+
+    if not salon_staff:
+        return await ctx.send("❌ Le salon staff n'a pas été trouvé.")
+
+    # Vérifier si l'utilisateur a un prêt en cours
+    if membre.id not in prets_en_cours:
+        return await ctx.send(f"❌ {membre.mention} n'a aucun prêt en cours.")
+
+    # Récupération des détails du prêt
+    pret = prets_en_cours.pop(membre.id)  # Supprime le prêt après validation
+    montant = pret["montant"]
+    montant_rendu = pret["montant_rendu"]
+
+    # Création de l'embed pour confirmer le remboursement
+    embed = discord.Embed(title="✅ Prêt Remboursé", color=discord.Color.green())
+    embed.add_field(name="👤 Pseudonyme", value=membre.mention, inline=True)
+    embed.add_field(name="💰 Montant demandé", value=f"{montant:,} crédits", inline=True)
+    embed.add_field(name="📄 Ticket/Formulaire", value="Ticket", inline=True)
+    embed.add_field(name="💳 Montant remboursé", value=f"{montant_rendu:,} crédits", inline=True)
+    embed.add_field(name="🔄 Statut", value="Payé", inline=True)
+    embed.set_footer(text=f"Prêt remboursé confirmé par {ctx.author.display_name}")
+
+    await salon_staff.send(embed=embed)
+    await ctx.send(f"✅ Le prêt de {montant:,} crédits de {membre.mention} est marqué comme remboursé.")
+
 #------------------------------------------------------------------------- Ignorer les messages des autres bots
 
 @bot.event
