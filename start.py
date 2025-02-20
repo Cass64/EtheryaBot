@@ -322,7 +322,7 @@ async def pret50k(ctx, membre: discord.Member):
 
 async def enregistrer_pret(ctx, membre, montant, montant_rendu, duree):
     """Enregistre un prêt avec détails et envoie un message dans le salon staff."""
-    CHANNEL_ID = 1341844144032714833  # Remplace par l'ID du salon staff
+    CHANNEL_ID =  1340674704964583455 # Remplace par l'ID du salon staff
 
     salon_staff = bot.get_channel(CHANNEL_ID)
     if not salon_staff:
