@@ -11,12 +11,12 @@ import pymongo
 from pymongo import MongoClient
 import datetime
 import math
-import ssl
+
 load_dotenv()
 
 # Connexion MongoDB
 mongo_uri = os.getenv("MONGO_URI")
-client = MongoClient(mongo_uri, ssl=True, ssl_cert_reqs=ssl.CERT_NONE)  # Connexion avec SSL
+client = MongoClient(mongo_uri)
 db = client['Etherya2.1']
 collection = db['commande_eco']
 store_collection = db['store']
