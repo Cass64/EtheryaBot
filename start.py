@@ -430,6 +430,10 @@ async def terminer(ctx, membre: discord.Member):
 prets_en_cours = {}
 
 @bot.tree.command(name="frags")
+
+REQUIRED_ROLE = "″ [𝑺ץ] Gestion & Finance Team"
+FRAG_ROLE = "″ [𝑺ץ] Frags Quotidien"
+
 async def frags(interaction: discord.Interaction, user: discord.Member):
     """Ajoute le rôle Frags Quotidien à un utilisateur pour 24 heures."""
     # Vérifier si l'exécutant a le rôle requis
