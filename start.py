@@ -305,40 +305,46 @@ async def spatial(ctx):
 
 #------------------------------------------------------------------------- Commandes d'économie : !!frag
 
-@bot.command(name="frags")
-async def frags(ctx, membre: discord.Member):
-    """Ajoute le rôle 'Frags Quotidien' à un utilisateur si l'exécutant a le rôle 'Gestion & Finance Team'.
-       Un message est envoyé dans un salon spécifique et le rôle est retiré automatiquement après 24h.
-    """
+# Commande !!frags
+@client.command()
+async def frags(ctx, user: discord.Member):
+    # Vérifier si l'exécutant a le rôle requis
+    if not any(role.name == REQUIRED_ROLE for role in ctx.author.roles):
+        await ctx.send("Tu n'as pas le rôle requis pour utiliser cette commande.")
+        return
+    
+    # Ajouter le rôle "Frags Quotidien" à l'utilisateur
+    frag_role = discord.utils.get(ctx.guild.roles, name=FRAG_ROLE)
+    if frag_role:
+        await user.add_roles(frag_role)
+        await ctx.send(f"Le rôle `{FRAG_ROLE}` a été attribué à {user.mention}.")
 
-    ROLE_REQUIRED = "″ [𝑺ץ] Gestion & Finance Team"  # Rôle requis pour exécuter la commande
-    ROLE_TO_ADD = "″ [𝑺ץ] Frags Quotidien"  # Rôle temporaire (24h)
-    CHANNEL_ID = 1341671012109914173  # ID du salon où envoyer le message
+        # Retirer le rôle après 24 heures
+        await asyncio.sleep(86400)  # 86400 secondes = 24 heures
+        await user.remove_roles(frag_role)
+        await ctx.send(f"Le rôle `{FRAG_ROLE}` a été retiré de {user.mention} après 24 heures.")
+    else:
+        await ctx.send(f"Le rôle `{FRAG_ROLE}` n'existe pas sur ce serveur.")
 
-    role_required = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED)
-    role_to_add = discord.utils.get(ctx.guild.roles, name=ROLE_TO_ADD)
-    channel = bot.get_channel(CHANNEL_ID)
+#------------------------------------------------------------------------- Commandes d'économie : /embed
 
-    if not role_required or not role_to_add or not channel:
-        return await ctx.send("❌ L'un des rôles ou le salon spécifié n'existe pas.")
+# L'image fixe définie dans le code
+fixed_image_url = "https://example.com/ton-image-fixe.png"  # Remplace par l'URL de ton image
+# Enregistrement de la commande slash
+@client.tree.command(name="embed", description="Envoie un texte formaté avec une image")
+async def customtext(interaction: discord.Interaction, texte: str, image: str = None):
+    # Crée un embed
+    embed = discord.Embed(description=texte, color=discord.Color.green())
 
-    if role_required not in ctx.author.roles:
-        return await ctx.send("❌ Vous n'avez pas la permission d'utiliser cette commande.")
+    # Ajoute l'image fournie (s'il y en a une)
+    if image:
+        embed.set_image(url=image)
 
-    # Ajouter le rôle à la cible
-    await membre.add_roles(role_to_add)
-    await ctx.send(f"✅ {membre.mention} a reçu le rôle {role_to_add.mention} pour 24 heures !")
+    # Ajoute l'image fixe en haut à droite (thumbnail)
+    embed.set_thumbnail(url=fixed_image_url)
 
-    # Envoyer un message dans le salon spécifié
-    await channel.send(f"{membre.mention} a vendu ses fragments de Veryon Quotidien.")
-
-    # Attendre 24h puis retirer le rôle
-    await asyncio.sleep(86400)  # 24 heures en secondes
-
-    # Vérifier si la personne a toujours le rôle avant de le retirer
-    if role_to_add in membre.roles:
-        await membre.remove_roles(role_to_add)
-        await ctx.send(f"❌ Le rôle {role_to_add.mention} a été retiré de {membre.mention} après 24 heures.")
+    # Répondre avec l'embed
+    await interaction.response.send_message(embed=embed)
 
 #------------------------------------------------------------------------- !!pret
 
