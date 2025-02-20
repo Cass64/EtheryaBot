@@ -303,7 +303,42 @@ async def spatial(ctx):
     await ctx.author.remove_roles(role_to_add)
     await ctx.send(f"Le rôle {role_to_add.mention} vous a été retiré après 2 jours heure. ⏳")
 
+#------------------------------------------------------------------------- !!pret
 
+@bot.command(name="pret10k")
+async def pret10k(ctx, membre: discord.Member):
+    """Enregistre un prêt de 10k avec détails dans un salon staff."""
+    await enregistrer_pret(ctx, membre, montant=10000, montant_rendu=11500, duree="1 Semaine")
+
+@bot.command(name="pret25k")
+async def pret25k(ctx, membre: discord.Member):
+    """Enregistre un prêt de 25k avec détails dans un salon staff."""
+    await enregistrer_pret(ctx, membre, montant=25000, montant_rendu=28750, duree="2 Semaines")
+
+@bot.command(name="pret50k")
+async def pret50k(ctx, membre: discord.Member):
+    """Enregistre un prêt de 50k avec détails dans un salon staff."""
+    await enregistrer_pret(ctx, membre, montant=50000, montant_rendu=57500, duree="3 Semaines")
+
+async def enregistrer_pret(ctx, membre, montant, montant_rendu, duree):
+    """Enregistre un prêt avec détails et envoie un message dans le salon staff."""
+    CHANNEL_ID = 1341844144032714833  # Remplace par l'ID du salon staff
+
+    salon_staff = bot.get_channel(CHANNEL_ID)
+    if not salon_staff:
+        return await ctx.send("❌ Le salon staff n'a pas été trouvé.")
+
+    embed = discord.Embed(title="📜 Nouveau Prêt", color=discord.Color.blue())
+    embed.add_field(name="👤 Pseudonyme", value=membre.mention, inline=True)
+    embed.add_field(name="💰 Montant demandé", value=f"{montant:,} crédits", inline=True)
+    embed.add_field(name="📄 Ticket/Formulaire", value="Ticket", inline=True)
+    embed.add_field(name="📅 Date pour rendre", value=duree, inline=True)
+    embed.add_field(name="💳 Montant à rendre", value=f"{montant_rendu:,} crédits", inline=True)
+    embed.add_field(name="🔄 Statut", value="En Cours", inline=True)
+    embed.set_footer(text=f"Prêt enregistré par {ctx.author.display_name}")
+
+    await salon_staff.send(embed=embed)
+    await ctx.send(f"✅ Prêt de {montant:,} crédits accordé à {membre.mention}. Détails envoyés en staff.")
 #------------------------------------------------------------------------- Ignorer les messages des autres bots
 
 @bot.event
