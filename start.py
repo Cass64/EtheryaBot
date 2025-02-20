@@ -453,12 +453,21 @@ async def frags(interaction: discord.Interaction, user: discord.Member):
     else:
         await interaction.response.send_message(f"Le rôle `{FRAG_ROLE}` n'existe pas sur ce serveur.")
 
+# Rôle requis pour exécuter les commandes
+
+
 @bot.tree.command(name="pret")
 async def pret(interaction: discord.Interaction, membre: discord.Member, montant: int, montant_à_rendre: int, duree: str):
     """Enregistre un prêt avec les détails dans un salon staff."""
-    await enregistrer_pret(interaction, membre, montant, montant_rendu, duree)
+REQUIRED_ROLE = "[𝑺ץ] Gestion & Finance Team"
+    # Vérifier si l'utilisateur a le rôle requis
+    if not any(role.name == REQUIRED_ROLE for role in interaction.user.roles):
+        await interaction.response.send_message("❌ Tu n'as pas le rôle requis pour utiliser cette commande.")
+        return
 
-async def enregistrer_pret(interaction, membre, montant, montant_rendu, duree):
+    await enregistrer_pret(interaction, membre, montant, montant_à_rendre, duree)
+
+async def enregistrer_pret(interaction, membre, montant, montant_à_rendre, duree):
     """Enregistre un prêt avec détails et envoie un message dans le salon staff."""
     CHANNEL_ID = 1340674704964583455  # Remplace par l'ID du salon staff
     salon_staff = interaction.guild.get_channel(CHANNEL_ID)
@@ -471,12 +480,12 @@ async def enregistrer_pret(interaction, membre, montant, montant_rendu, duree):
     embed.add_field(name="💰 Montant demandé", value=f"{montant:,} crédits", inline=True)
     embed.add_field(name="📄 Ticket/Formulaire", value="Ticket", inline=True)
     embed.add_field(name="📅 Date pour rendre", value=duree, inline=True)
-    embed.add_field(name="💳 Montant à rendre", value=f"{montant_rendu:,} crédits", inline=True)
+    embed.add_field(name="💳 Montant à rendre", value=f"{montant_à_rendre:,} crédits", inline=True)
     embed.add_field(name="🔄 Statut", value="En Cours", inline=True)
     embed.set_footer(text=f"Prêt enregistré par {interaction.user.display_name}")
 
     # Sauvegarde du prêt dans MongoDB
-    prets_en_cours[membre.id] = {"montant": montant, "montant_rendu": montant_rendu, "statut": "En Cours"}
+    prets_en_cours[membre.id] = {"montant": montant, "montant_rendu": montant_à_rendre, "statut": "En Cours"}
     collection.update_one({"user_id": membre.id}, {"$set": {"pret": prets_en_cours[membre.id]}}, upsert=True)
 
     await salon_staff.send(embed=embed)
@@ -485,6 +494,12 @@ async def enregistrer_pret(interaction, membre, montant, montant_rendu, duree):
 @bot.tree.command(name="pretpayer")
 async def terminer(interaction: discord.Interaction, membre: discord.Member):
     """Marque un prêt comme 'Payé' si l'utilisateur avait un prêt en cours."""
+    REQUIRED_ROLE = "[𝑺ץ] Gestion & Finance Team"
+    # Vérifier si l'utilisateur a le rôle requis
+    if not any(role.name == REQUIRED_ROLE for role in interaction.user.roles):
+        await interaction.response.send_message("❌ Tu n'as pas le rôle requis pour utiliser cette commande.")
+        return
+
     CHANNEL_ID = 1340674730683924593  # Remplace par l'ID du salon staff
     salon_staff = interaction.guild.get_channel(CHANNEL_ID)
 
@@ -516,6 +531,7 @@ async def terminer(interaction: discord.Interaction, membre: discord.Member):
 
     await salon_staff.send(embed=embed)
     await interaction.response.send_message(f"✅ Le prêt de {montant:,} crédits de {membre.mention} est marqué comme remboursé.")
+
 
 #------------------------------------------------------------------------- Ignorer les messages des autres bots
 
