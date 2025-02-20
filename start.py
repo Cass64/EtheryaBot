@@ -338,7 +338,7 @@ async def enregistrer_pret(ctx, membre, montant, montant_rendu, duree):
     embed.set_footer(text=f"Prêt enregistré par {ctx.author.display_name}")
 
     await salon_staff.send(embed=embed)
-    await ctx.send(f"✅ Prêt de {montant:,} crédits accordé à {membre.mention}. Détails envoyés en staff.")
+    await ctx.send(f"✅ Prêt de {montant:,} crédits accordé à {membre.mention}. Détails envoyés aux staff.")
 #------------------------------------------------------------------------- Ignorer les messages des autres bots
 
 @bot.event
