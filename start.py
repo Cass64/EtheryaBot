@@ -460,13 +460,17 @@ async def frags(interaction: discord.Interaction, user: discord.Member):
 @bot.tree.command(name="pret")
 async def pret(interaction: discord.Interaction, membre: discord.Member, montant: int, montant_à_rendre: int, duree: str):
     """Enregistre un prêt avec les détails dans un salon staff."""
-REQUIRED_ROLE = "[𝑺ץ] Gestion & Finance Team"
+    
+    REQUIRED_ROLE = "[𝑺ץ] Gestion & Finance Team"  # Déclaration de la variable à l'intérieur de la fonction
+
     # Vérifier si l'utilisateur a le rôle requis
     if not any(role.name == REQUIRED_ROLE for role in interaction.user.roles):
         await interaction.response.send_message("❌ Tu n'as pas le rôle requis pour utiliser cette commande.")
         return
 
+    # Enregistrer le prêt si l'utilisateur a le bon rôle
     await enregistrer_pret(interaction, membre, montant, montant_à_rendre, duree)
+
 
 async def enregistrer_pret(interaction, membre, montant, montant_à_rendre, duree):
     """Enregistre un prêt avec détails et envoie un message dans le salon staff."""
