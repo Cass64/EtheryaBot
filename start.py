@@ -313,12 +313,12 @@ async def pret10k(ctx, membre: discord.Member):
 @bot.command(name="pret25k")
 async def pret25k(ctx, membre: discord.Member):
     """Enregistre un prêt de 25k avec détails dans un salon staff."""
-    await enregistrer_pret(ctx, membre, montant=25000, montant_rendu=28750, duree="2 Semaines")
+    await enregistrer_pret(ctx, membre, montant=25000, montant_rendu=28750, duree="1 Semaines")
 
 @bot.command(name="pret50k")
 async def pret50k(ctx, membre: discord.Member):
     """Enregistre un prêt de 50k avec détails dans un salon staff."""
-    await enregistrer_pret(ctx, membre, montant=50000, montant_rendu=57500, duree="3 Semaines")
+    await enregistrer_pret(ctx, membre, montant=50000, montant_rendu=57500, duree="1 Semaines")
 
 async def enregistrer_pret(ctx, membre, montant, montant_rendu, duree):
     """Enregistre un prêt avec détails et envoie un message dans le salon staff."""
