@@ -333,6 +333,7 @@ async def protect(ctx):
 
 # L'image fixe définie dans le code
 fixed_image_url = "https://example.com/ton-image-fixe.png"  # Remplace par l'URL de ton image
+
 @bot.tree.command(name="embed", description="Envoie un texte formaté avec une image")
 async def customtext(interaction: discord.Interaction, texte: str, image: str = None):
     # Crée un embed
@@ -347,6 +348,7 @@ async def customtext(interaction: discord.Interaction, texte: str, image: str = 
 
     # Répondre avec l'embed
     await interaction.response.send_message(embed=embed)
+
 
 #------------------------------------------------------------------------- Commandes classiques pour les prêts
 
@@ -430,12 +432,11 @@ async def terminer(ctx, membre: discord.Member):
 prets_en_cours = {}
 
 @bot.tree.command(name="frags")
-
-REQUIRED_ROLE = "″ [𝑺ץ] Gestion & Finance Team"
-FRAG_ROLE = "″ [𝑺ץ] Frags Quotidien"
-
 async def frags(interaction: discord.Interaction, user: discord.Member):
     """Ajoute le rôle Frags Quotidien à un utilisateur pour 24 heures."""
+
+    REQUIRED_ROLE = "″ [𝑺ץ] Gestion & Finance Team"
+    FRAG_ROLE = "″ [𝑺ץ] Frags Quotidien"
     # Vérifier si l'exécutant a le rôle requis
     if not any(role.name == REQUIRED_ROLE for role in interaction.user.roles):
         await interaction.response.send_message("Tu n'as pas le rôle requis pour utiliser cette commande.")
