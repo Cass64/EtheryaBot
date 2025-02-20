@@ -8,9 +8,26 @@ from keep_alive import keep_alive
 import json
 import asyncio
 import datetime
-
+import pymongo
+from pymongo import MongoClient
 
 load_dotenv()
+
+# Connexion MongoDB
+mongo_uri = os.getenv("MONGO_URI")
+client = MongoClient(mongo_uri)
+db = client['Etherya']
+collection = db['commande_eco']
+store_collection = db['store']
+
+# Vérification MongoDB
+try:
+    client.admin.command('ping')
+    print("✅ Connexion à MongoDB réussie !")
+except Exception as e:
+    print(f"❌ Échec de connexion à MongoDB : {e}")
+    exit()
+
 cooldowns = {}
 
 token = os.getenv('TOKEN_BOT_DISCORD')
@@ -22,10 +39,102 @@ bot = commands.Bot(command_prefix="!!", intents=intents)
 @bot.event
 async def on_ready():
     print(f"Bot connecté en tant que {bot.user}")
+    try:
+        synced = await bot.tree.sync()
+        print(f"Synced {len(synced)} commands")
+    except Exception as e:
+        print(e)
+
+#------------------------------------------------------------------------- Commandes d'économie : /frags, /pret, /pretpayer
+
+# Dictionnaire pour stocker les prêts en cours, maintenant persistant dans MongoDB
+prets_en_cours = {}
+
+@bot.tree.command(name="frags")
+async def frags(interaction: discord.Interaction, user: discord.Member):
+    """Ajoute le rôle Frags Quotidien à un utilisateur pour 24 heures."""
+    # Vérifier si l'exécutant a le rôle requis
+    if not any(role.name == REQUIRED_ROLE for role in interaction.user.roles):
+        await interaction.response.send_message("Tu n'as pas le rôle requis pour utiliser cette commande.")
+        return
+    
+    frag_role = discord.utils.get(interaction.guild.roles, name=FRAG_ROLE)
+    if frag_role:
+        await user.add_roles(frag_role)
+        await interaction.response.send_message(f"Le rôle `{FRAG_ROLE}` a été attribué à {user.mention}.")
+
+        # Retirer le rôle après 24 heures
+        await asyncio.sleep(86400)  # 86400 secondes = 24 heures
+        await user.remove_roles(frag_role)
+        await interaction.followup.send(f"Le rôle `{FRAG_ROLE}` a été retiré de {user.mention} après 24 heures.")
+    else:
+        await interaction.response.send_message(f"Le rôle `{FRAG_ROLE}` n'existe pas sur ce serveur.")
+
+@bot.tree.command(name="pret")
+async def pret(interaction: discord.Interaction, membre: discord.Member, montant: int, montant_rendu: int, duree: str):
+    """Enregistre un prêt avec les détails dans un salon staff."""
+    await enregistrer_pret(interaction, membre, montant, montant_rendu, duree)
+
+async def enregistrer_pret(interaction, membre, montant, montant_rendu, duree):
+    """Enregistre un prêt avec détails et envoie un message dans le salon staff."""
+    CHANNEL_ID = 1340674704964583455  # Remplace par l'ID du salon staff
+    salon_staff = interaction.guild.get_channel(CHANNEL_ID)
+
+    if not salon_staff:
+        return await interaction.response.send_message("❌ Le salon staff n'a pas été trouvé.")
+
+    embed = discord.Embed(title="📜 Nouveau Prêt", color=discord.Color.blue())
+    embed.add_field(name="👤 Pseudonyme", value=membre.mention, inline=True)
+    embed.add_field(name="💰 Montant demandé", value=f"{montant:,} crédits", inline=True)
+    embed.add_field(name="📄 Ticket/Formulaire", value="Ticket", inline=True)
+    embed.add_field(name="📅 Date pour rendre", value=duree, inline=True)
+    embed.add_field(name="💳 Montant à rendre", value=f"{montant_rendu:,} crédits", inline=True)
+    embed.add_field(name="🔄 Statut", value="En Cours", inline=True)
+    embed.set_footer(text=f"Prêt enregistré par {interaction.user.display_name}")
+
+    # Sauvegarde du prêt dans MongoDB
+    prets_en_cours[membre.id] = {"montant": montant, "montant_rendu": montant_rendu, "statut": "En Cours"}
+    collection.update_one({"user_id": membre.id}, {"$set": {"pret": prets_en_cours[membre.id]}}, upsert=True)
+
+    await salon_staff.send(embed=embed)
+    await interaction.response.send_message(f"✅ Prêt de {montant:,} crédits accordé à {membre.mention}. Détails envoyés aux staff.")
+
+@bot.tree.command(name="pretpayer")
+async def terminer(interaction: discord.Interaction, membre: discord.Member):
+    """Marque un prêt comme 'Payé' si l'utilisateur avait un prêt en cours."""
+    CHANNEL_ID = 1340674704964583455  # Remplace par l'ID du salon staff
+    salon_staff = interaction.guild.get_channel(CHANNEL_ID)
+
+    if not salon_staff:
+        return await interaction.response.send_message("❌ Le salon staff n'a pas été trouvé.")
+
+    # Vérifier si l'utilisateur a un prêt en cours dans la base de données
+    user_data = collection.find_one({"user_id": membre.id})
+    if not user_data or "pret" not in user_data:
+        return await interaction.response.send_message(f"❌ {membre.mention} n'a aucun prêt en cours.")
+
+    # Récupération des détails du prêt
+    pret = user_data["pret"]
+    montant = pret["montant"]
+    montant_rendu = pret["montant_rendu"]
+
+    # Création de l'embed pour confirmer le remboursement
+    embed = discord.Embed(title="✅ Prêt Remboursé", color=discord.Color.green())
+    embed.add_field(name="👤 Pseudonyme", value=membre.mention, inline=True)
+    embed.add_field(name="💰 Montant demandé", value=f"{montant:,} crédits", inline=True)
+    embed.add_field(name="📄 Ticket/Formulaire", value="Ticket", inline=True)
+    embed.add_field(name="💳 Montant remboursé", value=f"{montant_rendu:,} crédits", inline=True)
+    embed.add_field(name="🔄 Statut", value="Payé", inline=True)
+    embed.set_footer(text=f"Prêt remboursé confirmé par {interaction.user.display_name}")
+
+    # Mettre à jour le statut du prêt dans la base de données
+    pret["statut"] = "Payé"
+    collection.update_one({"user_id": membre.id}, {"$set": {"pret": pret}})
+
+    await salon_staff.send(embed=embed)
+    await interaction.response.send_message(f"✅ Le prêt de {montant:,} crédits de {membre.mention} est marqué comme remboursé.")
 
 #------------------------------------------------------------------------- Commandes d'économie : !!break
-
-from discord.ext import commands
 
 # Liste des rôles autorisés pour exécuter les commandes de modération
 AUTHORIZED_ROLES = ["″ [𝑺ץ] Perm Anti Protect"]
@@ -47,15 +156,14 @@ async def breakk(ctx, membre: discord.Member):
         return await ctx.send("❌ L'un des rôles spécifiés n'existe pas.")
 
     if role_required not in ctx.author.roles:
-      return await ctx.send("❌ Vous n'avez pas la permission d'utiliser cette commande.")
+        return await ctx.send("❌ Vous n'avez pas la permission d'utiliser cette commande.")
 
-# Vérifie si le membre a le rôle avant de le retirer
+    # Vérifie si le membre a le rôle avant de le retirer
     if role_to_remove_break not in membre.roles:
         await ctx.send(f"{membre.mention} n'a pas le rôle {role_to_remove_break.mention}. <:haram:1176229029796380702>")
     else:
         await membre.remove_roles(role_to_remove_break)
         await ctx.send(f"Le rôle {role_to_remove_break.mention} a été enlevé. <a:fete:1172810362261880873>")
-
 
     # Retirer le rôle à l'exécutant
     if role_to_remove in ctx.author.roles:
@@ -72,21 +180,20 @@ AUTHORIZED_ROLES = ["″ [𝑺ץ] Perm Ajout Malus"]
 async def malus(ctx, membre: discord.Member):
     """Ajoute un rôle fixe à un utilisateur, retire un autre rôle fixe à l'exécutant, 
        et supprime le rôle ajouté après une durée spécifiée.
-       Seuls ceux ayant '[𝑺ץ] Perm Anti Protect' peuvent utiliser cette commande.
+       Seuls ceux ayant '[𝑺ץ] Perm Ajout Malus' peuvent utiliser cette commande.
     """
-
-    ROLE_REQUIRED_MALUS = "″ [𝑺ץ] Perm Ajout Malus"  # Rôle requis pour exécuter la commande
+    ROLE_REQUIRED = "″ [𝑺ץ] Perm Ajout Malus"  # Rôle requis pour exécuter la commande
     ROLE_TO_ADD_MALUS = "″ [𝑺ץ] Malus Temporelle"  # Le rôle temporaire à ajouter
     ROLE_TO_REMOVE_MALUS = "″ [𝑺ץ] Perm Ajout Malus"  # Rôle à retirer à l'exécutant
 
-    role_required_malus = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED_MALUS)
+    role_required = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED)
     role_to_add_malus = discord.utils.get(ctx.guild.roles, name=ROLE_TO_ADD_MALUS)
     role_to_remove_malus = discord.utils.get(ctx.guild.roles, name=ROLE_TO_REMOVE_MALUS)
 
-    if not role_required_malus or not role_to_add_malus or not role_to_remove_malus:
+    if not role_required or not role_to_add_malus or not role_to_remove_malus:
         return await ctx.send("❌ L'un des rôles spécifiés n'existe pas.")
 
-    if role_required_malus not in ctx.author.roles:
+    if role_required not in ctx.author.roles:
         return await ctx.send("❌ Vous n'avez pas la permission d'utiliser cette commande.")
 
     # Ajouter le rôle temporaire à l'utilisateur
@@ -101,11 +208,11 @@ async def malus(ctx, membre: discord.Member):
         await ctx.send(f"{ctx.author.mention}, vous n'aviez pas le rôle {role_to_remove_malus.mention}. <:haram:1176229029796380702>")
 
     # Temps pendant lequel le rôle restera (exemple : 1 heure)
-    await asyncio.sleep(86400)  # 3600 secondes = 1 heure
+    await asyncio.sleep(86400)  # 86400 secondes = 24 heures
 
     # Retirer le rôle après le délai
     await membre.remove_roles(role_to_add_malus)
-    await ctx.send(f"Le rôle {role_to_add_malus.mention} a été retiré de {membre.mention} après 1 jour. ⏳")
+    await ctx.send(f"Le rôle {role_to_add_malus.mention} a été retiré de {membre.mention} après 24 heures. ⏳")
 
 #------------------------------------------------------------------------- Commandes d'économie : !!annihilation
 
@@ -114,7 +221,6 @@ async def annihilation(ctx, membre: discord.Member):
     """Ajoute le rôle 'Cible D'anéantissement' à un utilisateur si l'exécutant a le rôle 'Perm Crystal D'anéantissement'.
        Un message est envoyé automatiquement dans un salon spécifique et l'exécutant perd son rôle 'Perm Crystal D'anéantissement'.
     """
-    
     ROLE_REQUIRED = "″ [𝑺ץ] Perm Crystal D'anéantissement"  # Rôle requis pour exécuter la commande
     ROLE_TO_ADD = "″ [𝑺ץ] Cible D'anéantissement"  # Rôle à ajouter
     CHANNEL_ID = 1341844144032714833  # ID du salon où envoyer le message
@@ -150,7 +256,6 @@ async def gravity(ctx, membre: discord.Member):
        et envoie un message confirmant l'opération.
        Seuls ceux ayant le rôle '″ [𝑺ץ] Perm Gravité Forte' peuvent utiliser cette commande.
     """
-
     ROLE_REQUIRED = "″ [𝑺ץ] Perm Gravité Forte"  # Rôle requis pour exécuter la commande
     ROLE_TO_ADD = "″ [𝑺ץ] Gravité Forte"  # Rôle à ajouter
     ROLE_TO_REMOVE = "″ [𝑺ץ] Perm Gravité Forte"  # Rôle à retirer à l'exécutant
@@ -181,7 +286,7 @@ async def gravity(ctx, membre: discord.Member):
 @bot.command(name="spatial")
 async def spatial(ctx):
     """Ajoute temporairement le rôle '[𝑺ץ] Spatial' si l'utilisateur a '[𝑺ץ] Perm Spatial',
-       et applique un cooldown de 24 heures.
+       et applique un cooldown de 24 heures. L'heure de la dernière utilisation est enregistrée dans la base de données MongoDB.
     """
     ROLE_REQUIRED = "″ [𝑺ץ] Perm Spatial"  # Rôle requis pour exécuter la commande
     ROLE_TO_ADD = "″ [𝑺ץ] Spatial"  # Rôle à ajouter temporairement
@@ -197,21 +302,27 @@ async def spatial(ctx):
     if role_required not in ctx.author.roles:
         return await ctx.send("❌ Vous n'avez pas la permission d'utiliser cette commande.")
 
+    # Connexion à la base de données
+    user_data = collection.find_one({"user_id": ctx.author.id})
+
+    if user_data:
+        last_used = user_data.get("last_used", 0)
+    else:
+        last_used = 0
+
     now = datetime.datetime.utcnow().timestamp()
 
     # Vérifier si l'utilisateur est en cooldown
-    if ctx.author.id in cooldowns:
-        time_since_last_use = now - cooldowns[ctx.author.id]
-        if time_since_last_use < COOLDOWN_DURATION:
-            remaining_time = int((COOLDOWN_DURATION - time_since_last_use) / 3600)
-            return await ctx.send(f"❌ Vous devez attendre encore {remaining_time} heure(s) avant de réutiliser cette commande.")
+    if now - last_used < COOLDOWN_DURATION:
+        remaining_time = int((COOLDOWN_DURATION - (now - last_used)) / 3600)
+        return await ctx.send(f"❌ Vous devez attendre encore {remaining_time} heure(s) avant de réutiliser cette commande.")
 
     # Ajouter le rôle temporaire
     await ctx.author.add_roles(role_to_add)
     await ctx.send(f"Le rôle {role_to_add.mention} vous a été attribué pour 1 heure. 🚀")
 
-    # Enregistrer l'heure d'utilisation pour le cooldown
-    cooldowns[ctx.author.id] = now
+    # Mettre à jour l'heure de la dernière utilisation dans la base de données
+    collection.update_one({"user_id": ctx.author.id}, {"$set": {"last_used": now}}, upsert=True)
 
     # Supprimer le rôle après 1 heure
     await asyncio.sleep(TEMP_ROLE_DURATION)
@@ -223,7 +334,6 @@ async def spatial(ctx):
 @bot.command(name="heal")
 async def heal(ctx):
     """Supprime les rôles de malus et retire le rôle permettant d'utiliser la commande."""
-    
     ROLE_REQUIRED = "″ [𝑺ץ] Perm Anti-Dote"  # Rôle requis pour exécuter la commande
     ROLE_TO_REMOVE_1 = "″ [𝑺ץ] Gravité Forte"  # Premier rôle à enlever
     ROLE_TO_REMOVE_2 = "″ [𝑺ץ] Malus Temporelle"  # Deuxième rôle à enlever
@@ -264,14 +374,14 @@ async def heal(ctx):
 #------------------------------------------------------------------------- Commandes d'économie : !!protect
 
 @bot.command(name="protect")
-async def spatial(ctx):
-    """Ajoute temporairement le rôle '[𝑺ץ] Spatial' si l'utilisateur a '[𝑺ץ] Perm Spatial',
-       et applique un cooldown de 24 heures.
+async def protect(ctx):
+    """Ajoute temporairement le rôle '[𝑺ץ] Protect !!rob' si l'utilisateur a '[𝑺ץ] Perm Protect !!rob',
+       et applique un cooldown de 48 heures.
     """
     ROLE_REQUIRED = "″ [𝑺ץ] Perm Protect !!rob"  # Rôle requis pour exécuter la commande
     ROLE_TO_ADD = "″ [𝑺ץ] Protect !!rob"  # Rôle à ajouter temporairement
-    COOLDOWN_DURATION = 172800  # 24 heures en secondes
-    TEMP_ROLE_DURATION = 172800  # 1 heure en secondes
+    COOLDOWN_DURATION = 172800  # 48 heures en secondes
+    TEMP_ROLE_DURATION = 172800  # 48 heures en secondes
 
     role_required = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED)
     role_to_add = discord.utils.get(ctx.guild.roles, name=ROLE_TO_ADD)
@@ -284,53 +394,35 @@ async def spatial(ctx):
 
     now = datetime.datetime.utcnow().timestamp()
 
-    # Vérifier si l'utilisateur est en cooldown
-    if ctx.author.id in cooldowns:
-        time_since_last_use = now - cooldowns[ctx.author.id]
+    # Vérifier si l'utilisateur est en cooldown dans la base de données
+    user_data = collection.find_one({"user_id": ctx.author.id})
+
+    if user_data:
+        last_used = user_data.get("last_used", 0)
+        time_since_last_use = now - last_used
         if time_since_last_use < COOLDOWN_DURATION:
             remaining_time = int((COOLDOWN_DURATION - time_since_last_use) / 3600)
             return await ctx.send(f"❌ Vous devez attendre encore {remaining_time} heure(s) avant de réutiliser cette commande.")
+    else:
+        # Si l'utilisateur n'a pas de données dans la base, l'ajouter
+        collection.insert_one({"user_id": ctx.author.id, "last_used": now})
 
     # Ajouter le rôle temporaire
     await ctx.author.add_roles(role_to_add)
     await ctx.send(f"Le rôle {role_to_add.mention} vous a été attribué pour 2 jours. 🚀")
 
-    # Enregistrer l'heure d'utilisation pour le cooldown
-    cooldowns[ctx.author.id] = now
+    # Mettre à jour l'heure d'utilisation dans la base de données
+    collection.update_one({"user_id": ctx.author.id}, {"$set": {"last_used": now}}, upsert=True)
 
-    # Supprimer le rôle après 1 heure
+    # Supprimer le rôle après 48 heures
     await asyncio.sleep(TEMP_ROLE_DURATION)
     await ctx.author.remove_roles(role_to_add)
-    await ctx.send(f"Le rôle {role_to_add.mention} vous a été retiré après 2 jours heure. ⏳")
-
-#------------------------------------------------------------------------- Commandes d'économie : !!frag
-
-# Commande !!frags
-@client.command()
-async def frags(ctx, user: discord.Member):
-    # Vérifier si l'exécutant a le rôle requis
-    if not any(role.name == REQUIRED_ROLE for role in ctx.author.roles):
-        await ctx.send("Tu n'as pas le rôle requis pour utiliser cette commande.")
-        return
-    
-    # Ajouter le rôle "Frags Quotidien" à l'utilisateur
-    frag_role = discord.utils.get(ctx.guild.roles, name=FRAG_ROLE)
-    if frag_role:
-        await user.add_roles(frag_role)
-        await ctx.send(f"Le rôle `{FRAG_ROLE}` a été attribué à {user.mention}.")
-
-        # Retirer le rôle après 24 heures
-        await asyncio.sleep(86400)  # 86400 secondes = 24 heures
-        await user.remove_roles(frag_role)
-        await ctx.send(f"Le rôle `{FRAG_ROLE}` a été retiré de {user.mention} après 24 heures.")
-    else:
-        await ctx.send(f"Le rôle `{FRAG_ROLE}` n'existe pas sur ce serveur.")
+    await ctx.send(f"Le rôle {role_to_add.mention} vous a été retiré après 2 jours. ⏳")
 
 #------------------------------------------------------------------------- Commandes d'économie : /embed
 
 # L'image fixe définie dans le code
 fixed_image_url = "https://example.com/ton-image-fixe.png"  # Remplace par l'URL de ton image
-# Enregistrement de la commande slash
 @client.tree.command(name="embed", description="Envoie un texte formaté avec une image")
 async def customtext(interaction: discord.Interaction, texte: str, image: str = None):
     # Crée un embed
@@ -346,14 +438,7 @@ async def customtext(interaction: discord.Interaction, texte: str, image: str = 
     # Répondre avec l'embed
     await interaction.response.send_message(embed=embed)
 
-#------------------------------------------------------------------------- !!pret
-
-import asyncio
-import discord
-from discord.ext import commands
-
-# Dictionnaire pour stocker les prêts en cours
-prets_en_cours = {}
+#------------------------------------------------------------------------- Commandes classiques pour les prêts
 
 @bot.command(name="pret10k")
 async def pret10k(ctx, membre: discord.Member):
@@ -387,8 +472,9 @@ async def enregistrer_pret(ctx, membre, montant, montant_rendu, duree):
     embed.add_field(name="🔄 Statut", value="En Cours", inline=True)
     embed.set_footer(text=f"Prêt enregistré par {ctx.author.display_name}")
 
-    # Sauvegarde du prêt dans le dictionnaire
-    prets_en_cours[membre.id] = {"montant": montant, "montant_rendu": montant_rendu}
+    # Sauvegarde du prêt dans MongoDB
+    prets_en_cours[membre.id] = {"montant": montant, "montant_rendu": montant_rendu, "statut": "En Cours"}
+    collection.update_one({"user_id": membre.id}, {"$set": {"pret": prets_en_cours[membre.id]}}, upsert=True)
 
     await salon_staff.send(embed=embed)
     await ctx.send(f"✅ Prêt de {montant:,} crédits accordé à {membre.mention}. Détails envoyés aux staff.")
@@ -402,12 +488,13 @@ async def terminer(ctx, membre: discord.Member):
     if not salon_staff:
         return await ctx.send("❌ Le salon staff n'a pas été trouvé.")
 
-    # Vérifier si l'utilisateur a un prêt en cours
-    if membre.id not in prets_en_cours:
+    # Vérifier si l'utilisateur a un prêt en cours dans la base de données
+    user_data = collection.find_one({"user_id": membre.id})
+    if not user_data or "pret" not in user_data:
         return await ctx.send(f"❌ {membre.mention} n'a aucun prêt en cours.")
 
     # Récupération des détails du prêt
-    pret = prets_en_cours.pop(membre.id)  # Supprime le prêt après validation
+    pret = user_data["pret"]
     montant = pret["montant"]
     montant_rendu = pret["montant_rendu"]
 
@@ -419,6 +506,10 @@ async def terminer(ctx, membre: discord.Member):
     embed.add_field(name="💳 Montant remboursé", value=f"{montant_rendu:,} crédits", inline=True)
     embed.add_field(name="🔄 Statut", value="Payé", inline=True)
     embed.set_footer(text=f"Prêt remboursé confirmé par {ctx.author.display_name}")
+
+    # Mettre à jour le statut du prêt dans la base de données
+    pret["statut"] = "Payé"
+    collection.update_one({"user_id": membre.id}, {"$set": {"pret": pret}})
 
     await salon_staff.send(embed=embed)
     await ctx.send(f"✅ Le prêt de {montant:,} crédits de {membre.mention} est marqué comme remboursé.")
@@ -447,8 +538,7 @@ async def on_message(message):
         embed.add_field(name="🏥 `!!heal`", value="Retire les malus et soigne l'utilisateur.", inline=False)
         embed.add_field(name="🛡️ `!!protect`", value="Te protège des rob temporairement.", inline=False)
 
-
-        embed.set_thumbnail(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/etheryBot_profil.jpg?raw=true")  # Remplace par l'URL de l'image en haut à droite
+        embed.set_thumbnail(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/etheryBot_profil.jpg?raw=true")
         embed.set_footer(text="Utilise ces commandes avec sagesse !")
         embed.set_image(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/etheryaBot_banniere.png?raw=true")
 
@@ -456,6 +546,7 @@ async def on_message(message):
 
     # Assurez-vous que le bot continue de traiter les commandes
     await bot.process_commands(message)
+
 #------------------------------------------------------------------------- Lancement du bot
 keep_alive()
 bot.run(token)
