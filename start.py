@@ -17,7 +17,7 @@ load_dotenv()
 # Connexion MongoDB
 mongo_uri = os.getenv("MONGO_URI")
 client = MongoClient(mongo_uri)
-db = client['Etherya2.1']
+db = client['Etherya4']
 collection = db['commande_eco']
 store_collection = db['store']
 
