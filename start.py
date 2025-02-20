@@ -333,7 +333,7 @@ async def protect(ctx):
 
 # L'image fixe définie dans le code
 fixed_image_url = "https://example.com/ton-image-fixe.png"  # Remplace par l'URL de ton image
-@client.tree.command(name="embed", description="Envoie un texte formaté avec une image")
+@bot.tree.command(name="embed", description="Envoie un texte formaté avec une image")
 async def customtext(interaction: discord.Interaction, texte: str, image: str = None):
     # Crée un embed
     embed = discord.Embed(description=texte, color=discord.Color.green())
