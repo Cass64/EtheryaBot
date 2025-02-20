@@ -17,7 +17,7 @@ load_dotenv()
 # Connexion MongoDB
 mongo_uri = os.getenv("MONGO_URI")
 client = MongoClient(mongo_uri)
-db = client['Etherya4']
+db = client['Cass-Eco2']
 collection = db['commandes']
 
 # Vérification MongoDB
