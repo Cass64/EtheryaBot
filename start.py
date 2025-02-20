@@ -1,20 +1,23 @@
 import os  
 from dotenv import load_dotenv
-import discord
 from discord import app_commands
+import discord
 from discord.ext import commands
-import random
 from keep_alive import keep_alive
+import random
 import json
 import asyncio
-import datetime
 import pymongo
 from pymongo import MongoClient
+import datetime
+import math
+import ssl
+load_dotenv()
 
 # Connexion MongoDB
 mongo_uri = os.getenv("MONGO_URI")
-client = MongoClient(mongo_uri)
-db = client['Etherya3']
+client = MongoClient(mongo_uri, ssl=True, ssl_cert_reqs=ssl.CERT_NONE)  # Connexion avec SSL
+db = client['Etherya2.1']
 collection = db['commande_eco']
 store_collection = db['store']
 
