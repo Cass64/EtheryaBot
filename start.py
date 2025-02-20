@@ -450,7 +450,7 @@ async def frags(interaction: discord.Interaction, user: discord.Member):
         await interaction.response.send_message(f"Le rôle `{FRAG_ROLE}` n'existe pas sur ce serveur.")
 
 @bot.tree.command(name="pret")
-async def pret(interaction: discord.Interaction, membre: discord.Member, montant: int, montant_rendu: int, duree: str):
+async def pret(interaction: discord.Interaction, membre: discord.Member, montant: int, montant_à_rendre: int, duree: str):
     """Enregistre un prêt avec les détails dans un salon staff."""
     await enregistrer_pret(interaction, membre, montant, montant_rendu, duree)
 
@@ -481,7 +481,7 @@ async def enregistrer_pret(interaction, membre, montant, montant_rendu, duree):
 @bot.tree.command(name="pretpayer")
 async def terminer(interaction: discord.Interaction, membre: discord.Member):
     """Marque un prêt comme 'Payé' si l'utilisateur avait un prêt en cours."""
-    CHANNEL_ID = 1340674704964583455  # Remplace par l'ID du salon staff
+    CHANNEL_ID = 1340674730683924593  # Remplace par l'ID du salon staff
     salon_staff = interaction.guild.get_channel(CHANNEL_ID)
 
     if not salon_staff:
