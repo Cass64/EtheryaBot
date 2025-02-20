@@ -44,96 +44,6 @@ async def on_ready():
         print(f"Synced {len(synced)} commands")
     except Exception as e:
         print(e)
-
-#------------------------------------------------------------------------- Commandes d'économie : /frags, /pret, /pretpayer
-
-# Dictionnaire pour stocker les prêts en cours, maintenant persistant dans MongoDB
-prets_en_cours = {}
-
-@bot.tree.command(name="frags")
-async def frags(interaction: discord.Interaction, user: discord.Member):
-    """Ajoute le rôle Frags Quotidien à un utilisateur pour 24 heures."""
-    # Vérifier si l'exécutant a le rôle requis
-    if not any(role.name == REQUIRED_ROLE for role in interaction.user.roles):
-        await interaction.response.send_message("Tu n'as pas le rôle requis pour utiliser cette commande.")
-        return
-    
-    frag_role = discord.utils.get(interaction.guild.roles, name=FRAG_ROLE)
-    if frag_role:
-        await user.add_roles(frag_role)
-        await interaction.response.send_message(f"Le rôle `{FRAG_ROLE}` a été attribué à {user.mention}.")
-
-        # Retirer le rôle après 24 heures
-        await asyncio.sleep(86400)  # 86400 secondes = 24 heures
-        await user.remove_roles(frag_role)
-        await interaction.followup.send(f"Le rôle `{FRAG_ROLE}` a été retiré de {user.mention} après 24 heures.")
-    else:
-        await interaction.response.send_message(f"Le rôle `{FRAG_ROLE}` n'existe pas sur ce serveur.")
-
-@bot.tree.command(name="pret")
-async def pret(interaction: discord.Interaction, membre: discord.Member, montant: int, montant_rendu: int, duree: str):
-    """Enregistre un prêt avec les détails dans un salon staff."""
-    await enregistrer_pret(interaction, membre, montant, montant_rendu, duree)
-
-async def enregistrer_pret(interaction, membre, montant, montant_rendu, duree):
-    """Enregistre un prêt avec détails et envoie un message dans le salon staff."""
-    CHANNEL_ID = 1340674704964583455  # Remplace par l'ID du salon staff
-    salon_staff = interaction.guild.get_channel(CHANNEL_ID)
-
-    if not salon_staff:
-        return await interaction.response.send_message("❌ Le salon staff n'a pas été trouvé.")
-
-    embed = discord.Embed(title="📜 Nouveau Prêt", color=discord.Color.blue())
-    embed.add_field(name="👤 Pseudonyme", value=membre.mention, inline=True)
-    embed.add_field(name="💰 Montant demandé", value=f"{montant:,} crédits", inline=True)
-    embed.add_field(name="📄 Ticket/Formulaire", value="Ticket", inline=True)
-    embed.add_field(name="📅 Date pour rendre", value=duree, inline=True)
-    embed.add_field(name="💳 Montant à rendre", value=f"{montant_rendu:,} crédits", inline=True)
-    embed.add_field(name="🔄 Statut", value="En Cours", inline=True)
-    embed.set_footer(text=f"Prêt enregistré par {interaction.user.display_name}")
-
-    # Sauvegarde du prêt dans MongoDB
-    prets_en_cours[membre.id] = {"montant": montant, "montant_rendu": montant_rendu, "statut": "En Cours"}
-    collection.update_one({"user_id": membre.id}, {"$set": {"pret": prets_en_cours[membre.id]}}, upsert=True)
-
-    await salon_staff.send(embed=embed)
-    await interaction.response.send_message(f"✅ Prêt de {montant:,} crédits accordé à {membre.mention}. Détails envoyés aux staff.")
-
-@bot.tree.command(name="pretpayer")
-async def terminer(interaction: discord.Interaction, membre: discord.Member):
-    """Marque un prêt comme 'Payé' si l'utilisateur avait un prêt en cours."""
-    CHANNEL_ID = 1340674704964583455  # Remplace par l'ID du salon staff
-    salon_staff = interaction.guild.get_channel(CHANNEL_ID)
-
-    if not salon_staff:
-        return await interaction.response.send_message("❌ Le salon staff n'a pas été trouvé.")
-
-    # Vérifier si l'utilisateur a un prêt en cours dans la base de données
-    user_data = collection.find_one({"user_id": membre.id})
-    if not user_data or "pret" not in user_data:
-        return await interaction.response.send_message(f"❌ {membre.mention} n'a aucun prêt en cours.")
-
-    # Récupération des détails du prêt
-    pret = user_data["pret"]
-    montant = pret["montant"]
-    montant_rendu = pret["montant_rendu"]
-
-    # Création de l'embed pour confirmer le remboursement
-    embed = discord.Embed(title="✅ Prêt Remboursé", color=discord.Color.green())
-    embed.add_field(name="👤 Pseudonyme", value=membre.mention, inline=True)
-    embed.add_field(name="💰 Montant demandé", value=f"{montant:,} crédits", inline=True)
-    embed.add_field(name="📄 Ticket/Formulaire", value="Ticket", inline=True)
-    embed.add_field(name="💳 Montant remboursé", value=f"{montant_rendu:,} crédits", inline=True)
-    embed.add_field(name="🔄 Statut", value="Payé", inline=True)
-    embed.set_footer(text=f"Prêt remboursé confirmé par {interaction.user.display_name}")
-
-    # Mettre à jour le statut du prêt dans la base de données
-    pret["statut"] = "Payé"
-    collection.update_one({"user_id": membre.id}, {"$set": {"pret": pret}})
-
-    await salon_staff.send(embed=embed)
-    await interaction.response.send_message(f"✅ Le prêt de {montant:,} crédits de {membre.mention} est marqué comme remboursé.")
-
 #------------------------------------------------------------------------- Commandes d'économie : !!break
 
 # Liste des rôles autorisés pour exécuter les commandes de modération
@@ -513,6 +423,95 @@ async def terminer(ctx, membre: discord.Member):
 
     await salon_staff.send(embed=embed)
     await ctx.send(f"✅ Le prêt de {montant:,} crédits de {membre.mention} est marqué comme remboursé.")
+
+#------------------------------------------------------------------------- Commandes d'économie : /frags, /pret, /pretpayer
+
+# Dictionnaire pour stocker les prêts en cours, maintenant persistant dans MongoDB
+prets_en_cours = {}
+
+@bot.tree.command(name="frags")
+async def frags(interaction: discord.Interaction, user: discord.Member):
+    """Ajoute le rôle Frags Quotidien à un utilisateur pour 24 heures."""
+    # Vérifier si l'exécutant a le rôle requis
+    if not any(role.name == REQUIRED_ROLE for role in interaction.user.roles):
+        await interaction.response.send_message("Tu n'as pas le rôle requis pour utiliser cette commande.")
+        return
+    
+    frag_role = discord.utils.get(interaction.guild.roles, name=FRAG_ROLE)
+    if frag_role:
+        await user.add_roles(frag_role)
+        await interaction.response.send_message(f"Le rôle `{FRAG_ROLE}` a été attribué à {user.mention}.")
+
+        # Retirer le rôle après 24 heures
+        await asyncio.sleep(86400)  # 86400 secondes = 24 heures
+        await user.remove_roles(frag_role)
+        await interaction.followup.send(f"Le rôle `{FRAG_ROLE}` a été retiré de {user.mention} après 24 heures.")
+    else:
+        await interaction.response.send_message(f"Le rôle `{FRAG_ROLE}` n'existe pas sur ce serveur.")
+
+@bot.tree.command(name="pret")
+async def pret(interaction: discord.Interaction, membre: discord.Member, montant: int, montant_rendu: int, duree: str):
+    """Enregistre un prêt avec les détails dans un salon staff."""
+    await enregistrer_pret(interaction, membre, montant, montant_rendu, duree)
+
+async def enregistrer_pret(interaction, membre, montant, montant_rendu, duree):
+    """Enregistre un prêt avec détails et envoie un message dans le salon staff."""
+    CHANNEL_ID = 1340674704964583455  # Remplace par l'ID du salon staff
+    salon_staff = interaction.guild.get_channel(CHANNEL_ID)
+
+    if not salon_staff:
+        return await interaction.response.send_message("❌ Le salon staff n'a pas été trouvé.")
+
+    embed = discord.Embed(title="📜 Nouveau Prêt", color=discord.Color.blue())
+    embed.add_field(name="👤 Pseudonyme", value=membre.mention, inline=True)
+    embed.add_field(name="💰 Montant demandé", value=f"{montant:,} crédits", inline=True)
+    embed.add_field(name="📄 Ticket/Formulaire", value="Ticket", inline=True)
+    embed.add_field(name="📅 Date pour rendre", value=duree, inline=True)
+    embed.add_field(name="💳 Montant à rendre", value=f"{montant_rendu:,} crédits", inline=True)
+    embed.add_field(name="🔄 Statut", value="En Cours", inline=True)
+    embed.set_footer(text=f"Prêt enregistré par {interaction.user.display_name}")
+
+    # Sauvegarde du prêt dans MongoDB
+    prets_en_cours[membre.id] = {"montant": montant, "montant_rendu": montant_rendu, "statut": "En Cours"}
+    collection.update_one({"user_id": membre.id}, {"$set": {"pret": prets_en_cours[membre.id]}}, upsert=True)
+
+    await salon_staff.send(embed=embed)
+    await interaction.response.send_message(f"✅ Prêt de {montant:,} crédits accordé à {membre.mention}. Détails envoyés aux staff.")
+
+@bot.tree.command(name="pretpayer")
+async def terminer(interaction: discord.Interaction, membre: discord.Member):
+    """Marque un prêt comme 'Payé' si l'utilisateur avait un prêt en cours."""
+    CHANNEL_ID = 1340674704964583455  # Remplace par l'ID du salon staff
+    salon_staff = interaction.guild.get_channel(CHANNEL_ID)
+
+    if not salon_staff:
+        return await interaction.response.send_message("❌ Le salon staff n'a pas été trouvé.")
+
+    # Vérifier si l'utilisateur a un prêt en cours dans la base de données
+    user_data = collection.find_one({"user_id": membre.id})
+    if not user_data or "pret" not in user_data:
+        return await interaction.response.send_message(f"❌ {membre.mention} n'a aucun prêt en cours.")
+
+    # Récupération des détails du prêt
+    pret = user_data["pret"]
+    montant = pret["montant"]
+    montant_rendu = pret["montant_rendu"]
+
+    # Création de l'embed pour confirmer le remboursement
+    embed = discord.Embed(title="✅ Prêt Remboursé", color=discord.Color.green())
+    embed.add_field(name="👤 Pseudonyme", value=membre.mention, inline=True)
+    embed.add_field(name="💰 Montant demandé", value=f"{montant:,} crédits", inline=True)
+    embed.add_field(name="📄 Ticket/Formulaire", value="Ticket", inline=True)
+    embed.add_field(name="💳 Montant remboursé", value=f"{montant_rendu:,} crédits", inline=True)
+    embed.add_field(name="🔄 Statut", value="Payé", inline=True)
+    embed.set_footer(text=f"Prêt remboursé confirmé par {interaction.user.display_name}")
+
+    # Mettre à jour le statut du prêt dans la base de données
+    pret["statut"] = "Payé"
+    collection.update_one({"user_id": membre.id}, {"$set": {"pret": pret}})
+
+    await salon_staff.send(embed=embed)
+    await interaction.response.send_message(f"✅ Le prêt de {montant:,} crédits de {membre.mention} est marqué comme remboursé.")
 
 #------------------------------------------------------------------------- Ignorer les messages des autres bots
 
