@@ -510,7 +510,7 @@ async def frags(interaction: discord.Interaction, user: discord.Member):
     frag_role = discord.utils.get(interaction.guild.roles, name=FRAG_ROLE)
     if frag_role:
         await user.add_roles(frag_role)
-        await interaction.response.send_message(f"Le rôle `{FRAG_ROLE}` a été attribué à {user.mention}.")
+        await interaction.response.send_message(f"{user.mention} a vendu ses fragments de Veyron quotidien.")
 
         # Retirer le rôle après 24 heures
         await asyncio.sleep(86400)  # 86400 secondes = 24 heures
