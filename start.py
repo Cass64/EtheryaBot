@@ -331,10 +331,6 @@ async def protect(ctx):
 
 #------------------------------------------------------------------------- Commandes d'économie : /embed
 
-import discord
-from discord import app_commands
-from discord.ext import commands
-
 class EmbedBuilderView(discord.ui.View):
     def __init__(self, author: discord.User):
         super().__init__(timeout=180)
