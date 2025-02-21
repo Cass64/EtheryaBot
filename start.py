@@ -438,8 +438,13 @@ class EmbedDescriptionModal(discord.ui.Modal, title="Modifier la Description"):
         self.add_item(self.description_input)
 
     async def on_submit(self, interaction: discord.Interaction):
-        self.view.embed.description = self.description_input.value
+        text = self.description_input.value
+
+        self.view.embed.clear_fields()  # Supprime les anciens champs
+        self.view.embed.add_field(name="📜 Description :", value=text, inline=False)  # Ajoute un champ
+
         await interaction.response.edit_message(embed=self.view.embed, view=self.view)
+
 
 class EmbedImageModal(discord.ui.Modal, title="Ajouter une image"):
     def __init__(self, view: EmbedBuilderView):
