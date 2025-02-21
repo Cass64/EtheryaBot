@@ -336,7 +336,7 @@ async def custom_embed(interaction: discord.Interaction, image_url: str, texte: 
     # Remplacer les doubles espaces par un saut de ligne
     texte_avec_sauts_de_ligne = texte.replace("  ", "\n")
     # URL de l'image prédéfinie
-    predefined_image_url = "https://thumbs.dreamstime.com/b/beau-paysage-mer-nature-ext%C3%A9rieure-panorama-magnifique-plage-coucher-de-soleil-l-oc%C3%A9an-temps-d-%C3%A9t%C3%A9-fond-beaut%C3%A9-naturelle-asie-244989155.jpg"  # Remplace par l'URL de ton image prédéfinie
+    predefined_image_url = "https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/etheryBot_profil.jpg?raw=true"  # Remplace par l'URL de ton image prédéfinie
 
     # Crée un embed
     embed = discord.Embed(description=texte, color=discord.Color.green())
