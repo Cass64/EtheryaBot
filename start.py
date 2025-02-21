@@ -336,7 +336,7 @@ class EmbedBuilderView(discord.ui.View):
         super().__init__(timeout=180)
         self.author = author
         self.embed = discord.Embed(title="Titre", description="Description", color=discord.Color.blue())
-        self.channel = None  # Salon sélectionné
+        self.channel = None
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user == self.author
@@ -354,10 +354,6 @@ class EmbedBuilderView(discord.ui.View):
         self.embed.color = discord.Color.random()
         await interaction.response.edit_message(embed=self.embed, view=self)
 
-    @discord.ui.button(label="Ajouter un champ", style=discord.ButtonStyle.secondary)
-    async def add_field(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(EmbedFieldModal(self))
-
     @discord.ui.button(label="Envoyer", style=discord.ButtonStyle.success)
     async def send_embed(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.channel:
@@ -365,16 +361,6 @@ class EmbedBuilderView(discord.ui.View):
             await interaction.response.send_message("Embed envoyé !", ephemeral=True)
         else:
             await interaction.response.send_message("Sélectionne un salon avant d'envoyer !", ephemeral=True)
-
-    @discord.ui.select(placeholder="Choisir un salon", min_values=1, max_values=1,
-                       options=[discord.SelectOption(label="Salon par défaut")])
-    async def select_channel(self, interaction: discord.Interaction, select: discord.ui.Select):
-        selected_channel = discord.utils.get(interaction.guild.channels, name=select.values[0])
-        if selected_channel and isinstance(selected_channel, discord.TextChannel):
-            self.channel = selected_channel
-            await interaction.response.send_message(f"Salon sélectionné : {self.channel.mention}", ephemeral=True)
-        else:
-            await interaction.response.send_message("Salon invalide.", ephemeral=True)
 
 class EmbedTitleModal(discord.ui.Modal, title="Modifier le Titre"):
     def __init__(self, view: EmbedBuilderView):
@@ -398,33 +384,10 @@ class EmbedDescriptionModal(discord.ui.Modal, title="Modifier la Description"):
         self.view.embed.description = self.description_input.value
         await interaction.response.edit_message(embed=self.view.embed, view=self.view)
 
-class EmbedFieldModal(discord.ui.Modal, title="Ajouter un Champ"):
-    def __init__(self, view: EmbedBuilderView):
-        super().__init__()
-        self.view = view
-        self.name_input = discord.ui.TextInput(label="Nom du champ", required=True)
-        self.value_input = discord.ui.TextInput(label="Valeur du champ", required=True, style=discord.TextStyle.long)
-        self.add_item(self.name_input)
-        self.add_item(self.value_input)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        self.view.embed.add_field(name=self.name_input.value, value=self.value_input.value, inline=False)
-        await interaction.response.edit_message(embed=self.view.embed, view=self.view)
-
-class EmbedBuilder(commands.Cog):
-    def __init__(self, bot: commands.Bot):
-        self.bot = bot
-
-    @app_commands.command(name="embed", description="Créer un embed personnalisé")
-    async def embed_builder(self, interaction: discord.Interaction):
-        view = EmbedBuilderView(interaction.user)
-        channels = [discord.SelectOption(label=channel.name, value=channel.name) for channel in interaction.guild.text_channels]
-        view.select_channel.options = channels  # Mettre à jour les options du menu déroulant
-        await interaction.response.send_message(embed=view.embed, view=view, ephemeral=True)
-
-async def setup(bot: commands.Bot):
-    await bot.add_cog(EmbedBuilder(bot))
-
+@bot.tree.command(name="embed", description="Créer un embed personnalisé")
+async def embed_builder(interaction: discord.Interaction):
+    view = EmbedBuilderView(interaction.user)
+    await interaction.response.send_message(embed=view.embed, view=view, ephemeral=True)
 
 #------------------------------------------------------------------------- Commandes classiques pour les prêts
 
