@@ -332,7 +332,7 @@ async def protect(ctx):
 #------------------------------------------------------------------------- Commandes d'économie : /embed
 
 # Définir l'URL de l'image fixe (en haut à droite)
-THUMBNAIL_URL = "https://exemple.com/image-fixe.png"
+THUMBNAIL_URL = "https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/etheryBot_profil.jpg"
 
 class EmbedBuilderView(discord.ui.View):
     def __init__(self, author: discord.User, channel: discord.TextChannel):
