@@ -441,7 +441,7 @@ async def on_message(message):
 
 # Pour lancer le bot (remplacez "VOTRE_TOKEN)
 #------------------------------------------------------------------------- Commandes classiques pour les prêt 
-GF_REQUIRED_ROLE = "[𝑺ץ] Gestion & Finance Team"
+GF_REQUIRED_ROLE = "″ [𝑺ץ] Gestion & Finance Team"
 
 
 # Dictionnaire pour stocker les prêts en cours (persistant dans MongoDB)
@@ -538,7 +538,7 @@ async def frags(interaction: discord.Interaction, user: discord.Member):
         await interaction.response.send_message("❌ Tu n'as pas le rôle requis pour utiliser cette commande.")
         return
 
-    FRAG_ROLE = "[𝑺ץ] Frags Quotidien"
+    FRAG_ROLE = "″ [𝑺ץ] Frags Quotidien"
     frag_role = discord.utils.get(interaction.guild.roles, name=FRAG_ROLE)
     if frag_role:
         await user.add_roles(frag_role)
