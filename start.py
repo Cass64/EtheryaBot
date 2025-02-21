@@ -254,7 +254,7 @@ async def spatial(ctx):
 
 @bot.command(name="heal")
 async def heal(ctx):
-    """Supprime les rôles de malus et retire le rôle permettant d'utiliser la commande."""
+    """Supprime les rôles de malus et retire le rôle permettant d'utiliser la commande, avec un message en embed."""
     ROLE_REQUIRED = "″ [𝑺ץ] Perm Anti-Dote"  # Rôle requis pour exécuter la commande
     ROLE_TO_REMOVE_1 = "″ [𝑺ץ] Gravité Forte"  # Premier rôle à enlever
     ROLE_TO_REMOVE_2 = "″ [𝑺ץ] Malus Temporelle"  # Deuxième rôle à enlever
@@ -270,28 +270,43 @@ async def heal(ctx):
         return await ctx.send("❌ Vous n'avez pas la permission d'utiliser cette commande.")
 
     roles_removed = []
-    
+
     # Vérifier et retirer les rôles si présents
     if role_to_remove_1 in ctx.author.roles:
         await ctx.author.remove_roles(role_to_remove_1)
-        roles_removed.append(role_to_remove_1.name)
+        roles_removed.append(role_to_remove_1.mention)
 
     if role_to_remove_2 in ctx.author.roles:
         await ctx.author.remove_roles(role_to_remove_2)
-        roles_removed.append(role_to_remove_2.name)
+        roles_removed.append(role_to_remove_2.mention)
 
-    # Message en fonction du nombre de rôles supprimés
+    # Création de l'embed en fonction du nombre de rôles supprimés
+    embed = discord.Embed(color=discord.Color.green())
+
     if len(roles_removed) == 2:
-        await ctx.send(f"✨ {ctx.author.mention}, vous avez été totalement purgé de vos blessures et malédictions ! Plus rien ne vous entrave. 🏥")
+        embed.title = "✨ Guérison Complète"
+        embed.description = f"{ctx.author.mention}, vous avez été totalement purgé de vos blessures et malédictions ! Plus rien ne vous entrave. 🏥"
+        embed.add_field(name="Rôles retirés", value=", ".join(roles_removed), inline=False)
+
     elif len(roles_removed) == 1:
-        await ctx.send(f"🌿 {ctx.author.mention}, vous avez été guéri de **{roles_removed[0]}** ! Encore un petit effort pour être totalement rétabli. 💊")
+        embed.title = "🌿 Guérison Partielle"
+        embed.description = f"{ctx.author.mention}, vous avez été guéri de **{roles_removed[0]}** ! Encore un petit effort pour être totalement rétabli. 💊"
+
     else:
-        await ctx.send(f"😂 {ctx.author.mention}, tu essaies de te soigner alors que tu n'as rien ? T'es un clown !? 🤡")
+        embed.title = "😂 Tentative de guérison échouée"
+        embed.description = f"{ctx.author.mention}, tu essaies de te soigner alors que tu n'as rien ? T'es un clown !? 🤡"
+
+    await ctx.send(embed=embed)
 
     # Retirer le rôle "Perm Anti-Dote" après l'utilisation
     await ctx.author.remove_roles(role_required)
-    await ctx.send(f"🔻 {ctx.author.mention}, votre **antidote** a été retiré après utilisation.")
 
+    embed_removal = discord.Embed(
+        title="🔻 Antidote consommé",
+        description=f"{ctx.author.mention}, votre **{role_required.mention}** a été retiré après utilisation.",
+        color=discord.Color.red()
+    )
+    await ctx.send(embed=embed_removal)
 #------------------------------------------------------------------------- Commandes d'économie : !!protect
 
 @bot.command(name="protect")
