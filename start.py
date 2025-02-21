@@ -590,7 +590,6 @@ async def terminer(ctx, membre: discord.Member):
                           f"Le statut de ton prêt a été mis à jour comme **Payé**.")
     except discord.Forbidden:
         await ctx.send(f"❌ Impossible d'envoyer un MP à {membre.mention}, il a désactivé les messages privés.")
----
 
 #------------------------------------------------------------------------- Commandes /frags
 
