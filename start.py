@@ -586,23 +586,33 @@ async def terminer(ctx, membre: discord.Member):
 
 # --- Commandes slash qui nécessitent aussi le rôle ---
 
+#------------------------------------------------------------------------- Commandes /frags
+
 @bot.tree.command(name="frags")
 async def frags(interaction: discord.Interaction, user: discord.Member):
-    """Ajoute le rôle Frags Quotidien à un utilisateur pour 24 heures et envoie un embed dans le salon staff."""
+    """Ajoute le rôle Frags Quotidien à un utilisateur pour 24 heures et enregistre l'expiration en base de données."""
     if not any(role.name == GF_REQUIRED_ROLE for role in interaction.user.roles):
         await interaction.response.send_message("❌ Tu n'as pas le rôle requis pour utiliser cette commande.", ephemeral=True)
         return
 
     FRAG_ROLE = "″ [𝑺ץ] Frags Quotidien"
     frag_role = discord.utils.get(interaction.guild.roles, name=FRAG_ROLE)
-    
+
     if frag_role:
-        # Attribution du rôle à l'utilisateur ciblé
         await user.add_roles(frag_role)
+        expiration_time = datetime.utcnow() + timedelta(hours=24)
+
+        # Enregistrer l'expiration en base de données
+        collection.update_one(
+            {"user_id": user.id},
+            {"$set": {"expires_at": expiration_time}},
+            upsert=True
+        )
+
         await interaction.response.send_message(f"✅ {user.mention} a reçu le rôle `{FRAG_ROLE}` pour 24 heures.", ephemeral=True)
 
         # Envoi de l'embed dans le salon staff
-        CHANNEL_ID = 1341671012109914173  # ID du salon staff
+        CHANNEL_ID = 1341671012109914173
         salon_staff = interaction.guild.get_channel(CHANNEL_ID)
         if salon_staff:
             embed = discord.Embed(title="Vente Frags Quotidien", color=discord.Color.blue())
@@ -610,12 +620,11 @@ async def frags(interaction: discord.Interaction, user: discord.Member):
             embed.add_field(name="Acheteur", value=interaction.user.mention, inline=True)
             embed.set_footer(text="Frags vendus via la commande /frags")
             await salon_staff.send(embed=embed)
-        else:
-            await interaction.followup.send("❌ Le salon staff n'a pas été trouvé.", ephemeral=True)
 
         # Retirer le rôle après 24 heures
-        await asyncio.sleep(86400)  # 86400 secondes = 24 heures
+        await asyncio.sleep(86400)
         await user.remove_roles(frag_role)
+        collection.delete_one({"user_id": user.id})  # Supprime l'entrée en base
         if salon_staff:
             embed_remove = discord.Embed(title="Retrait Frags Quotidien", color=discord.Color.red())
             embed_remove.add_field(name="Utilisateur", value=user.mention, inline=True)
@@ -623,6 +632,38 @@ async def frags(interaction: discord.Interaction, user: discord.Member):
             await salon_staff.send(embed=embed_remove)
     else:
         await interaction.response.send_message(f"❌ Le rôle `{FRAG_ROLE}` n'existe pas sur ce serveur.", ephemeral=True)
+
+#------------------------------------------------------------------------- Commandes frags-time
+
+@bot.tree.command(name="frags_time")
+async def frags_timeleft(interaction: discord.Interaction, user: discord.Member):
+    """Affiche le temps restant avant que le rôle Frags Quotidien soit retiré."""
+    record = collection.find_one({"user_id": user.id})
+    
+    if not record:
+        await interaction.response.send_message(f"❌ {user.mention} n'a pas de rôle Frags Quotidien actif.", ephemeral=True)
+        return
+
+    expiration = record["expiration"]
+    time_left = expiration - datetime.datetime.utcnow()
+
+    if time_left.total_seconds() <= 0:
+        await interaction.response.send_message(f"❌ {user.mention} n'a plus le rôle Frags Quotidien.", ephemeral=True)
+        return
+
+    hours, remainder = divmod(int(time_left.total_seconds()), 3600)
+    minutes, _ = divmod(remainder, 60)
+
+    embed = discord.Embed(
+        title="⏳ Temps restant pour Frags Quotidien",
+        description=f"{user.mention} perdra son rôle dans **{hours}h {minutes}m**.",
+        color=discord.Color.green()
+    )
+    embed.set_footer(text="Ce rôle est temporaire, il sera retiré après 24 heures.")
+    await interaction.response.send_message(embed=embed)
+
+#------------------------------------------------------------------------- Commandes /pret
+
 @bot.tree.command(name="pret")
 @app_commands.describe(
     membre="Le membre à qui le prêt est accordé",
