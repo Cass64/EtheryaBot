@@ -44,6 +44,16 @@ async def on_ready():
         print(f"Synced {len(synced)} commands")
     except Exception as e:
         print(e)
+
+#------------------------------------------------------------------------- Commandes d'économie : /calcul
+
+@bot.tree.command(name="calcul", description="Calcule un pourcentage d'un nombre")
+@app_commands.describe(nombre="Le nombre à calculer", pourcentage="Le pourcentage (ex: 15 pour 15%)")
+async def calcul(interaction: discord.Interaction, nombre: float, pourcentage: float):
+    resultat = (nombre * pourcentage) / 100
+    await interaction.response.send_message(f"✅ {pourcentage}% de {nombre} est **{resultat}**")
+
+
 #------------------------------------------------------------------------- Commandes d'économie : !!break
 
 # Liste des rôles autorisés pour exécuter les commandes de modération
