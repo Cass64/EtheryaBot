@@ -439,27 +439,40 @@ async def on_message(message):
             await message.channel.send(embed=embed)
     await bot.process_commands(message)
 
-# Pour lancer le bot (remplacez "VOTRE_TOKEN
-#------------------------------------------------------------------------- Commandes classiques pour les prêts
+# Pour lancer le bot (remplacez "VOTRE_TOKEN)
+#------------------------------------------------------------------------- Commandes classiques pour les prêt 
+GF_REQUIRED_ROLE = "[𝑺ץ] Gestion & Finance Team"
+
+
+# Dictionnaire pour stocker les prêts en cours (persistant dans MongoDB)
+prets_en_cours = {}
+
+# --- Commandes classiques avec préfixe qui nécessitent le rôle ---
 
 @bot.command(name="pret10k")
 async def pret10k(ctx, membre: discord.Member):
     """Enregistre un prêt de 10k avec détails dans un salon staff."""
+    if not any(role.name == GF_REQUIRED_ROLE for role in ctx.author.roles):
+        return await ctx.send("❌ Tu n'as pas le rôle requis pour utiliser cette commande.")
     await enregistrer_pret(ctx, membre, montant=10000, montant_rendu=11500, duree="1 Semaine")
 
 @bot.command(name="pret25k")
 async def pret25k(ctx, membre: discord.Member):
     """Enregistre un prêt de 25k avec détails dans un salon staff."""
+    if not any(role.name == GF_REQUIRED_ROLE for role in ctx.author.roles):
+        return await ctx.send("❌ Tu n'as pas le rôle requis pour utiliser cette commande.")
     await enregistrer_pret(ctx, membre, montant=25000, montant_rendu=28750, duree="1 Semaine")
 
 @bot.command(name="pret50k")
 async def pret50k(ctx, membre: discord.Member):
     """Enregistre un prêt de 50k avec détails dans un salon staff."""
+    if not any(role.name == GF_REQUIRED_ROLE for role in ctx.author.roles):
+        return await ctx.send("❌ Tu n'as pas le rôle requis pour utiliser cette commande.")
     await enregistrer_pret(ctx, membre, montant=50000, montant_rendu=57500, duree="1 Semaine")
 
 async def enregistrer_pret(ctx, membre, montant, montant_rendu, duree):
     """Enregistre un prêt avec détails et envoie un message dans le salon staff."""
-    CHANNEL_ID = 1340674704964583455  # Remplace par l'ID du salon staff
+    CHANNEL_ID = 1340674704964583455  # Remplacez par l'ID du salon staff
     salon_staff = bot.get_channel(CHANNEL_ID)
 
     if not salon_staff:
@@ -484,7 +497,7 @@ async def enregistrer_pret(ctx, membre, montant, montant_rendu, duree):
 @bot.command(name="terminer")
 async def terminer(ctx, membre: discord.Member):
     """Marque un prêt comme 'Payé' si l'utilisateur avait un prêt en cours."""
-    CHANNEL_ID = 1340674704964583455  # Remplace par l'ID du salon staff
+    CHANNEL_ID = 1340674704964583455  # Remplacez par l'ID du salon staff
     salon_staff = bot.get_channel(CHANNEL_ID)
 
     if not salon_staff:
@@ -516,22 +529,16 @@ async def terminer(ctx, membre: discord.Member):
     await salon_staff.send(embed=embed)
     await ctx.send(f"✅ Le prêt de {montant:,} crédits de {membre.mention} est marqué comme remboursé.")
 
-#------------------------------------------------------------------------- Commandes d'économie : /frags, /pret, /pretpayer
-
-# Dictionnaire pour stocker les prêts en cours, maintenant persistant dans MongoDB
-prets_en_cours = {}
+# --- Commandes slash qui nécessitent aussi le rôle ---
 
 @bot.tree.command(name="frags")
 async def frags(interaction: discord.Interaction, user: discord.Member):
     """Ajoute le rôle Frags Quotidien à un utilisateur pour 24 heures."""
-
-    REQUIRED_ROLE = "″ [𝑺ץ] Gestion & Finance Team"
-    FRAG_ROLE = "″ [𝑺ץ] Frags Quotidien"
-    # Vérifier si l'exécutant a le rôle requis
-    if not any(role.name == REQUIRED_ROLE for role in interaction.user.roles):
-        await interaction.response.send_message("Tu n'as pas le rôle requis pour utiliser cette commande.")
+    if not any(role.name == GF_REQUIRED_ROLE for role in interaction.user.roles):
+        await interaction.response.send_message("❌ Tu n'as pas le rôle requis pour utiliser cette commande.")
         return
-    
+
+    FRAG_ROLE = "[𝑺ץ] Frags Quotidien"
     frag_role = discord.utils.get(interaction.guild.roles, name=FRAG_ROLE)
     if frag_role:
         await user.add_roles(frag_role)
@@ -544,27 +551,18 @@ async def frags(interaction: discord.Interaction, user: discord.Member):
     else:
         await interaction.response.send_message(f"Le rôle `{FRAG_ROLE}` n'existe pas sur ce serveur.")
 
-# Rôle requis pour exécuter les commandes
-
-
 @bot.tree.command(name="pret")
 async def pret(interaction: discord.Interaction, membre: discord.Member, montant: int, montant_à_rendre: int, duree: str):
     """Enregistre un prêt avec les détails dans un salon staff."""
-    
-    REQUIRED_ROLE = "[𝑺ץ] Gestion & Finance Team"  # Déclaration de la variable à l'intérieur de la fonction
-
-    # Vérifier si l'utilisateur a le rôle requis
-    if not any(role.name == REQUIRED_ROLE for role in interaction.user.roles):
+    if not any(role.name == GF_REQUIRED_ROLE for role in interaction.user.roles):
         await interaction.response.send_message("❌ Tu n'as pas le rôle requis pour utiliser cette commande.")
         return
 
-    # Enregistrer le prêt si l'utilisateur a le bon rôle
     await enregistrer_pret(interaction, membre, montant, montant_à_rendre, duree)
-
 
 async def enregistrer_pret(interaction, membre, montant, montant_à_rendre, duree):
     """Enregistre un prêt avec détails et envoie un message dans le salon staff."""
-    CHANNEL_ID = 1340674704964583455  # Remplace par l'ID du salon staff
+    CHANNEL_ID = 1340674704964583455  # Remplacez par l'ID du salon staff
     salon_staff = interaction.guild.get_channel(CHANNEL_ID)
 
     if not salon_staff:
@@ -587,15 +585,13 @@ async def enregistrer_pret(interaction, membre, montant, montant_à_rendre, dure
     await interaction.response.send_message(f"✅ Prêt de {montant:,} crédits accordé à {membre.mention}. Détails envoyés aux staff.")
 
 @bot.tree.command(name="pretpayer")
-async def terminer(interaction: discord.Interaction, membre: discord.Member):
+async def pretpayer(interaction: discord.Interaction, membre: discord.Member):
     """Marque un prêt comme 'Payé' si l'utilisateur avait un prêt en cours."""
-    REQUIRED_ROLE = "[𝑺ץ] Gestion & Finance Team"
-    # Vérifier si l'utilisateur a le rôle requis
-    if not any(role.name == REQUIRED_ROLE for role in interaction.user.roles):
+    if not any(role.name == GF_REQUIRED_ROLE for role in interaction.user.roles):
         await interaction.response.send_message("❌ Tu n'as pas le rôle requis pour utiliser cette commande.")
         return
 
-    CHANNEL_ID = 1340674730683924593  # Remplace par l'ID du salon staff
+    CHANNEL_ID = 1340674730683924593  # Remplacez par l'ID du salon staff
     salon_staff = interaction.guild.get_channel(CHANNEL_ID)
 
     if not salon_staff:
