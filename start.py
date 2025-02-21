@@ -704,7 +704,7 @@ async def enregistrer_pret(ctx, membre, montant, montant_rendu, duree, methode):
     embed.add_field(name="📅 Date pour rendre", value=duree, inline=True)
     embed.add_field(name="💳 Montant à rendre", value=f"{montant_rendu:,} crédits", inline=True)
     embed.add_field(name="🔄 Statut", value="En Cours", inline=True)
-    embed.set_footer(text=f"Prêt enregistré par {ctx.author.display_name}")
+    embed.set_footer(text=f"Prêt enregistré par {interaction.user.display_name}")
 
     # Sauvegarde du prêt dans MongoDB
     prets_en_cours[membre.id] = {
