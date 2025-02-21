@@ -331,12 +331,16 @@ async def protect(ctx):
 
 #------------------------------------------------------------------------- Commandes d'économie : /embed
 
+# Définir l'URL de l'image fixe (en haut à droite)
+THUMBNAIL_URL = "https://exemple.com/image-fixe.png"
+
 class EmbedBuilderView(discord.ui.View):
     def __init__(self, author: discord.User, channel: discord.TextChannel):
         super().__init__(timeout=180)
         self.author = author
         self.channel = channel  # Le salon où la commande a été exécutée
         self.embed = discord.Embed(title="Titre", description="Description", color=discord.Color.blue())
+        self.embed.set_thumbnail(url=THUMBNAIL_URL)  # Ajouter l'image fixe en haut à droite
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user == self.author
@@ -353,6 +357,10 @@ class EmbedBuilderView(discord.ui.View):
     async def edit_color(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.embed.color = discord.Color.random()
         await interaction.response.edit_message(embed=self.embed, view=self)
+
+    @discord.ui.button(label="Ajouter une image", style=discord.ButtonStyle.secondary)
+    async def add_image(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(EmbedImageModal(self))
 
     @discord.ui.button(label="Envoyer", style=discord.ButtonStyle.success)
     async def send_embed(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -381,10 +389,32 @@ class EmbedDescriptionModal(discord.ui.Modal, title="Modifier la Description"):
         self.view.embed.description = self.description_input.value
         await interaction.response.edit_message(embed=self.view.embed, view=self.view)
 
+class EmbedImageModal(discord.ui.Modal, title="Ajouter une image"):
+    def __init__(self, view: EmbedBuilderView):
+        super().__init__()
+        self.view = view
+        self.image_input = discord.ui.TextInput(label="URL de l'image", required=False)
+        self.add_item(self.image_input)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        if self.image_input.value:
+            self.view.embed.set_image(url=self.image_input.value)  # Image principale sous le texte
+        await interaction.response.edit_message(embed=self.view.embed, view=self.view)
+
 @bot.tree.command(name="embed", description="Créer un embed personnalisé")
 async def embed_builder(interaction: discord.Interaction):
     view = EmbedBuilderView(interaction.user, interaction.channel)
     await interaction.response.send_message(embed=view.embed, view=view, ephemeral=True)
+
+@bot.event
+async def on_message(message):
+    if message.attachments:  # Si un fichier est joint
+        attachment = message.attachments[0]  # Prend la première image
+        if attachment.content_type.startswith("image/"):  # Vérifie si c'est une image
+            embed = discord.Embed(title="Image ajoutée")
+            embed.set_thumbnail(url=THUMBNAIL_URL)  # Image fixe en haut à droite
+            embed.set_image(url=attachment.url)  # Image principale sous le texte
+            await message.channel.send(embed=embed)
 #------------------------------------------------------------------------- Commandes classiques pour les prêts
 
 @bot.command(name="pret10k")
