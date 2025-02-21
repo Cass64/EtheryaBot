@@ -687,44 +687,37 @@ async def pret(interaction: discord.Interaction, membre: discord.Member, montant
         await interaction.response.send_message("❌ Tu n'as pas le rôle requis pour utiliser cette commande.", ephemeral=True)
         return
 
+    # Appel de la fonction pour enregistrer le prêt
     await enregistrer_pret(interaction, membre, montant, montant_à_rendre, duree, methode.capitalize())
 
-async def enregistrer_pret(ctx, membre, montant, montant_rendu, duree, methode):
-    """Enregistre un prêt avec détails et envoie un message dans le salon staff et un MP au membre."""
+async def enregistrer_pret(interaction: discord.Interaction, membre: discord.Member, montant: int, montant_à_rendre: int, duree: str, methode: str):
+    """Enregistre un prêt avec détails et envoie un message dans le salon staff."""
     CHANNEL_ID = 1340674704964583455  # ID du salon staff
-    salon_staff = bot.get_channel(CHANNEL_ID)
+    salon_staff = interaction.guild.get_channel(CHANNEL_ID)
 
     if not salon_staff:
-        return await ctx.send("❌ Le salon staff n'a pas été trouvé.")
+        return await interaction.response.send_message("❌ Le salon staff n'a pas été trouvé.", ephemeral=True)
 
     embed = discord.Embed(title="📜 Nouveau Prêt", color=discord.Color.blue())
     embed.add_field(name="👤 Pseudonyme", value=membre.mention, inline=True)
     embed.add_field(name="💰 Montant demandé", value=f"{montant:,} crédits", inline=True)
     embed.add_field(name="📄 Méthode", value=methode, inline=True)
     embed.add_field(name="📅 Date pour rendre", value=duree, inline=True)
-    embed.add_field(name="💳 Montant à rendre", value=f"{montant_rendu:,} crédits", inline=True)
+    embed.add_field(name="💳 Montant à rendre", value=f"{montant_à_rendre:,} crédits", inline=True)
     embed.add_field(name="🔄 Statut", value="En Cours", inline=True)
-    embed.set_footer(text=f"Prêt enregistré par {interaction.user.display_name}")
+    embed.set_footer(text=f"Prêt enregistré par {interaction.user.display_name}")  # Utilisation correcte de `interaction.user`
 
     # Sauvegarde du prêt dans MongoDB
     prets_en_cours[membre.id] = {
         "montant": montant, 
-        "montant_rendu": montant_rendu, 
+        "montant_rendu": montant_à_rendre, 
         "methode": methode, 
         "statut": "En Cours"
     }
     collection.update_one({"user_id": membre.id}, {"$set": {"pret": prets_en_cours[membre.id]}}, upsert=True)
 
     await salon_staff.send(embed=embed)
-    await ctx.send(f"✅ Prêt de {montant:,} crédits accordé à {membre.mention}. Détails envoyés aux staff.")
-
-    # Envoi d'un MP au membre
-    try:
-        await membre.send(f"✅ Bonjour {membre.mention}, ton prêt de **{montant:,} crédits** a été accordé. "
-                          f"Le montant à rendre est **{montant_rendu:,} crédits**. "
-                          f"Le prêt doit être remboursé dans **{duree}**.")
-    except discord.Forbidden:
-        await ctx.send(f"❌ Impossible d'envoyer un MP à {membre.mention}, il a désactivé les messages privés.")
+    await interaction.response.send_message(f"✅ Prêt de {montant:,} crédits accordé à {membre.mention} avec la méthode `{methode}`. Détails envoyés aux staff.")
 
 
 @bot.tree.command(name="pretpayer")
