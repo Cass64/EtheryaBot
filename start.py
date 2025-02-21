@@ -467,8 +467,13 @@ class EmbedSecondImageModal(discord.ui.Modal, title="Ajouter une 2ème image"):
 
 @bot.tree.command(name="embed", description="Créer un embed personnalisé")
 async def embed_builder(interaction: discord.Interaction):
+    role_id = 1170326040485318686  # ID du rôle requis
+    if not any(role.id == role_id for role in interaction.user.roles):
+        return await interaction.response.send_message("❌ Vous n'avez pas la permission d'utiliser cette commande.", ephemeral=True)
+
     view = EmbedBuilderView(interaction.user, interaction.channel)
     await interaction.response.send_message(embed=view.embed, view=view, ephemeral=True)
+
 
 # Exemple d'un event on_message pour ajouter une image à partir d'une pièce jointe, si besoin.
 @bot.event
