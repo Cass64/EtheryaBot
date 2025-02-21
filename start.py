@@ -332,11 +332,11 @@ async def protect(ctx):
 #------------------------------------------------------------------------- Commandes d'économie : /embed
 
 class EmbedBuilderView(discord.ui.View):
-    def __init__(self, author: discord.User):
+    def __init__(self, author: discord.User, channel: discord.TextChannel):
         super().__init__(timeout=180)
         self.author = author
+        self.channel = channel  # Le salon où la commande a été exécutée
         self.embed = discord.Embed(title="Titre", description="Description", color=discord.Color.blue())
-        self.channel = None
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user == self.author
@@ -356,11 +356,8 @@ class EmbedBuilderView(discord.ui.View):
 
     @discord.ui.button(label="Envoyer", style=discord.ButtonStyle.success)
     async def send_embed(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if self.channel:
-            await self.channel.send(embed=self.embed)
-            await interaction.response.send_message("Embed envoyé !", ephemeral=True)
-        else:
-            await interaction.response.send_message("Sélectionne un salon avant d'envoyer !", ephemeral=True)
+        await self.channel.send(embed=self.embed)
+        await interaction.response.send_message("Embed envoyé !", ephemeral=True)
 
 class EmbedTitleModal(discord.ui.Modal, title="Modifier le Titre"):
     def __init__(self, view: EmbedBuilderView):
@@ -386,9 +383,8 @@ class EmbedDescriptionModal(discord.ui.Modal, title="Modifier la Description"):
 
 @bot.tree.command(name="embed", description="Créer un embed personnalisé")
 async def embed_builder(interaction: discord.Interaction):
-    view = EmbedBuilderView(interaction.user)
+    view = EmbedBuilderView(interaction.user, interaction.channel)
     await interaction.response.send_message(embed=view.embed, view=view, ephemeral=True)
-
 #------------------------------------------------------------------------- Commandes classiques pour les prêts
 
 @bot.command(name="pret10k")
