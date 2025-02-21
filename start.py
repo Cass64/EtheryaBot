@@ -553,6 +553,9 @@ async def frags(interaction: discord.Interaction, user: discord.Member):
 import discord
 from discord import app_commands
 
+import discord
+from discord import app_commands
+
 @bot.tree.command(name="pret")
 @app_commands.describe(
     membre="Le membre à qui le prêt est accordé",
@@ -641,7 +644,6 @@ async def pretpayer(interaction: discord.Interaction, membre: discord.Member):
 
     await salon_staff.send(embed=embed)
     await interaction.response.send_message(f"✅ Le prêt de {montant:,} crédits de {membre.mention} est marqué comme remboursé.")
-
 #------------------------------------------------------------------------- Ignorer les messages des autres bots
 
 @bot.event
