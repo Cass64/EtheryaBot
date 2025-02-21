@@ -552,7 +552,7 @@ async def enregistrer_pret(ctx, membre, montant, montant_rendu, duree):
 @bot.command(name="terminer")
 async def terminer(ctx, membre: discord.Member):
     """Marque un prêt comme 'Payé' si l'utilisateur avait un prêt en cours."""
-    CHANNEL_ID = 1340674704964583455  # Remplacez par l'ID du salon staff
+    CHANNEL_ID = 1340674704964583455  # ID du salon staff
     salon_staff = bot.get_channel(CHANNEL_ID)
 
     if not salon_staff:
@@ -584,7 +584,13 @@ async def terminer(ctx, membre: discord.Member):
     await salon_staff.send(embed=embed)
     await ctx.send(f"✅ Le prêt de {montant:,} crédits de {membre.mention} est marqué comme remboursé.")
 
-# --- Commandes slash qui nécessitent aussi le rôle ---
+    # Envoi d'un MP au membre
+    try:
+        await membre.send(f"✅ Bonjour {membre.mention}, ton prêt de **{montant:,} crédits** a bien été remboursé. "
+                          f"Le statut de ton prêt a été mis à jour comme **Payé**.")
+    except discord.Forbidden:
+        await ctx.send(f"❌ Impossible d'envoyer un MP à {membre.mention}, il a désactivé les messages privés.")
+---
 
 #------------------------------------------------------------------------- Commandes /frags
 
@@ -684,34 +690,43 @@ async def pret(interaction: discord.Interaction, membre: discord.Member, montant
 
     await enregistrer_pret(interaction, membre, montant, montant_à_rendre, duree, methode.capitalize())
 
-async def enregistrer_pret(interaction, membre, montant, montant_à_rendre, duree, methode):
-    """Enregistre un prêt avec détails et envoie un message dans le salon staff."""
+async def enregistrer_pret(ctx, membre, montant, montant_rendu, duree, methode):
+    """Enregistre un prêt avec détails et envoie un message dans le salon staff et un MP au membre."""
     CHANNEL_ID = 1340674704964583455  # ID du salon staff
-    salon_staff = interaction.guild.get_channel(CHANNEL_ID)
+    salon_staff = bot.get_channel(CHANNEL_ID)
 
     if not salon_staff:
-        return await interaction.response.send_message("❌ Le salon staff n'a pas été trouvé.", ephemeral=True)
+        return await ctx.send("❌ Le salon staff n'a pas été trouvé.")
 
     embed = discord.Embed(title="📜 Nouveau Prêt", color=discord.Color.blue())
     embed.add_field(name="👤 Pseudonyme", value=membre.mention, inline=True)
     embed.add_field(name="💰 Montant demandé", value=f"{montant:,} crédits", inline=True)
     embed.add_field(name="📄 Méthode", value=methode, inline=True)
     embed.add_field(name="📅 Date pour rendre", value=duree, inline=True)
-    embed.add_field(name="💳 Montant à rendre", value=f"{montant_à_rendre:,} crédits", inline=True)
+    embed.add_field(name="💳 Montant à rendre", value=f"{montant_rendu:,} crédits", inline=True)
     embed.add_field(name="🔄 Statut", value="En Cours", inline=True)
-    embed.set_footer(text=f"Prêt enregistré par {interaction.user.display_name}")
+    embed.set_footer(text=f"Prêt enregistré par {ctx.author.display_name}")
 
     # Sauvegarde du prêt dans MongoDB
     prets_en_cours[membre.id] = {
         "montant": montant, 
-        "montant_rendu": montant_à_rendre, 
+        "montant_rendu": montant_rendu, 
         "methode": methode, 
         "statut": "En Cours"
     }
     collection.update_one({"user_id": membre.id}, {"$set": {"pret": prets_en_cours[membre.id]}}, upsert=True)
 
     await salon_staff.send(embed=embed)
-    await interaction.response.send_message(f"✅ Prêt de {montant:,} crédits accordé à {membre.mention} avec la méthode `{methode}`. Détails envoyés aux staff.")
+    await ctx.send(f"✅ Prêt de {montant:,} crédits accordé à {membre.mention}. Détails envoyés aux staff.")
+
+    # Envoi d'un MP au membre
+    try:
+        await membre.send(f"✅ Bonjour {membre.mention}, ton prêt de **{montant:,} crédits** a été accordé. "
+                          f"Le montant à rendre est **{montant_rendu:,} crédits**. "
+                          f"Le prêt doit être remboursé dans **{duree}**.")
+    except discord.Forbidden:
+        await ctx.send(f"❌ Impossible d'envoyer un MP à {membre.mention}, il a désactivé les messages privés.")
+
 
 @bot.tree.command(name="pretpayer")
 async def pretpayer(interaction: discord.Interaction, membre: discord.Member):
@@ -752,6 +767,14 @@ async def pretpayer(interaction: discord.Interaction, membre: discord.Member):
 
     await salon_staff.send(embed=embed)
     await interaction.response.send_message(f"✅ Le prêt de {montant:,} crédits de {membre.mention} est marqué comme remboursé.")
+
+    # Envoi d'un MP au membre
+    try:
+        await membre.send(f"✅ Bonjour {membre.mention}, ton prêt de **{montant:,} crédits** a bien été remboursé. "
+                          f"Le statut de ton prêt a été mis à jour comme **Payé**.")
+    except discord.Forbidden:
+        await interaction.response.send_message(f"❌ Impossible d'envoyer un MP à {membre.mention}, il a désactivé les messages privés.", ephemeral=True)
+
 #------------------------------------------------------------------------- Ignorer les messages des autres bots
 
 @bot.event
