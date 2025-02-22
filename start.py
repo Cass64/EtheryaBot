@@ -576,26 +576,12 @@ async def frags_timeleft(interaction: discord.Interaction, user: discord.Member)
 
 #------------------------------------------------------------------------- Commandes /pret
 
-import discord
-from discord.ext import commands
-from discord import app_commands
-import asyncio
-from datetime import datetime
-import pymongo
-
-# Initialisation du bot
-bot = commands.Bot(command_prefix="!")
 
 # Rôle requis pour certaines commandes
 GF_REQUIRED_ROLE = "″ [𝑺ץ] Gestion & Finance Team"
 
 # Dictionnaire pour stocker les prêts en cours (persistant dans MongoDB)
 prets_en_cours = {}
-
-# Connexion à MongoDB (assurer que tu as correctement configuré MongoDB)
-client = pymongo.MongoClient("mongodb://localhost:27017/")
-db = client["mon_bdd"]
-collection = db["utilisateurs"]
 
 # Commandes classiques avec préfixe qui nécessitent le rôle
 @bot.command(name="pret10k")
