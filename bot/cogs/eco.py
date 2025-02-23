@@ -12,7 +12,7 @@ import datetime
 import math
 
 load_dotenv()
-
+TOKEN = os.getenv('TOKEN_BOT_DISCORD')
 class Eco(commands.Cog):
     def __init__(self, bot):
         self.bot = bot

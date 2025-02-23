@@ -33,10 +33,10 @@ async def load_cogs():
     for cog in os.listdir("bot/cogs"):  # Assurez-vous que le chemin est correct !
         if cog.endswith(".py"):
             try:
-                await bot.load_extension(f"cogs.{cog[:-3]}")
-                print(f"✅ Cog {cog[:-3]} chargé.")
+                await bot.load_extension(f"cogs.{cogs[:-3]}")
+                print(f"✅ Cogs {cogs[:-3]} chargé.")
             except Exception as e:
-                print(f"❌ Erreur lors du chargement de {cog}: {e}")
+                print(f"❌ Erreur lors du chargement de {cogs}: {e}")
 
 @bot.event
 async def on_ready():
