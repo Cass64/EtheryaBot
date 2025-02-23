@@ -1,16 +1,10 @@
 import os  
 from dotenv import load_dotenv
-from discord import app_commands
 import discord
 from discord.ext import commands
 from keep_alive import keep_alive
-import random
-import json
 import asyncio
-import pymongo
 from pymongo import MongoClient
-import datetime
-import math
 
 # Chargement des variables d'environnement
 load_dotenv()
@@ -34,35 +28,40 @@ intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!!", intents=intents)
 bot.db = db  # Ajouter la base de données à l'objet bot
 
+#  Chargement automatique des cogs 
 async def load_cogs():
-    cogs_dir = os.path.join(os.path.dirname(__file__), 'cogs')
-    for filename in os.listdir(cogs_dir):
-        if filename.endswith('.py'):
+    for cog in os.listdir("bot/cogs"):  # Assurez-vous que le chemin est correct !
+        if cog.endswith(".py"):
             try:
-                await bot.load_extension(f'cogs.{filename[:-3]}')  # Ajout de await
-                print(f'✅ Cog {filename[:-3]} chargé.')
+                await bot.load_extension(f"cogs.{cog[:-3]}")
+                print(f"✅ Cog {cog[:-3]} chargé.")
             except Exception as e:
-                print(f'❌ Erreur lors du chargement de {filename}: {e}')
+                print(f"❌ Erreur lors du chargement de {cog}: {e}")
 
 @bot.event
 async def on_ready():
     print(f"Bot connecté en tant que {bot.user}")
 
-    # Charger les cogs
+    #  Charger les cogs
     await load_cogs()
 
-    # Synchroniser les commandes slash
+    #  Synchroniser les commandes slash
     try:
         await bot.tree.sync()
         print("✅ Commandes slash synchronisées.")
     except Exception as e:
         print(f"❌ Erreur de synchronisation des commandes slash : {e}")
 
-    # 🔥 Debug: Vérifie si les commandes existent
-    print("📌 Liste des commandes chargées:")
+    #  Debug: Vérifie si les commandes existent
+    print(" Liste des commandes chargées:")
     for command in bot.commands:
         print(f"🔹 {command.name}")
 
-# Démarrage du bot
+#  Lancer le bot avec asyncio.run()
+async def main():
+    async with bot:
+        await load_cogs()
+        await bot.start(TOKEN)
+
 keep_alive()
-bot.run(TOKEN)
+asyncio.run(main())  
