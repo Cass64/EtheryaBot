@@ -52,11 +52,7 @@ async def on_ready():
     await load_cogs()
     
     # Synchroniser les commandes slash
-    await bot.tree.sync()
-    print("✅ Commandes slash synchronisées.")
-
-    # Synchronisation des commandes slash
-     try:
+    try:
         await bot.tree.sync()
         print("✅ Commandes slash synchronisées.")
     except Exception as e:
