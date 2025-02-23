@@ -34,19 +34,33 @@ intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!!", intents=intents)
 bot.db = db  # Ajouter la base de données à l'objet bot
 
-# Événement lorsque le bot est prêt
+async def load_cogs():
+    cogs_dir = os.path.join(os.path.dirname(__file__), 'cogs')
+    for filename in os.listdir(cogs_dir):
+        if filename.endswith('.py'):
+            try:
+                await bot.load_extension(f'cogs.{filename[:-3]}')
+                print(f'✅ Cog {filename[:-3]} chargé.')
+            except Exception as e:
+                print(f'❌ Erreur lors du chargement de {filename}: {e}')
+
 @bot.event
 async def on_ready():
     print(f"Bot connecté en tant que {bot.user}")
-    # Chargement des cogs
-    cogs_dir = os.path.join(os.path.dirname(__file__), 'cogs')
-    for filename in os.listdir(cogs_dir):
-        if filename in ["eco.py"]:  # Mets ici les fichiers à charger
-            bot.load_extension(f'cogs.{filename[:-3]}')
-            print(f'Cog {filename[:-3]} chargé.')
-    # Synchronisation des commandes slash
+    
+    # Charger les cogs
+    await load_cogs()
+    
+    # Synchroniser les commandes slash
     await bot.tree.sync()
-    print("Commandes slash synchronisées.")
+    print("✅ Commandes slash synchronisées.")
+
+    # Synchronisation des commandes slash
+     try:
+        await bot.tree.sync()
+        print("✅ Commandes slash synchronisées.")
+    except Exception as e:
+        print(f"❌ Erreur de synchronisation des commandes slash : {e}")
 
 # Démarrage du bot
 keep_alive()
