@@ -1,4 +1,3 @@
-# eco.py
 import os  
 from dotenv import load_dotenv
 from discord import app_commands
@@ -19,11 +18,14 @@ class Eco(commands.Cog):
         self.bot = bot
         self.db = bot.db  # Utiliser la base de données passée par main.py
 
-    # Commandes d'économie et interactions avec la base de données ici...
+    # Commande de test pour voir si le cog fonctionne
+    @commands.command()
+    async def testeco(self, ctx):
+        await ctx.send("🚀 La commande testeco fonctionne !")
 
-# Pour lancer le bot (remplacez "VOTRE_TOKEN)
-def setup(bot):
-    bot.add_cog(Eco(bot))
+async def setup(bot):  # Modification pour async/await
+    await bot.add_cog(Eco(bot))
+    print("✅ Cog eco chargé avec succès")
 #------------------------------------------------------------------------- Commandes d'économie : /calcul
 
 @bot.tree.command(name="calcul", description="Calcule un pourcentage d'un nombre")
