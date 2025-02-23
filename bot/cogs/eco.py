@@ -21,10 +21,6 @@ class Eco(commands.Cog):
     @commands.command()
     async def testeco(self, ctx):
         await ctx.send("🚀 La commande testeco fonctionne !")
-
-async def setup(bot):  # ✅ Fonction setup asynchrone
-    await bot.add_cog(Eco(bot))
-    print("✅ Cog eco chargé avec succès")
 #------------------------------------------------------------------------- Commandes d'économie : /calcul
 
 @bot.tree.command(name="calcul", description="Calcule un pourcentage d'un nombre")
@@ -809,5 +805,6 @@ async def on_message(message):
     # Assurez-vous que le bot continue de traiter les commandes
     await bot.process_commands(message)
 #------------------------------------------------------------------------- Lancement du bot
-def setup(bot):
-    bot.add_cog(Eco(bot))
+async def setup(bot):  # ✅ Fonction setup asynchrone
+    await bot.add_cog(Eco(bot))
+    print("✅ Cog eco chargé avec succès")
