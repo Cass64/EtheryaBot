@@ -41,7 +41,7 @@ async def on_ready():
     # Chargement des cogs
     cogs_dir = os.path.join(os.path.dirname(__file__), 'cogs')
     for filename in os.listdir(cogs_dir):
-        if filename.endswith('.py'):
+        if filename in ["eco.py"]:  # Mets ici les fichiers à charger
             bot.load_extension(f'cogs.{filename[:-3]}')
             print(f'Cog {filename[:-3]} chargé.')
     # Synchronisation des commandes slash
