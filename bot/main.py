@@ -30,13 +30,14 @@ bot.db = db  # Ajouter la base de données à l'objet bot
 
 #  Chargement automatique des cogs 
 async def load_cogs():
-    for cog in os.listdir("bot/cogs"):  # Assurez-vous que le chemin est correct !
-        if cog.endswith(".py"):
+    cogs_dir = os.path.join(os.path.dirname(__file__), 'cogs')
+    for filename in os.listdir(cogs_dir):
+        if filename.endswith('.py'):
             try:
-                await bot.load_extension(f"cogs.{cogs[:-3]}")
-                print(f"✅ Cogs {cogs[:-3]} chargé.")
+                await bot.load_extension(f'cogs.{filename[:-3]}')  # Utilisation de filename
+                print(f'✅ Cog {filename[:-3]} chargé.')
             except Exception as e:
-                print(f"❌ Erreur lors du chargement de {filename}: {e}")
+                print(f'❌ Erreur lors du chargement de {filename}: {e}')
 
 @bot.event
 async def on_ready():
