@@ -15,10 +15,10 @@ import math
 # Chargement des variables d'environnement
 load_dotenv()
 TOKEN = os.getenv('TOKEN_BOT_DISCORD')
+MONGO_URI = os.getenv('MONGO_URI')
 
 # Connexion MongoDB
-mongo_uri = os.getenv("MONGO_URI")
-client = MongoClient(mongo_uri)
+client = MongoClient(MONGO_URI)
 db = client['Cass-Eco2']
 
 # Vérification de la connexion MongoDB
