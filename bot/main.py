@@ -39,7 +39,7 @@ async def load_cogs():
     for filename in os.listdir(cogs_dir):
         if filename.endswith('.py'):
             try:
-                await bot.load_extension(f'cogs.{filename[:-3]}')
+                await bot.load_extension(f'cogs.{filename[:-3]}')  # Ajout de await
                 print(f'✅ Cog {filename[:-3]} chargé.')
             except Exception as e:
                 print(f'❌ Erreur lors du chargement de {filename}: {e}')
@@ -47,16 +47,21 @@ async def load_cogs():
 @bot.event
 async def on_ready():
     print(f"Bot connecté en tant que {bot.user}")
-    
+
     # Charger les cogs
     await load_cogs()
-    
+
     # Synchroniser les commandes slash
     try:
         await bot.tree.sync()
         print("✅ Commandes slash synchronisées.")
     except Exception as e:
         print(f"❌ Erreur de synchronisation des commandes slash : {e}")
+
+    # 🔥 Debug: Vérifie si les commandes existent
+    print("📌 Liste des commandes chargées:")
+    for command in bot.commands:
+        print(f"🔹 {command.name}")
 
 # Démarrage du bot
 keep_alive()
