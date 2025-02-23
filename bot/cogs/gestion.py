@@ -16,8 +16,6 @@ load_dotenv()
 
 cooldowns = {}
 
-token = os.getenv('TOKEN_BOT_DISCORD')
-
 class gestion(commands.Cog):
     def __init__(self, bot, db):
         self.bot = bot

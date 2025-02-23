@@ -22,47 +22,16 @@ try:
 except Exception as e:
     print(f"❌ Échec de connexion à MongoDB : {e}")
     exit()
-
+    
+class EtheryaBot(commands.Bot):
+    async def setup_hooks(self):
+        for extension in ['eco','moderation','gestion']:
+            await self.load_extension(f'cogs.{extension}')
+            
 # Intents et configuration du bot
 intents = discord.Intents.all()
-bot = commands.Bot(command_prefix="!!", intents=intents)
+bot = EtheryaBot(command_prefix="!!", intents=intents)
 bot.db = db  # Ajouter la base de données à l'objet bot
 
-#  Chargement automatique des cogs 
-async def load_cogs():
-    cogs_dir = os.path.join(os.path.dirname(__file__), 'cogs')
-    for filename in os.listdir(cogs_dir):
-        if filename.endswith('.py'):
-            try:
-                await bot.load_extension(f'cogs.{filename[:-3]}')  # Utilisation de filename
-                print(f'✅ Cog {filename[:-3]} chargé.')
-            except Exception as e:
-                print(f'❌ Erreur lors du chargement de {filename}: {e}')
-
-@bot.event
-async def on_ready():
-    print(f"Bot connecté en tant que {bot.user}")
-
-    #  Charger les cogs
-    await load_cogs()
-
-    #  Synchroniser les commandes slash
-    try:
-        await bot.tree.sync()
-        print("✅ Commandes slash synchronisées.")
-    except Exception as e:
-        print(f"❌ Erreur de synchronisation des commandes slash : {e}")
-
-    #  Debug: Vérifie si les commandes existent
-    print(" Liste des commandes chargées:")
-    for command in bot.commands:
-        print(f"🔹 {command.name}")
-
-#  Lancer le bot avec asyncio.run()
-async def main():
-    async with bot:
-        await load_cogs()
-        await bot.start(TOKEN)
-
 keep_alive()
-asyncio.run(main())
+bot.run(TOKEN)
