@@ -1,15 +1,8 @@
-import os  
-from dotenv import load_dotenv
-from discord import app_commands
 import discord
 from discord.ext import commands
-import random
-import json
-import asyncio
-import pymongo
-from pymongo import MongoClient
+from discord import app_commands
 import datetime
-import math
+import asyncio
 
 class Eco(commands.Cog):
     def __init__(self, bot):
@@ -19,11 +12,10 @@ class Eco(commands.Cog):
     @commands.command()
     async def testeco(self, ctx):
         await ctx.send("🚀 La commande testeco fonctionne !")
-#------------------------------------------------------------------------- Commandes d'économie : /calcul
 
-    @commands.tree.command(name="calcul", description="Calcule un pourcentage d'un nombre")
+    @app_commands.command(name="calcul", description="Calcule un pourcentage d'un nombre")
     @app_commands.describe(nombre="Le nombre de base", pourcentage="Le pourcentage à appliquer (ex: 15 pour 15%)")
-    async def calcul(interaction: discord.Interaction, nombre: float, pourcentage: float):
+    async def calcul(self, interaction: discord.Interaction, nombre: float, pourcentage: float):
         resultat = (nombre * pourcentage) / 100
 
         embed = discord.Embed(
@@ -34,19 +26,14 @@ class Eco(commands.Cog):
 
         await interaction.response.send_message(embed=embed)
 
-    #------------------------------------------------------------------------- Commandes d'économie : !!break
-
-    # Liste des rôles autorisés pour exécuter les commandes de modération
-    AUTHORIZED_ROLES = ["″ [𝑺ץ] Perm Anti Protect"]
-
     @commands.command(name="break")
     async def breakk(self, ctx, membre: discord.Member):
         """Ajoute un rôle fixe à un utilisateur et retire un autre rôle fixe à l'exécutant.
         Seuls ceux ayant '[𝑺ץ] Perm Anti Protect' peuvent utiliser cette commande.
         """
-        ROLE_REQUIRED = "″ [𝑺ץ] Perm Anti Protect"  # Rôle requis pour exécuter la commande
-        ROLE_TO_REMOVE_BREAK = "″ [𝑺ץ] Protect !!rob"  # Rôle à ajouter au membre ciblé
-        ROLE_TO_REMOVE = "″ [𝑺ץ] Perm Anti Protect"  # Rôle à retirer à l'exécutant
+        ROLE_REQUIRED = "″ [𝑺ץ] Perm Anti Protect"
+        ROLE_TO_REMOVE_BREAK = "″ [𝑺ץ] Protect !!rob"
+        ROLE_TO_REMOVE = "″ [𝑺ץ] Perm Anti Protect"
 
         role_required = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED)
         role_to_remove_break = discord.utils.get(ctx.guild.roles, name=ROLE_TO_REMOVE_BREAK)
@@ -58,23 +45,17 @@ class Eco(commands.Cog):
         if role_required not in ctx.author.roles:
             return await ctx.send("❌ Vous n'avez pas la permission d'utiliser cette commande.")
 
-        # Vérifie si le membre a le rôle avant de le retirer
         if role_to_remove_break not in membre.roles:
             await ctx.send(f"{membre.mention} n'a pas le rôle {role_to_remove_break.mention}.")
         else:
             await membre.remove_roles(role_to_remove_break)
             await ctx.send(f"Le rôle {role_to_remove_break.mention} a été enlevé.")
 
-        # Retirer le rôle à l'exécutant
         if role_to_remove in ctx.author.roles:
             await ctx.author.remove_roles(role_to_remove)
             await ctx.send(f"Le rôle {role_to_remove.mention} vous a été retiré.")
         else:
             await ctx.send(f"{ctx.author.mention}, vous n'aviez pas le rôle {role_to_remove.mention}.")
-
-    #------------------------------------------------------------------------- Commandes d'économie : !!malus
-
-    AUTHORIZED_ROLES = ["″ [𝑺ץ] Perm Ajout Malus"]
 
     @commands.command(name="malus")
     async def malus(self, ctx, membre: discord.Member):
@@ -82,9 +63,9 @@ class Eco(commands.Cog):
         et supprime le rôle ajouté après une durée spécifiée.
         Seuls ceux ayant '[𝑺ץ] Perm Ajout Malus' peuvent utiliser cette commande.
         """
-        ROLE_REQUIRED = "″ [𝑺ץ] Perm Ajout Malus"  # Rôle requis pour exécuter la commande
-        ROLE_TO_ADD_MALUS = "″ [𝑺ץ] Malus Temporelle"  # Le rôle temporaire à ajouter
-        ROLE_TO_REMOVE_MALUS = "″ [𝑺ץ] Perm Ajout Malus"  # Rôle à retirer à l'exécutant
+        ROLE_REQUIRED = "″ [𝑺ץ] Perm Ajout Malus"
+        ROLE_TO_ADD_MALUS = "″ [𝑺ץ] Malus Temporelle"
+        ROLE_TO_REMOVE_MALUS = "″ [𝑺ץ] Perm Ajout Malus"
 
         role_required = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED)
         role_to_add_malus = discord.utils.get(ctx.guild.roles, name=ROLE_TO_ADD_MALUS)
@@ -96,40 +77,32 @@ class Eco(commands.Cog):
         if role_required not in ctx.author.roles:
             return await ctx.send("❌ Vous n'avez pas la permission d'utiliser cette commande.")
 
-        # Ajouter le rôle temporaire à l'utilisateur
         await membre.add_roles(role_to_add_malus)
         await ctx.send(f"Le rôle {role_to_add_malus.mention} a été ajouté.") 
 
-        # Retirer le rôle à l'exécutant
         if role_to_remove_malus in ctx.author.roles:
             await ctx.author.remove_roles(role_to_remove_malus)
             await ctx.send(f"Le rôle {role_to_remove_malus.mention} a été retiré.")
         else:
             await ctx.send(f"{ctx.author.mention}, vous n'aviez pas le rôle {role_to_remove_malus.mention}.")
 
-        # Temps pendant lequel le rôle restera (exemple : 1 heure)
-        await asyncio.sleep(86400)  # 86400 secondes = 24 heures
-
-        # Retirer le rôle après le délai
+        await asyncio.sleep(86400)
         await membre.remove_roles(role_to_add_malus)
         await ctx.send(f"Le rôle {role_to_add_malus.mention} a été retiré de {membre.mention} après 24 heures.")
-
-    #------------------------------------------------------------------------- Commandes d'économie : !!annihilation
 
     @commands.command(name="annihilation")
     async def annihilation(self, ctx, membre: discord.Member):
         """Ajoute le rôle 'Cible D'anéantissement' à un utilisateur si l'exécutant a le rôle 'Perm Crystal D'anéantissement'.
         Un embed est envoyé dans un salon spécifique (avec un ping) et l'exécutant perd son rôle 'Perm Crystal D'anéantissement'.
         """
-        ROLE_REQUIRED = "″ [𝑺ץ] Perm Crystal D'anéantissement"  # Rôle requis pour exécuter la commande
-        ROLE_TO_ADD = "″ [𝑺ץ] Cible D'anéantissement"  # Rôle à ajouter à la cible
-        CHANNEL_ID = 1341844144032714833  # Salon spécial pour l'annonce
-        ROLE_PING_ID = 792755123587645461  # ID à ping
+        ROLE_REQUIRED = "″ [𝑺ץ] Perm Crystal D'anéantissement"
+        ROLE_TO_ADD = "″ [𝑺ץ] Cible D'anéantissement"
+        CHANNEL_ID = 1341844144032714833
+        ROLE_PING_ID = 792755123587645461
 
-        # Récupération des rôles et du salon
         role_required = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED)
         role_to_add = discord.utils.get(ctx.guild.roles, name=ROLE_TO_ADD)
-        channel = bot.get_channel(CHANNEL_ID)
+        channel = self.bot.get_channel(CHANNEL_ID)
 
         if not role_required or not role_to_add or not channel:
             return await ctx.send("❌ L'un des rôles ou le salon spécifié n'existe pas.")
@@ -137,11 +110,9 @@ class Eco(commands.Cog):
         if role_required not in ctx.author.roles:
             return await ctx.send("❌ Vous n'avez pas la permission d'utiliser cette commande.")
 
-        # Ajouter le rôle à la cible et retirer le rôle de l'exécutant
         await membre.add_roles(role_to_add)
         await ctx.author.remove_roles(role_required)
 
-        # Création de l'embed avec les informations demandées
         embed = discord.Embed(
             title="Annihilation",
             color=discord.Color.dark_red(),
@@ -153,14 +124,10 @@ class Eco(commands.Cog):
         embed.set_footer(text="Annihilation exécutée")
         embed.timestamp = ctx.message.created_at
 
-        # Envoi dans le salon spécial avec le ping au-dessus de l'embed
         ping = f"<@{ROLE_PING_ID}>"
         await channel.send(content=ping, embed=embed)
 
-        # Confirmation dans le canal d'exécution de la commande
         await ctx.send(f"✅ {membre.mention} a été ciblé par un anéantissement. Le rôle {role_to_add.mention} a été attribué.")
-
-    #------------------------------------------------------------------------- Commandes d'économie : !!gravity
 
     @commands.command(name="gravity")
     async def gravity(self, ctx, membre: discord.Member):
@@ -168,9 +135,9 @@ class Eco(commands.Cog):
         et envoie un message confirmant l'opération.
         Seuls ceux ayant le rôle '″ [𝑺ץ] Perm Gravité Forte' peuvent utiliser cette commande.
         """
-        ROLE_REQUIRED = "″ [𝑺ץ] Perm Gravité Forte"  # Rôle requis pour exécuter la commande
-        ROLE_TO_ADD = "″ [𝑺ץ] Gravité Forte"  # Rôle à ajouter
-        ROLE_TO_REMOVE = "″ [𝑺ץ] Perm Gravité Forte"  # Rôle à retirer à l'exécutant
+        ROLE_REQUIRED = "″ [𝑺ץ] Perm Gravité Forte"
+        ROLE_TO_ADD = "″ [𝑺ץ] Gravité Forte"
+        ROLE_TO_REMOVE = "″ [𝑺ץ] Perm Gravité Forte"
 
         role_required = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED)
         role_to_add = discord.utils.get(ctx.guild.roles, name=ROLE_TO_ADD)
@@ -182,28 +149,24 @@ class Eco(commands.Cog):
         if role_required not in ctx.author.roles:
             return await ctx.send("❌ Vous n'avez pas la permission d'utiliser cette commande.")
 
-        # Ajouter le rôle à la cible
         await membre.add_roles(role_to_add)
         await ctx.send(f"Le rôle {role_to_add.mention} a été ajouté à {membre.mention}. 🌌")
 
-        # Retirer le rôle à l'exécutant
         if role_to_remove in ctx.author.roles:
             await ctx.author.remove_roles(role_to_remove)
             await ctx.send(f"Le rôle {role_to_remove.mention} vous a été retiré. ❌")
         else:
             await ctx.send(f"{ctx.author.mention}, vous n'aviez pas le rôle {role_to_remove.mention}. ❌")
 
-    #------------------------------------------------------------------------- Commandes d'économie : !!spatial
-
     @commands.command(name="spatial")
     async def spatial(self, ctx):
         """Ajoute temporairement le rôle '[𝑺ץ] Spatial' si l'utilisateur a '[𝑺ץ] Perm Spatial',
         et applique un cooldown de 24 heures. L'heure de la dernière utilisation est enregistrée dans la base de données MongoDB.
         """
-        ROLE_REQUIRED = "″ [𝑺ץ] Perm Spatial"  # Rôle requis pour exécuter la commande
-        ROLE_TO_ADD = "″ [𝑺ץ] Spatial"  # Rôle à ajouter temporairement
-        COOLDOWN_DURATION = 86400  # 24 heures en secondes
-        TEMP_ROLE_DURATION = 3600  # 1 heure en secondes
+        ROLE_REQUIRED = "″ [𝑺ץ] Perm Spatial"
+        ROLE_TO_ADD = "″ [𝑺ץ] Spatial"
+        COOLDOWN_DURATION = 86400
+        TEMP_ROLE_DURATION = 3600
 
         role_required = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED)
         role_to_add = discord.utils.get(ctx.guild.roles, name=ROLE_TO_ADD)
@@ -214,7 +177,6 @@ class Eco(commands.Cog):
         if role_required not in ctx.author.roles:
             return await ctx.send("❌ Vous n'avez pas la permission d'utiliser cette commande.")
 
-        # Connexion à la base de données
         collection = self.db['user_data']
         user_data = collection.find_one({"user_id": ctx.author.id})
 
@@ -225,31 +187,25 @@ class Eco(commands.Cog):
 
         now = datetime.datetime.utcnow().timestamp()
 
-        # Vérifier si l'utilisateur est en cooldown
         if now - last_used < COOLDOWN_DURATION:
             remaining_time = int((COOLDOWN_DURATION - (now - last_used)) / 3600)
             return await ctx.send(f"❌ Vous devez attendre encore {remaining_time} heure(s) avant de réutiliser cette commande.")
 
-        # Ajouter le rôle temporaire
         await ctx.author.add_roles(role_to_add)
         await ctx.send(f"Le rôle {role_to_add.mention} vous a été attribué pour 1 heure. 🚀")
 
-        # Mettre à jour l'heure de la dernière utilisation dans la base de données
         collection.update_one({"user_id": ctx.author.id}, {"$set": {"last_used": now}}, upsert=True)
 
-        # Supprimer le rôle après 1 heure
         await asyncio.sleep(TEMP_ROLE_DURATION)
         await ctx.author.remove_roles(role_to_add)
         await ctx.send(f"Le rôle {role_to_add.mention} vous a été retiré après 1 heure. ⏳")
 
-    #------------------------------------------------------------------------- Commandes d'économie : !!heal
-
     @commands.command(name="heal")
     async def heal(self, ctx):
         """Supprime les rôles de malus et retire le rôle permettant d'utiliser la commande, avec un message en embed."""
-        ROLE_REQUIRED = "″ [𝑺ץ] Perm Anti-Dote"  # Rôle requis pour exécuter la commande
-        ROLE_TO_REMOVE_1 = "″ [𝑺ץ] Gravité Forte"  # Premier rôle à enlever
-        ROLE_TO_REMOVE_2 = "″ [𝑺ץ] Malus Temporelle"  # Deuxième rôle à enlever
+        ROLE_REQUIRED = "″ [𝑺ץ] Perm Anti-Dote"
+        ROLE_TO_REMOVE_1 = "″ [𝑺ץ] Gravité Forte"
+        ROLE_TO_REMOVE_2 = "″ [𝑺ץ] Malus Temporelle"
 
         role_required = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED)
         role_to_remove_1 = discord.utils.get(ctx.guild.roles, name=ROLE_TO_REMOVE_1)
@@ -263,7 +219,6 @@ class Eco(commands.Cog):
 
         roles_removed = []
 
-        # Vérifier et retirer les rôles si présents
         if role_to_remove_1 in ctx.author.roles:
             await ctx.author.remove_roles(role_to_remove_1)
             roles_removed.append(role_to_remove_1.mention)
@@ -272,7 +227,6 @@ class Eco(commands.Cog):
             await ctx.author.remove_roles(role_to_remove_2)
             roles_removed.append(role_to_remove_2.mention)
 
-        # Création de l'embed en fonction du nombre de rôles supprimés
         embed = discord.Embed(color=discord.Color.green())
 
         if len(roles_removed) == 2:
@@ -290,7 +244,6 @@ class Eco(commands.Cog):
 
         await ctx.send(embed=embed)
 
-        # Retirer le rôle "Perm Anti-Dote" après l'utilisation
         await ctx.author.remove_roles(role_required)
 
         embed_removal = discord.Embed(
@@ -300,17 +253,15 @@ class Eco(commands.Cog):
         )
         await ctx.send(embed=embed_removal)
 
-    #------------------------------------------------------------------------- Commandes d'économie : !!protect
-
     @commands.command(name="protect")
     async def protect(self, ctx):
         """Ajoute temporairement le rôle '[𝑺ץ] Protect !!rob' si l'utilisateur a '[𝑺ץ] Perm Protect !!rob',
         et applique un cooldown de 48 heures.
         """
-        ROLE_REQUIRED = "″ [𝑺ץ] Perm Protect !!rob"  # Rôle requis pour exécuter la commande
-        ROLE_TO_ADD = "″ [𝑺ץ] Protect !!rob"  # Rôle à ajouter temporairement
-        COOLDOWN_DURATION = 172800  # 48 heures en secondes
-        TEMP_ROLE_DURATION = 172800  # 48 heures en secondes
+        ROLE_REQUIRED = "″ [𝑺ץ] Perm Protect !!rob"
+        ROLE_TO_ADD = "″ [𝑺ץ] Protect !!rob"
+        COOLDOWN_DURATION = 172800
+        TEMP_ROLE_DURATION = 172800
 
         role_required = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED)
         role_to_add = discord.utils.get(ctx.guild.roles, name=ROLE_TO_ADD)
@@ -323,7 +274,6 @@ class Eco(commands.Cog):
 
         now = datetime.datetime.utcnow().timestamp()
 
-        # Vérifier si l'utilisateur est en cooldown dans la base de données
         collection = self.db['user_data']
         user_data = collection.find_one({"user_id": ctx.author.id})
 
@@ -334,21 +284,22 @@ class Eco(commands.Cog):
                 remaining_time = int((COOLDOWN_DURATION - time_since_last_use) / 3600)
                 return await ctx.send(f"❌ Vous devez attendre encore {remaining_time} heure(s) avant de réutiliser cette commande.")
         else:
-            # Si l'utilisateur n'a pas de données dans la base, l'ajouter
             collection.insert_one({"user_id": ctx.author.id, "last_used": now})
 
-        # Ajouter le rôle temporaire
         await ctx.author.add_roles(role_to_add)
         await ctx.send(f"Le rôle {role_to_add.mention} vous a été attribué pour 2 jours. 🚀")
 
-        # Mettre à jour l'heure d'utilisation dans la base de données
         collection.update_one({"user_id": ctx.author.id}, {"$set": {"last_used": now}}, upsert=True)
 
-        # Supprimer le rôle après 48 heures
         await asyncio.sleep(TEMP_ROLE_DURATION)
         await ctx.author.remove_roles(role_to_add)
         await ctx.send(f"Le rôle {role_to_add.mention} vous a été retiré après 2 jours. ⏳")
 
+    @app_commands.command(name="embed", description="Créer un embed personnalisé")
+    async def embed_builder(self, interaction: discord.Interaction):
+        role_id = 1170326040485318686
+        if not any(role.id == role_id for role in interaction.user.roles):
+            return await interaction.response.send_message("❌ Vous n'avez pasimport discord
 
     #------------------------------------------------------------------------- Commandes d'économie : /embed
 
