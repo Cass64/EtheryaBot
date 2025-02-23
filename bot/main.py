@@ -64,4 +64,4 @@ async def main():
         await bot.start(TOKEN)
 
 keep_alive()
-asyncio.run(main())  
+asyncio.run(main())

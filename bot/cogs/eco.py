@@ -810,4 +810,4 @@ async def on_message(message):
     await bot.process_commands(message)
 #------------------------------------------------------------------------- Lancement du bot
 def setup(bot):
-    bot.add_cog(eco(bot))
+    bot.add_cog(Eco(bot))
