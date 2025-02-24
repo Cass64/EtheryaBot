@@ -9,7 +9,7 @@ import json
 import asyncio
 import pymongo
 from pymongo import MongoClient
-import datetime
+from datetime import datetime, timedelta
 import math
 
 load_dotenv()
@@ -500,6 +500,7 @@ async def on_message(message):
 
 #------------------------------------------------------------------------- Commandes /frags
 
+
 @bot.tree.command(name="frags")
 async def frags(interaction: discord.Interaction, user: discord.Member):
     """Ajoute le rôle Frags Quotidien à un utilisateur pour 24 heures et enregistre l'expiration en base de données."""
@@ -510,40 +511,31 @@ async def frags(interaction: discord.Interaction, user: discord.Member):
     FRAG_ROLE = "″ [𝑺ץ] Frags Quotidien"
     frag_role = discord.utils.get(interaction.guild.roles, name=FRAG_ROLE)
 
-    if frag_role:
-        await user.add_roles(frag_role)
-        expiration_time = datetime.utcnow() + timedelta(hours=24)
-
-        # Enregistrer l'expiration en base de données
-        collection.update_one(
-            {"user_id": user.id},
-            {"$set": {"expires_at": expiration_time}},
-            upsert=True
-        )
-
-        await interaction.response.send_message(f"✅ {user.mention} a reçu le rôle `{FRAG_ROLE}` pour 24 heures.", ephemeral=True)
-
-        # Envoi de l'embed dans le salon staff
-        CHANNEL_ID = 1341671012109914173
-        salon_staff = interaction.guild.get_channel(CHANNEL_ID)
-        if salon_staff:
-            embed = discord.Embed(title="Vente Frags Quotidien", color=discord.Color.blue())
-            embed.add_field(name="Vendeur", value=user.mention, inline=True)
-            embed.add_field(name="Acheteur", value=interaction.user.mention, inline=True)
-            embed.set_footer(text="Frags vendus via la commande /frags")
-            await salon_staff.send(embed=embed)
-
-        # Retirer le rôle après 24 heures
-        await asyncio.sleep(86400)
-        await user.remove_roles(frag_role)
-        collection.delete_one({"user_id": user.id})  # Supprime l'entrée en base
-        if salon_staff:
-            embed_remove = discord.Embed(title="Retrait Frags Quotidien", color=discord.Color.red())
-            embed_remove.add_field(name="Utilisateur", value=user.mention, inline=True)
-            embed_remove.set_footer(text="Rôle retiré après 24 heures")
-            await salon_staff.send(embed=embed_remove)
-    else:
+    if not frag_role:
         await interaction.response.send_message(f"❌ Le rôle `{FRAG_ROLE}` n'existe pas sur ce serveur.", ephemeral=True)
+        return
+
+    await user.add_roles(frag_role)
+    expiration_time = datetime.utcnow() + timedelta(hours=24)
+
+    # Enregistrer l'expiration en base de données
+    collection.update_one(
+        {"user_id": user.id},
+        {"$set": {"expires_at": expiration_time}},
+        upsert=True
+    )
+
+    await interaction.response.send_message(f"✅ {user.mention} a reçu le rôle `{FRAG_ROLE}` pour 24 heures.", ephemeral=True)
+
+    # Envoi de l'embed dans le salon staff
+    CHANNEL_ID = 1341671012109914173
+    salon_staff = interaction.guild.get_channel(CHANNEL_ID)
+    if salon_staff:
+        embed = discord.Embed(title="Vente Frags Quotidien", color=discord.Color.blue())
+        embed.add_field(name="Vendeur", value=interaction.user.mention, inline=True)
+        embed.add_field(name="Acheteur", value=user.mention, inline=True)
+        embed.set_footer(text="Frags vendus via la commande /frags")
+        await salon_staff.send(embed=embed)
 
 #------------------------------------------------------------------------- Commandes frags-time
 
@@ -552,12 +544,12 @@ async def frags_timeleft(interaction: discord.Interaction, user: discord.Member)
     """Affiche le temps restant avant que le rôle Frags Quotidien soit retiré."""
     record = collection.find_one({"user_id": user.id})
     
-    if not record:
+    if not record or "expires_at" not in record:
         await interaction.response.send_message(f"❌ {user.mention} n'a pas de rôle Frags Quotidien actif.", ephemeral=True)
         return
 
-    expiration = record["expiration"]
-    time_left = expiration - datetime.datetime.utcnow()
+    expiration = record["expires_at"]
+    time_left = expiration - datetime.utcnow()
 
     if time_left.total_seconds() <= 0:
         await interaction.response.send_message(f"❌ {user.mention} n'a plus le rôle Frags Quotidien.", ephemeral=True)
@@ -573,6 +565,7 @@ async def frags_timeleft(interaction: discord.Interaction, user: discord.Member)
     )
     embed.set_footer(text="Ce rôle est temporaire, il sera retiré après 24 heures.")
     await interaction.response.send_message(embed=embed)
+
 
 #------------------------------------------------------------------------- Commandes /pret
 
