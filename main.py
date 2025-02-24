@@ -867,22 +867,21 @@ async def retirer_livret(interaction: discord.Interaction, montant: int = None):
 
 #---------------------------------------------------------------
 
+@aiocron.crontab("0 0 * * 0")  # Tous les dimanches à 00:00 UTC
 async def ajouter_interets():
-    """Ajoute 2% d'intérêts sur le Livret A chaque semaine."""
-    while True:
-        await asyncio.sleep(604800)  # 7 jours en secondes
-        utilisateurs = collection.find({"livretA": {"$gt": 0}})
-        for user in utilisateurs:
-            user_id = user["user_id"]
-            montant = user["livretA"]
-            nouveaux_interets = math.floor(montant * 0.02)  # 2% d'intérêt arrondi
+    """Ajoute 2% d'intérêts sur le Livret A chaque dimanche à minuit."""
+    utilisateurs = collection.find({"livretA": {"$gt": 0}})
+    for user in utilisateurs:
+        user_id = user["user_id"]
+        montant = user["livretA"]
+        nouveaux_interets = math.floor(montant * 0.02)  # 2% d'intérêt arrondi
 
-            collection.update_one(
-                {"user_id": user_id},
-                {"$inc": {"livretA": nouveaux_interets}}
-            )
+        collection.update_one(
+            {"user_id": user_id},
+            {"$inc": {"livretA": nouveaux_interets}}
+        )
 
-            print(f"✅ Intérêts ajoutés : {user_id} a gagné {nouveaux_interets} 💰")
+        print(f"✅ Intérêts ajoutés : {user_id} a gagné {nouveaux_interets} 💰")
 
 #------------------------------------------------------------------------- Ignorer les messages des autres bots
 
