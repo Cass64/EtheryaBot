@@ -433,7 +433,7 @@ class EmbedTitleModal(discord.ui.Modal, title="Modifier le Titre"):
 class EmbedDescriptionModal(discord.ui.Modal, title="Modifier la Description"):
     def __init__(self, view: EmbedBuilderView):
         super().__init__()
-        self.view = view
+        self.view.embed.description = None  # Supprime la description d'origine
         self.description_input = discord.ui.TextInput(label="Nouvelle Description", required=True, style=discord.TextStyle.long)
         self.add_item(self.description_input)
 
