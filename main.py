@@ -763,7 +763,6 @@ async def pretpayer(interaction: discord.Interaction, membre: discord.Member):
 @bot.tree.command(name="investirlivreta")  # Tout en minuscules
 @app_commands.describe(montant="Somme à investir (max 100,000)")
 async def investir_livret(interaction: discord.Interaction, montant: int):
-
     """Investit une somme dans le Livret A (max 100k)"""
     if montant <= 0 or montant > 100_000:
         await interaction.response.send_message("❌ Tu dois investir entre **1 et 100,000** 💰.", ephemeral=True)
@@ -781,6 +780,21 @@ async def investir_livret(interaction: discord.Interaction, montant: int):
         upsert=True
     )
 
+    # ID du salon et du rôle à ping
+    CHANNEL_ID = 1343687225790959647  # Remplace par l'ID du salon
+    ROLE_ID = 1341494709184368734  # Remplace par l'ID du rôle 
+    salon = interaction.guild.get_channel(CHANNEL_ID)
+    role_ping = f"<@&{ROLE_ID}>"  # Ping du rôle
+
+    embed = discord.Embed(
+        title="📥 Investissement - Livret A",
+        description=f"{interaction.user.mention} a investi **{montant}** 💰 dans son Livret A !\n💰 Total : **{nouveau_montant}**",
+        color=discord.Color.green()
+    )
+
+    if salon:
+        await salon.send(content=role_ping, embed=embed)
+    
     await interaction.response.send_message(f"✅ Tu as investi **{montant}** 💰 dans ton Livret A ! (Total: {nouveau_montant} 💰)", ephemeral=True)
 
 #---------------------------------------------------------------
@@ -788,8 +802,6 @@ async def investir_livret(interaction: discord.Interaction, montant: int):
 @bot.tree.command(name="livreta")
 async def consulter_livret(interaction: discord.Interaction):
     """Affiche la somme actuelle dans le Livret A de l'utilisateur."""
-    
-    # Déférer la réponse pour éviter l'erreur "Unknown Interaction"
     await interaction.response.defer(ephemeral=True)
 
     user_id = interaction.user.id
@@ -812,24 +824,31 @@ async def consulter_livret(interaction: discord.Interaction):
 #---------------------------------------------------------------
 
 @bot.tree.command(name="retirerlivreta")  # Tout en minuscules
-async def retirer_livret(interaction: discord.Interaction):
-    """Retire l'argent du Livret A et notifie un salon spécifique."""
+@app_commands.describe(montant="Somme à retirer (laisser vide pour tout retirer)")
+async def retirer_livret(interaction: discord.Interaction, montant: int = None):
+    """Retire une somme du Livret A et notifie un salon."""
     user_id = interaction.user.id
     user_data = collection.find_one({"user_id": user_id})
 
     if not user_data or "livretA" not in user_data or user_data["livretA"] == 0:
         await interaction.response.send_message("❌ Tu n'as pas d'argent dans ton Livret A.", ephemeral=True)
         return
+    
+    montant_max = user_data["livretA"]
+    montant = montant if montant is not None else montant_max
 
-    montant = user_data["livretA"]
+    if montant <= 0 or montant > montant_max:
+        await interaction.response.send_message(f"❌ Tu peux retirer entre **1 et {montant_max}** 💰.", ephemeral=True)
+        return
 
-    # Retirer l'argent
-    collection.update_one({"user_id": user_id}, {"$unset": {"livretA": ""}})
+    collection.update_one(
+        {"user_id": user_id},
+        {"$inc": {"livretA": -montant}}
+    )
 
-    # ID du salon où envoyer la notification
-    CHANNEL_ID = 1343674317053104349  # Remplace par l'ID du salon
-    ROLE_ID = 1341494709184368734  # Remplace par l'ID du rôle à ping
-
+    # ID du salon et du rôle 
+    CHANNEL_ID =  1343674317053104349 # Remplace par l'ID du salon
+    ROLE_ID = 1341494709184368734  # Remplace par l'ID du rôle
     salon = interaction.guild.get_channel(CHANNEL_ID)
     role_ping = f"<@&{ROLE_ID}>"  # Ping du rôle
 
@@ -842,9 +861,8 @@ async def retirer_livret(interaction: discord.Interaction):
 
     if salon:
         await salon.send(content=role_ping, embed=embed)
-        await interaction.response.send_message(f"✅ Demande envoyée dans {salon.mention}.", ephemeral=True)
-    else:
-        await interaction.response.send_message("❌ Erreur : Salon introuvable.", ephemeral=True)
+    
+    await interaction.response.send_message(f"✅ Tu as demandé à retirer **{montant}** 💰 de ton Livret A !", ephemeral=True)
 
 #---------------------------------------------------------------
 
@@ -864,7 +882,6 @@ async def ajouter_interets():
             )
 
             print(f"✅ Intérêts ajoutés : {user_id} a gagné {nouveaux_interets} 💰")
-
 
 #------------------------------------------------------------------------- Ignorer les messages des autres bots
 
