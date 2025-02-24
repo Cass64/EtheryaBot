@@ -532,8 +532,8 @@ async def frags(interaction: discord.Interaction, user: discord.Member):
     salon_staff = interaction.guild.get_channel(CHANNEL_ID)
     if salon_staff:
         embed = discord.Embed(title="Vente Frags Quotidien", color=discord.Color.blue())
-        embed.add_field(name="Vendeur", value=interaction.user.mention, inline=True)
-        embed.add_field(name="Acheteur", value=user.mention, inline=True)
+        embed.add_field(name="Acheteur", value=interaction.user.mention, inline=True)
+        embed.add_field(name="Vendeur", value=user.mention, inline=True)
         embed.set_footer(text="Frags vendus via la commande /frags")
         await salon_staff.send(embed=embed)
 
