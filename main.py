@@ -822,7 +822,7 @@ async def retirer_livret(interaction: discord.Interaction):
 
     # ID du salon où envoyer la notification
     CHANNEL_ID = 1343674317053104349  # Remplace par l'ID du salon
-    ROLE_ID = 792755123587645461  # Remplace par l'ID du rôle à ping
+    ROLE_ID = 1341494709184368734  # Remplace par l'ID du rôle à ping
 
     salon = interaction.guild.get_channel(CHANNEL_ID)
     role_ping = f"<@&{ROLE_ID}>"  # Ping du rôle
