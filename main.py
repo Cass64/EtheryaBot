@@ -785,23 +785,29 @@ async def investir_livret(interaction: discord.Interaction, montant: int):
 
 #---------------------------------------------------------------
 
-@bot.tree.command(name="livreta")  # Tout en minuscules
+@bot.tree.command(name="livreta")
 async def consulter_livret(interaction: discord.Interaction):
+    """Affiche la somme actuelle dans le Livret A de l'utilisateur."""
+    
+    # Déférer la réponse pour éviter l'erreur "Unknown Interaction"
+    await interaction.response.defer(ephemeral=True)
 
-    """Affiche l'argent actuellement dans le Livret A."""
     user_id = interaction.user.id
-    user_data = collection.find_one({"user_id": user_id})
+    record = collection.find_one({"user_id": user_id})
 
-    montant = user_data["livretA"] if user_data and "livretA" in user_data else 0
+    if not record or "livretA" not in record:
+        await interaction.followup.send("💰 Vous n'avez pas encore investi dans un Livret A.", ephemeral=True)
+        return
 
+    montant = record["livretA"]
     embed = discord.Embed(
-        title="📊 État du Livret A",
-        description=f"{interaction.user.mention} possède actuellement **{montant}** 💰 dans son Livret A.",
-        color=discord.Color.blue()
+        title="📈 Solde du Livret A",
+        description=f"💰 Votre solde actuel : **{montant}** crédits",
+        color=discord.Color.green()
     )
-    embed.set_footer(text="Les intérêts sont ajoutés automatiquement chaque semaine.")
-
-    await interaction.response.send_message(embed=embed, ephemeral=True)
+    embed.set_footer(text="Les intérêts sont ajoutés chaque semaine (+2%).")
+    
+    await interaction.followup.send(embed=embed, ephemeral=True)
 
 #---------------------------------------------------------------
 
