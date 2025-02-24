@@ -819,8 +819,8 @@ async def retirer_livret(interaction: discord.Interaction):
     collection.update_one({"user_id": user_id}, {"$unset": {"livretA": ""}})
 
     # ID du salon où envoyer la notification
-    CHANNEL_ID = 123456789012345678  # Remplace par l'ID du salon
-    ROLE_ID = 987654321098765432  # Remplace par l'ID du rôle à ping
+    CHANNEL_ID = 1343674317053104349  # Remplace par l'ID du salon
+    ROLE_ID = 792755123587645461  # Remplace par l'ID du rôle à ping
 
     salon = interaction.guild.get_channel(CHANNEL_ID)
     role_ping = f"<@&{ROLE_ID}>"  # Ping du rôle
