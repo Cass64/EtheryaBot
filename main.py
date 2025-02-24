@@ -431,20 +431,25 @@ class EmbedTitleModal(discord.ui.Modal, title="Modifier le Titre"):
         self.view.embed.title = self.title_input.value
         await interaction.response.edit_message(embed=self.view.embed, view=self.view)
 
-class EmbedDescriptionModal(discord.ui.Modal, title="Modifier la Description"):
-    def __init__(self, view: EmbedBuilderView):
-        super().__init__()
-        self.view.embed.description = None  # Supprime la description d'origine
-        self.description_input = discord.ui.TextInput(label="Nouvelle Description", required=True, style=discord.TextStyle.long)
-        self.add_item(self.description_input)
+class EmbedDescriptionModal(discord.ui.Modal):
+    def __init__(self, view):
+        super().__init__(title="Modifier la description")
+        self.view = view  # Assigne la vue correctement
+
+        self.description = discord.ui.TextInput(
+            label="Nouvelle description",
+            style=discord.TextStyle.paragraph,
+            max_length=2000
+        )
+        self.add_item(self.description)
 
     async def on_submit(self, interaction: discord.Interaction):
-        text = self.description_input.value
+        # Met à jour l'embed existant avec la nouvelle description
+        self.view.embed.description = self.description.value
 
-        self.view.embed.clear_fields()  # Supprime les anciens champs
-        self.view.embed.add_field(name="📜 Description :", value=text, inline=False)  # Ajoute un champ
-
-        await interaction.response.edit_message(embed=self.view.embed, view=self.view)
+        # Met à jour le message sans en créer un nouveau
+        await interaction.message.edit(embed=self.view.embed, view=self.view)
+        await interaction.response.defer()  # Empêche Discord de bloquer l'interaction
 
 
 class EmbedImageModal(discord.ui.Modal, title="Ajouter une image"):
