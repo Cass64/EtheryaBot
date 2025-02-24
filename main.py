@@ -888,6 +888,115 @@ async def ajouter_interets():
 
         print(f"✅ Intérêts ajoutés : {user_id} a gagné {nouveaux_interets} 💰")
 
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+PERM_CONSTRUCTION_ROLE_ID = 1343697977893453864
+ENTREPRENEUR_ROLE_ID = 1343697977893453864
+ANNOUNCE_CHANNEL_ID = 1343698434653159424
+COOLDOWN_TIME = timedelta(hours=24)
+
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Commande pour construire une entreprise
+@bot.tree.command(name="constructionentreprise", description="Construire une entreprise")
+async def construction_entreprise(interaction: discord.Interaction):
+    user = interaction.user
+    role = discord.Object(id=PERM_CONSTRUCTION_ROLE_ID)
+
+    if role not in user.roles:
+        return await interaction.response.send_message(
+            "❌ Vous n'avez pas la permission de construire une entreprise.", ephemeral=True
+        )
+
+    # Mise à jour de la base de données pour enregistrer la construction
+    collection.update_one(
+        {"user_id": user.id},
+        {"$set": {"entreprise_constructed": True}},
+        upsert=True
+    )
+
+    # Embed pour le joueur
+    embed_user = discord.Embed(
+        title="🏗️ Construction d'Entreprise",
+        description=f"{user.mention}, vous avez construit une entreprise avec succès ! 🎉",
+        color=discord.Color.green()
+    )
+    embed_user.set_footer(text="Bonne chance pour votre nouvelle entreprise !")
+
+    await interaction.response.send_message(embed=embed_user, ephemeral=True)
+
+    # Embed dans le salon d'annonce
+    announce_channel = bot.get_channel(ANNOUNCE_CHANNEL_ID)
+    if announce_channel:
+        embed_announce = discord.Embed(
+            title="📢 Nouvelle Entreprise Construite !",
+            description=f"{user.mention} vient de construire une entreprise ! 🏢",
+            color=discord.Color.blue()
+        )
+        embed_announce.set_footer(text="Vérifiez si tout est en règle.")
+        await announce_channel.send(embed=embed_announce)
+
+# Commande pour collecter les revenus de l'entreprise
+@bot.tree.command(name="collectentreprise", description="Collecter les revenus de votre entreprise")
+async def collect_entreprise(interaction: discord.Interaction):
+    user = interaction.user
+    role = discord.Object(id=ENTREPRENEUR_ROLE_ID)
+
+    if role not in user.roles:
+        return await interaction.response.send_message(
+            "❌ Vous devez être un entrepreneur pour collecter des revenus.", ephemeral=True
+        )
+
+    # Vérification du cooldown dans MongoDB
+    user_data = collection.find_one({"user_id": user.id})
+    if user_data:
+        last_time = user_data.get("last_collect_time", None)
+    else:
+        last_time = None
+
+    now = datetime.utcnow()
+
+    if last_time and now - last_time < COOLDOWN_TIME:
+        remaining_time = COOLDOWN_TIME - (now - last_time)
+        hours, remainder = divmod(int(remaining_time.total_seconds()), 3600)
+        minutes = remainder // 60
+        return await interaction.response.send_message(
+            f"⏳ Vous devez attendre encore {hours}h {minutes}m avant de collecter à nouveau.", ephemeral=True
+        )
+
+    # Génération d'un montant aléatoire entre 25,000 et 50,000
+    amount = random.randint(25000, 50000)
+
+    # Mise à jour de la base de données avec la nouvelle collecte et le cooldown
+    collection.update_one(
+        {"user_id": user.id},
+        {
+            "$set": {"last_collect_time": now},
+            "$inc": {"balance": amount}
+        },
+        upsert=True
+    )
+
+    # Embed de gain
+    embed_gain = discord.Embed(
+        title="💰 Revenus d'Entreprise",
+        description=f"{user.mention}, vous avez collecté **{amount:,}** pièces grâce à votre entreprise ! 🏦",
+        color=discord.Color.gold()
+    )
+    embed_gain.set_footer(text="Revenez demain pour un autre retrait.")
+
+    await interaction.response.send_message(embed=embed_gain, ephemeral=True)
+
+    # Message dans le salon d'annonce
+    announce_channel = bot.get_channel(ANNOUNCE_CHANNEL_ID)
+    if announce_channel:
+        embed_announce = discord.Embed(
+            title="📢 Revenus d'Entreprise Collectés",
+            description=f"{user.mention} vient de récupérer **{amount:,}** pièces de son entreprise. 💰",
+            color=discord.Color.blue()
+        )
+        embed_announce.set_footer(text="Surveillez les transactions.")
+        await announce_channel.send(embed=embed_announce)
+
 #------------------------------------------------------------------------- Ignorer les messages des autres bots
 
 @bot.event
