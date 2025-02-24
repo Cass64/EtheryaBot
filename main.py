@@ -393,7 +393,7 @@ class EmbedBuilderView(discord.ui.View):
     async def edit_title(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(EmbedTitleModal(self))
 
-     @discord.ui.button(label="Modifier la description", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="Modifier la description", style=discord.ButtonStyle.primary)
     async def edit_description(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(EmbedDescriptionModal(self))
 
@@ -436,7 +436,7 @@ class EmbedTitleModal(discord.ui.Modal, title="Modifier le Titre"):
 class EmbedDescriptionModal(discord.ui.Modal):
     def __init__(self, view):
         super().__init__(title="Modifier la description")
-        self.view = view  # Assigne la vue correctement
+        self.view = view  # Stocke la view
 
         self.description = discord.ui.TextInput(
             label="Nouvelle description",
@@ -446,12 +446,12 @@ class EmbedDescriptionModal(discord.ui.Modal):
         self.add_item(self.description)
 
     async def on_submit(self, interaction: discord.Interaction):
-        # Met à jour l'embed existant avec la nouvelle description
-        self.view.embed.description = self.description.value
+        self.view.embed.description = self.description.value  # Modifie la description
 
-        # Met à jour le message sans en créer un nouveau
-        await interaction.message.edit(embed=self.view.embed, view=self.view)
-        await interaction.response.defer()  # Empêche Discord de bloquer l'interaction
+        if self.view.message:
+            await self.view.message.edit(embed=self.view.embed, view=self.view)  # Édite le message stocké
+        else:
+            await interaction.response.send_message("Erreur : impossible de modifier le message.", ephemeral=True)
 
 
 class EmbedImageModal(discord.ui.Modal, title="Ajouter une image"):
