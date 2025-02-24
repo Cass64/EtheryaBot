@@ -500,7 +500,6 @@ async def on_message(message):
 
 #------------------------------------------------------------------------- Commandes /frags
 
-
 @bot.tree.command(name="frags")
 async def frags(interaction: discord.Interaction, user: discord.Member):
     """Ajoute le rôle Frags Quotidien à un utilisateur pour 24 heures et enregistre l'expiration en base de données."""
@@ -565,7 +564,6 @@ async def frags_timeleft(interaction: discord.Interaction, user: discord.Member)
     )
     embed.set_footer(text="Ce rôle est temporaire, il sera retiré après 24 heures.")
     await interaction.response.send_message(embed=embed)
-
 
 #------------------------------------------------------------------------- Commandes /pret
 
@@ -760,6 +758,104 @@ async def pretpayer(interaction: discord.Interaction, membre: discord.Member):
                           f"Le statut de ton prêt a été mis à jour comme **Payé**.")
     except discord.Forbidden:
         await interaction.response.send_message(f"❌ Impossible d'envoyer un MP à {membre.mention}, il a désactivé les messages privés.", ephemeral=True)
+
+#------------------------------------------------------------------------- Commandes de Livret A
+@bot.tree.command(name="InvestirLivretA")
+@app_commands.describe(montant="Somme à investir (max 100,000)")
+async def investir_livret(interaction: discord.Interaction, montant: int):
+    """Investit une somme dans le Livret A (max 100k)"""
+    if montant <= 0 or montant > 100_000:
+        await interaction.response.send_message("❌ Tu dois investir entre **1 et 100,000** 💰.", ephemeral=True)
+        return
+
+    user_id = interaction.user.id
+    user_data = collection.find_one({"user_id": user_id})
+
+    ancien_montant = user_data["livretA"] if user_data and "livretA" in user_data else 0
+    nouveau_montant = ancien_montant + montant
+
+    collection.update_one(
+        {"user_id": user_id},
+        {"$set": {"livretA": nouveau_montant}},
+        upsert=True
+    )
+
+    await interaction.response.send_message(f"✅ Tu as investi **{montant}** 💰 dans ton Livret A ! (Total: {nouveau_montant} 💰)", ephemeral=True)
+
+#---------------------------------------------------------------
+
+@bot.tree.command(name="LivretA")
+async def consulter_livret(interaction: discord.Interaction):
+    """Affiche l'argent actuellement dans le Livret A."""
+    user_id = interaction.user.id
+    user_data = collection.find_one({"user_id": user_id})
+
+    montant = user_data["livretA"] if user_data and "livretA" in user_data else 0
+
+    embed = discord.Embed(
+        title="📊 État du Livret A",
+        description=f"{interaction.user.mention} possède actuellement **{montant}** 💰 dans son Livret A.",
+        color=discord.Color.blue()
+    )
+    embed.set_footer(text="Les intérêts sont ajoutés automatiquement chaque semaine.")
+
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
+#---------------------------------------------------------------
+
+@bot.tree.command(name="RetirerLivretA")
+async def retirer_livret(interaction: discord.Interaction):
+    """Retire l'argent du Livret A et notifie un salon spécifique."""
+    user_id = interaction.user.id
+    user_data = collection.find_one({"user_id": user_id})
+
+    if not user_data or "livretA" not in user_data or user_data["livretA"] == 0:
+        await interaction.response.send_message("❌ Tu n'as pas d'argent dans ton Livret A.", ephemeral=True)
+        return
+
+    montant = user_data["livretA"]
+
+    # Retirer l'argent
+    collection.update_one({"user_id": user_id}, {"$unset": {"livretA": ""}})
+
+    # ID du salon où envoyer la notification
+    CHANNEL_ID = 123456789012345678  # Remplace par l'ID du salon
+    ROLE_ID = 987654321098765432  # Remplace par l'ID du rôle à ping
+
+    salon = interaction.guild.get_channel(CHANNEL_ID)
+    role_ping = f"<@&{ROLE_ID}>"  # Ping du rôle
+
+    embed = discord.Embed(
+        title="💸 Demande de Retrait - Livret A",
+        description=f"{interaction.user.mention} souhaite retirer **{montant}** 💰 de son Livret A.",
+        color=discord.Color.orange()
+    )
+    embed.set_footer(text="Un administrateur doit valider cette demande.")
+
+    if salon:
+        await salon.send(content=role_ping, embed=embed)
+        await interaction.response.send_message(f"✅ Demande envoyée dans {salon.mention}.", ephemeral=True)
+    else:
+        await interaction.response.send_message("❌ Erreur : Salon introuvable.", ephemeral=True)
+
+#---------------------------------------------------------------
+
+async def ajouter_interets():
+    """Ajoute 2% d'intérêts sur le Livret A chaque semaine."""
+    while True:
+        await asyncio.sleep(604800)  # 7 jours en secondes
+        utilisateurs = collection.find({"livretA": {"$gt": 0}})
+        for user in utilisateurs:
+            user_id = user["user_id"]
+            montant = user["livretA"]
+            nouveaux_interets = math.floor(montant * 0.02)  # 2% d'intérêt arrondi
+
+            collection.update_one(
+                {"user_id": user_id},
+                {"$inc": {"livretA": nouveaux_interets}}
+            )
+
+            print(f"✅ Intérêts ajoutés : {user_id} a gagné {nouveaux_interets} 💰")
 
 
 #------------------------------------------------------------------------- Ignorer les messages des autres bots
