@@ -393,9 +393,11 @@ class EmbedBuilderView(discord.ui.View):
     async def edit_title(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(EmbedTitleModal(self))
 
-    @discord.ui.button(label="Modifier la description", style=discord.ButtonStyle.primary)
+     @discord.ui.button(label="Modifier la description", style=discord.ButtonStyle.primary)
     async def edit_description(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(EmbedDescriptionModal(self))
+
+        
 
     @discord.ui.button(label="Changer la couleur", style=discord.ButtonStyle.primary)
     async def edit_color(self, interaction: discord.Interaction, button: discord.ui.Button):
