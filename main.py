@@ -484,7 +484,8 @@ async def embed_builder(interaction: discord.Interaction):
     if not any(role.id == role_id for role in interaction.user.roles):
         return await interaction.response.send_message("❌ Vous n'avez pas la permission d'utiliser cette commande.", ephemeral=True)
 
-    await interaction.response.defer(ephemeral=True)  # Déférer la réponse pour éviter l'expiration
+    if not interaction.response.is_done():  # Vérifie si la réponse est déjà envoyée
+        await interaction.response.defer(ephemeral=True)
     view = EmbedBuilderView(interaction.user, interaction.channel)
     await interaction.followup.send(embed=view.embed, view=view, ephemeral=True)
 
