@@ -796,7 +796,7 @@ async def investir_livret(interaction: discord.Interaction, montant: int):
     if salon:
         await salon.send(content=role_ping, embed=embed)
     
-    await interaction.response.send_message(f"✅ Tu as investi **{montant}** 💰 dans ton Livret A ! (Total: {nouveau_montant} 💰)", ephemeral=True)
+    await interaction.response.send_message(f"✅ Tu as investi **{montant}** 💰 dans ton Livret A ! (Total: {nouveau_montant} 💰) Cela peut prendre quelques heures avant que l'argent soit ajouté à ton livret.", ephemeral=True)
 
 #---------------------------------------------------------------
 
@@ -863,7 +863,7 @@ async def retirer_livret(interaction: discord.Interaction, montant: int = None):
     if salon:
         await salon.send(content=role_ping, embed=embed)
     
-    await interaction.response.send_message(f"✅ Tu as demandé à retirer **{montant}** 💰 de ton Livret A !", ephemeral=True)
+    await interaction.response.send_message(f"✅ Tu as demandé à retirer **{montant}** 💰 de ton Livret A ! Cela peut prendre quelques heure avant que ton argent te soit ajouter à ton compte.", ephemeral=True)
 
 #---------------------------------------------------------------
 
