@@ -760,9 +760,10 @@ async def pretpayer(interaction: discord.Interaction, membre: discord.Member):
         await interaction.response.send_message(f"❌ Impossible d'envoyer un MP à {membre.mention}, il a désactivé les messages privés.", ephemeral=True)
 
 #------------------------------------------------------------------------- Commandes de Livret A
-@bot.tree.command(name="InvestirLivretA")
+@bot.tree.command(name="investirlivreta")  # Tout en minuscules
 @app_commands.describe(montant="Somme à investir (max 100,000)")
 async def investir_livret(interaction: discord.Interaction, montant: int):
+
     """Investit une somme dans le Livret A (max 100k)"""
     if montant <= 0 or montant > 100_000:
         await interaction.response.send_message("❌ Tu dois investir entre **1 et 100,000** 💰.", ephemeral=True)
@@ -784,8 +785,9 @@ async def investir_livret(interaction: discord.Interaction, montant: int):
 
 #---------------------------------------------------------------
 
-@bot.tree.command(name="LivretA")
+@bot.tree.command(name="livreta")  # Tout en minuscules
 async def consulter_livret(interaction: discord.Interaction):
+
     """Affiche l'argent actuellement dans le Livret A."""
     user_id = interaction.user.id
     user_data = collection.find_one({"user_id": user_id})
@@ -803,7 +805,7 @@ async def consulter_livret(interaction: discord.Interaction):
 
 #---------------------------------------------------------------
 
-@bot.tree.command(name="RetirerLivretA")
+@bot.tree.command(name="retirerlivreta")  # Tout en minuscules
 async def retirer_livret(interaction: discord.Interaction):
     """Retire l'argent du Livret A et notifie un salon spécifique."""
     user_id = interaction.user.id
