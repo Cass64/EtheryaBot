@@ -375,16 +375,19 @@ async def protect(ctx):
 
 #------------------------------------------------------------------------- Commandes d'économie : /embed
 
+bot = commands.Bot(command_prefix="!!", intents=discord.Intents.all())
+
 THUMBNAIL_URL = "https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/etheryBot_profil.jpg?raw=true"
 
 class EmbedBuilderView(discord.ui.View):
     def __init__(self, author: discord.User, channel: discord.TextChannel):
         super().__init__(timeout=180)
         self.author = author
-        self.channel = channel  # Le salon où la commande a été exécutée
+        self.channel = channel
         self.embed = discord.Embed(title="Titre", description="Description", color=discord.Color.blue())
-        self.embed.set_thumbnail(url=THUMBNAIL_URL)  # Image fixe en haut à droite
-        self.second_image_url = None  # Pour stocker la deuxième image
+        self.embed.set_thumbnail(url=THUMBNAIL_URL)
+        self.second_image_url = None
+        self.message = None  # Stocker le message contenant l'embed
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user == self.author
@@ -397,12 +400,10 @@ class EmbedBuilderView(discord.ui.View):
     async def edit_description(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(EmbedDescriptionModal(self))
 
-        
-
     @discord.ui.button(label="Changer la couleur", style=discord.ButtonStyle.primary)
     async def edit_color(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.embed.color = discord.Color.random()
-        await interaction.response.edit_message(embed=self.embed, view=self)
+        await self.message.edit(embed=self.embed, view=self)
 
     @discord.ui.button(label="Ajouter une image", style=discord.ButtonStyle.secondary)
     async def add_image(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -419,6 +420,7 @@ class EmbedBuilderView(discord.ui.View):
             second_embed = discord.Embed(color=self.embed.color)
             second_embed.set_image(url=self.second_image_url)
             embeds.append(second_embed)
+
         await self.channel.send(embeds=embeds)
         await interaction.response.send_message("Embed envoyé !", ephemeral=True)
 
@@ -431,13 +433,12 @@ class EmbedTitleModal(discord.ui.Modal, title="Modifier le Titre"):
 
     async def on_submit(self, interaction: discord.Interaction):
         self.view.embed.title = self.title_input.value
-        await interaction.response.edit_message(embed=self.view.embed, view=self.view)
+        await self.view.message.edit(embed=self.view.embed, view=self.view)
 
 class EmbedDescriptionModal(discord.ui.Modal):
-    def __init__(self, view):
+    def __init__(self, view: EmbedBuilderView):
         super().__init__(title="Modifier la description")
-        self.view = view  # Stocke la view
-
+        self.view = view
         self.description = discord.ui.TextInput(
             label="Nouvelle description",
             style=discord.TextStyle.paragraph,
@@ -446,13 +447,12 @@ class EmbedDescriptionModal(discord.ui.Modal):
         self.add_item(self.description)
 
     async def on_submit(self, interaction: discord.Interaction):
-        self.view.embed.description = self.description.value  # Modifie la description
+        self.view.embed.description = self.description.value
 
         if self.view.message:
-            await self.view.message.edit(embed=self.view.embed, view=self.view)  # Édite le message stocké
+            await self.view.message.edit(embed=self.view.embed, view=self.view)
         else:
             await interaction.response.send_message("Erreur : impossible de modifier le message.", ephemeral=True)
-
 
 class EmbedImageModal(discord.ui.Modal, title="Ajouter une image"):
     def __init__(self, view: EmbedBuilderView):
@@ -463,8 +463,8 @@ class EmbedImageModal(discord.ui.Modal, title="Ajouter une image"):
 
     async def on_submit(self, interaction: discord.Interaction):
         if self.image_input.value:
-            self.view.embed.set_image(url=self.image_input.value)  # Première image sous le texte
-        await interaction.response.edit_message(embed=self.view.embed, view=self.view)
+            self.view.embed.set_image(url=self.image_input.value)
+        await self.view.message.edit(embed=self.view.embed, view=self.view)
 
 class EmbedSecondImageModal(discord.ui.Modal, title="Ajouter une 2ème image"):
     def __init__(self, view: EmbedBuilderView):
@@ -476,7 +476,7 @@ class EmbedSecondImageModal(discord.ui.Modal, title="Ajouter une 2ème image"):
     async def on_submit(self, interaction: discord.Interaction):
         if self.second_image_input.value:
             self.view.second_image_url = self.second_image_input.value
-        await interaction.response.edit_message(embed=self.view.embed, view=self.view)
+        await self.view.message.edit(embed=self.view.embed, view=self.view)
 
 @bot.tree.command(name="embed", description="Créer un embed personnalisé")
 async def embed_builder(interaction: discord.Interaction):
@@ -484,26 +484,23 @@ async def embed_builder(interaction: discord.Interaction):
     if not any(role.id == role_id for role in interaction.user.roles):
         return await interaction.response.send_message("❌ Vous n'avez pas la permission d'utiliser cette commande.", ephemeral=True)
 
-    if not interaction.response.is_done():  # Vérifie si la réponse est déjà envoyée
+    if not interaction.response.is_done():
         await interaction.response.defer(ephemeral=True)
+
     view = EmbedBuilderView(interaction.user, interaction.channel)
-    await interaction.followup.send(embed=view.embed, view=view, ephemeral=True)
+    view.message = await interaction.followup.send(embed=view.embed, view=view, ephemeral=True)
 
-
-
-# Exemple d'un event on_message pour ajouter une image à partir d'une pièce jointe, si besoin.
 @bot.event
 async def on_message(message):
-    if message.attachments:  # Si un fichier est joint
-        attachment = message.attachments[0]  # Prend la première image
+    if message.attachments:
+        attachment = message.attachments[0]
         if attachment.content_type and attachment.content_type.startswith("image/"):
             embed = discord.Embed(title="Image ajoutée")
-            embed.set_thumbnail(url=THUMBNAIL_URL)  # Image fixe en haut à droite
-            embed.set_image(url=attachment.url)  # Image principale sous le texte
+            embed.set_thumbnail(url=THUMBNAIL_URL)
+            embed.set_image(url=attachment.url)
             await message.channel.send(embed=embed)
     await bot.process_commands(message)
 
-# Pour lancer le bot (remplacez "VOTRE_TOKEN)
 #------------------------------------------------------------------------- Commandes classiques pour les prêt 
 
 
