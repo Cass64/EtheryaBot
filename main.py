@@ -1172,6 +1172,39 @@ async def on_message(message):
 
     # Assurez-vous que le bot continue de traiter les commandes
     await bot.process_commands(message)
+#------------------------------------------------------------------------- auto clan
+async def on_member_join(member):
+    # Liste des rôles à attribuer
+    roles_to_assign = [
+        "″ [𝑺ץ] Frostar", 
+        "″ [𝑺ץ] Ténébros", 
+        "″ [𝑺ץ] Luminis", 
+        "″ [𝑺ץ] Valkari"
+    ]
+    
+    # Vérifie si l'utilisateur a déjà un des rôles
+    existing_roles = [role.name for role in member.roles]
+    if not any(role in roles_to_assign for role in existing_roles):
+        # Choisir un rôle au hasard dans la liste
+        role_name = random.choice(roles_to_assign)
+        role = discord.utils.get(member.guild.roles, name=role_name)
+        
+        if role:
+            # Ajouter le rôle à l'utilisateur
+            await member.add_roles(role)
+            
+            # Créer l'embed
+            embed = discord.Embed(
+                title="🎉 Un nouveau membre rejoint !",
+                description=f"{member.mention} vient de rejoindre le serveur et a été assigné au rôle **{role_name}**.",
+                color=discord.Color.white()
+            )
+            embed.set_footer(text="Bienvenue parmi nous !")
+            
+            # Envoyer l'embed dans le salon spécifié
+            channel = bot.get_channel(1344065559826006047)  # ID du salon
+            if channel:
+                await channel.send(embed=embed)
 
 #------------------------------------------------------------------------- Lancement du bot
 keep_alive()
