@@ -40,8 +40,12 @@ bot = commands.Bot(command_prefix="!!", intents=intents)
 @bot.event
 async def on_ready():
     print(f"✅ Le bot est connecté en tant que {bot.user} (ID: {bot.user.id})")
-    print(f"📌 Nombre de commandes chargées : {len(bot.commands)}")
-    
+
+    # Afficher les commandes chargées
+    print("📌 Commandes disponibles :")
+    for command in bot.commands:
+        print(f"- {command.name}")
+        
     try:
         synced = await bot.tree.sync()  # Synchronisation des commandes slash
         print(f"✅ Commandes slash synchronisées : {[cmd.name for cmd in synced]}")
