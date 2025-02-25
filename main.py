@@ -57,16 +57,16 @@ async def on_ready():
 #------------------------------------------------------------------------- Commandes d'économie : !!break
 
 # Liste des rôles autorisés pour exécuter les commandes de modération
-AUTHORIZED_ROLES = ["″ [𝑺ץ] Perm Anti Protect"]
+AUTHORIZED_ROLES = ["″ [𝑺ץ] Perm Protect !!rob"]
 
 @bot.command(name="break")
 async def breakk(ctx, membre: discord.Member):
     """Ajoute un rôle fixe à un utilisateur et retire un autre rôle fixe à l'exécutant.
        Seuls ceux ayant '[𝑺ץ] Perm Anti Protect' peuvent utiliser cette commande.
     """
-    ROLE_REQUIRED = "″ [𝑺ץ] Perm Anti Protect"  # Rôle requis pour exécuter la commande
+    ROLE_REQUIRED = "″ [𝑺ץ] Perm Protect !!rob"  # Rôle requis pour exécuter la commande
     ROLE_TO_REMOVE_BREAK = "″ [𝑺ץ] Protect !!rob"       # Rôle à ajouter au membre ciblé
-    ROLE_TO_REMOVE = "″ [𝑺ץ] Perm Anti Protect"     # Rôle à retirer à l'exécutant
+    ROLE_TO_REMOVE = "″ [𝑺ץ] Perm Protect !!rob"     # Rôle à retirer à l'exécutant
 
     role_required = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED)
     role_to_remove_break = discord.utils.get(ctx.guild.roles, name=ROLE_TO_REMOVE_BREAK)
