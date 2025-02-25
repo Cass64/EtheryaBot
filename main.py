@@ -1007,6 +1007,57 @@ async def collect_entreprise(interaction: discord.Interaction):
         await announce_channel.send(embed=embed_announce)
 
 
+# Commande pour quitter l'entreprise
+@bot.tree.command(name="quitterentreprise", description="Quitter ou supprimer votre entreprise")
+async def quitter_entreprise(interaction: discord.Interaction):
+    user = interaction.user
+    role = discord.Object(id=ENTREPRENEUR_ROLE_ID)
+
+    # Vérifie si l'utilisateur a le rôle entrepreneur
+    if role not in user.roles:
+        return await interaction.response.send_message(
+            "❌ Vous devez être un entrepreneur pour quitter une entreprise.", ephemeral=True
+        )
+
+    # Vérifie si l'utilisateur a une entreprise construite
+    user_data = collection.find_one({"user_id": user.id})
+    if not user_data or not user_data.get("entreprise_constructed", False):
+        return await interaction.response.send_message(
+            "❌ Vous n'avez pas d'entreprise à quitter.", ephemeral=True
+        )
+
+    # Retirer le rôle Entrepreneur
+    await user.remove_roles(role)
+
+    # Supprimer l'enregistrement de l'entreprise dans la base de données
+    collection.update_one(
+        {"user_id": user.id},
+        {"$set": {"entreprise_constructed": False}, "$unset": {"last_collect_time": "", "balance": ""}},
+        upsert=True
+    )
+
+    # Embed de confirmation pour l'utilisateur
+    embed_user = discord.Embed(
+        title="🚫 Quitter l'Entreprise",
+        description=f"{user.mention}, vous avez quitté votre entreprise avec succès. Tous les enregistrements ont été supprimés.",
+        color=discord.Color.red()
+    )
+    embed_user.set_footer(text="Vous pouvez revenir si vous souhaitez en construire une autre.")
+
+    await interaction.response.send_message(embed=embed_user, ephemeral=True)
+
+    # Message dans le salon d'annonce
+    announce_channel = bot.get_channel(ANNOUNCE_CHANNEL_ID)
+    if announce_channel:
+        embed_announce = discord.Embed(
+            title="📢 Un Entrepreneur Quitte Son Entreprise",
+            description=f"{user.mention} vient de quitter son entreprise. 🏢🚶‍♂️",
+            color=discord.Color.blue()
+        )
+        embed_announce.set_footer(text="Un autre entrepreneur peut désormais prendre sa place.")
+        await announce_channel.send(embed=embed_announce)
+
+
 #------------------------------------------------------------------------- calcul
 
 @bot.tree.command(name="calcul", description="Calcule un pourcentage d'un nombre")
