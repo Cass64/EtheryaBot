@@ -39,11 +39,14 @@ bot = commands.Bot(command_prefix="!!", intents=intents)
 
 @bot.event
 async def on_ready():
+    print(f"✅ Le bot est connecté en tant que {bot.user} (ID: {bot.user.id})")
+    print(f"📌 Nombre de commandes chargées : {len(bot.commands)}")
+    
     try:
-        synced = await bot.tree.sync()
-        print(f"Commandes synchronisées : {[cmd.name for cmd in synced]}")
+        synced = await bot.tree.sync()  # Synchronisation des commandes slash
+        print(f"✅ Commandes slash synchronisées : {[cmd.name for cmd in synced]}")
     except Exception as e:
-        print(f"Erreur de synchronisation : {e}")
+        print(f"❌ Erreur de synchronisation des commandes slash : {e}")
 
 #------------------------------------------------------------------------- Commandes d'économie : /calcul
 
@@ -101,17 +104,12 @@ async def breakk(ctx, membre: discord.Member):
 
 #------------------------------------------------------------------------- Commandes d'économie : !!malus
 
-AUTHORIZED_ROLES = ["″ [𝑺ץ] Perm Ajout Malus"]
-
+# Commande classique pour "malus"
 @bot.command(name="malus")
 async def malus(ctx, membre: discord.Member):
-    """Ajoute un rôle fixe à un utilisateur, retire un autre rôle fixe à l'exécutant, 
-       et supprime le rôle ajouté après une durée spécifiée.
-       Seuls ceux ayant '[𝑺ץ] Perm Ajout Malus' peuvent utiliser cette commande.
-    """
-    ROLE_REQUIRED = "″ [𝑺ץ] Perm Ajout Malus"  # Rôle requis pour exécuter la commande
-    ROLE_TO_ADD_MALUS = "″ [𝑺ץ] Malus Temporelle"  # Le rôle temporaire à ajouter
-    ROLE_TO_REMOVE_MALUS = "″ [𝑺ץ] Perm Ajout Malus"  # Rôle à retirer à l'exécutant
+    ROLE_REQUIRED = "″ [𝑺ץ] Perm Ajout Malus"
+    ROLE_TO_ADD_MALUS = "″ [𝑺ץ] Malus Temporelle"
+    ROLE_TO_REMOVE_MALUS = "″ [𝑺ץ] Perm Ajout Malus"
 
     role_required = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED)
     role_to_add_malus = discord.utils.get(ctx.guild.roles, name=ROLE_TO_ADD_MALUS)
@@ -125,22 +123,19 @@ async def malus(ctx, membre: discord.Member):
 
     # Ajouter le rôle temporaire à l'utilisateur
     await membre.add_roles(role_to_add_malus)
-    await ctx.send(f"Le rôle {role_to_add_malus.mention} a été ajouté. <a:fete:1172810362261880873>") 
+    await ctx.send(f"Le rôle {role_to_add_malus.mention} a été ajouté. 🎉") 
 
     # Retirer le rôle à l'exécutant
     if role_to_remove_malus in ctx.author.roles:
         await ctx.author.remove_roles(role_to_remove_malus)
-        await ctx.send(f"Le rôle {role_to_remove_malus.mention} a été retiré. <a:emoji:1341500461475168369>")
+        await ctx.send(f"Le rôle {role_to_remove_malus.mention} a été retiré. 🎭")
     else:
-        await ctx.send(f"{ctx.author.mention}, vous n'aviez pas le rôle {role_to_remove_malus.mention}. <:haram:1176229029796380702>")
+        await ctx.send(f"{ctx.author.mention}, vous n'aviez pas le rôle {role_to_remove_malus.mention}. ❌")
 
-    # Temps pendant lequel le rôle restera (exemple : 1 heure)
-    await asyncio.sleep(86400)  # 86400 secondes = 24 heures
-
-    # Retirer le rôle après le délai
+    # Attendre 24 heures avant de retirer le rôle
+    await asyncio.sleep(86400)
     await membre.remove_roles(role_to_add_malus)
     await ctx.send(f"Le rôle {role_to_add_malus.mention} a été retiré de {membre.mention} après 24 heures. ⏳")
-
 #------------------------------------------------------------------------- Commandes d'économie : !!annihilation
 
 @bot.command(name="annihilation")
