@@ -58,8 +58,8 @@ async def calcul(interaction: discord.Interaction, nombre: float, pourcentage: f
         color=discord.Color.green()
     )
 
-   await interaction.response.defer()
-   await interaction.followup.send(embed=embed)
+await interaction.response.defer()
+await interaction.followup.send(embed=embed)
 
 
 #------------------------------------------------------------------------- Commandes d'économie : !!break
