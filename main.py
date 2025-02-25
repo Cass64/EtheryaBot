@@ -50,17 +50,16 @@ async def on_ready():
 @bot.tree.command(name="calcul", description="Calcule un pourcentage d'un nombre")
 @app_commands.describe(nombre="Le nombre de base", pourcentage="Le pourcentage à appliquer (ex: 15 pour 15%)")
 async def calcul(interaction: discord.Interaction, nombre: float, pourcentage: float):
-    resultat = (nombre * pourcentage) / 100
+    await interaction.response.defer()  # ✅ Correctement placé à l'intérieur de la fonction
 
+    resultat = (nombre * pourcentage) / 100
     embed = discord.Embed(
         title="📊 Calcul de pourcentage",
         description=f"{pourcentage}% de {nombre} = **{resultat}**",
         color=discord.Color.green()
     )
 
-await interaction.response.defer()
-await interaction.followup.send(embed=embed)
-
+    await interaction.followup.send(embed=embed)
 
 #------------------------------------------------------------------------- Commandes d'économie : !!break
 
