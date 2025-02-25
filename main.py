@@ -1075,7 +1075,6 @@ async def calcul(interaction: discord.Interaction, nombre: float, pourcentage: f
     await interaction.followup.send(embed=embed)
 
 #------------------------------------------------------------------------- Ignorer les messages des autres bots
-
 @bot.event
 async def on_message(message):
     # Ignorer les messages envoyés par d'autres bots
@@ -1090,39 +1089,78 @@ async def on_message(message):
             color=discord.Color(0xFFFFFF)
         )
 
+        # Assure-toi de récupérer les objets de rôle pour pouvoir les mentionner
+        role_gravity = discord.utils.get(message.guild.roles, name="[𝑺ץ] Gravité Forte")
+        role_spatial = discord.utils.get(message.guild.roles, name="[𝑺ץ] Spatial")
+
+        # Ajout des commandes
         embed.add_field(
-            name="💥 `!!break <membre>`",
-            value="Retire un rôle spécifique à un membre. Exemple : `!!break @Utilisateur`",
+            name="💥 !!break <membre>",
+            value="Retire un rôle spécifique à un membre. Exemple : !!break @Utilisateur",
             inline=False
         )
         embed.add_field(
-            name="⏳ `!!malus <membre>`",
-            value="Ajoute un rôle malus à un membre pour une durée prédéfinie de 24 heures. Exemple : `!!malus @Utilisateur`",
+            name="⏳ !!malus <membre>",
+            value="Ajoute un rôle malus à un membre pour une durée prédéfinie de 24 heures. Exemple : !!malus @Utilisateur",
             inline=False
         )
         embed.add_field(
-            name="☠️ `!!annihilation <membre>`",
-            value="Cible un membre pour l'anéantissement. Exemple : `!!annihilation @Utilisateur`",
+            name="☠️ !!annihilation <membre>",
+            value="Cible un membre pour l'anéantissement. Exemple : !!annihilation @Utilisateur",
             inline=False
         )
         embed.add_field(
-            name="🌌 `!!gravity <membre>`",
-            value="Ajoute le rôle 'Gravité Forte' à un membre. Exemple : `!!gravity @Utilisateur`",
+            name="🌌 !!gravity <membre>",
+            value=f"Ajoute le rôle {role_gravity.mention} à un membre. Exemple : !!gravity @Utilisateur",  # Mention du rôle ici
             inline=False
         )
         embed.add_field(
-            name="🚀 `!!spatial <membre>`",
-            value="Ajoute temporairement le rôle 'Spatial' à un membre. Exemple : `!!spatial @Utilisateur`",
+            name="🚀 !!spatial <membre>",
+            value=f"Ajoute temporairement le rôle {role_spatial.mention} à un membre. Exemple : !!spatial @Utilisateur",  # Mention du rôle ici
             inline=False
         )
         embed.add_field(
-            name="🏥 `!!heal`",
+            name="🏥 !!heal",
             value="Retire les malus et soigne l'utilisateur exécutant la commande.",
             inline=False
         )
         embed.add_field(
-            name="🛡️ `!!protect`",
-            value="Protège temporairement l'utilisateur des vols. Exemple : `!!protect`",
+            name="🛡️ !!protect",
+            value="Protège temporairement l'utilisateur des vols. Exemple : !!protect",
+            inline=False
+        )
+        
+        # Commandes liées au Livret A
+        embed.add_field(
+            name="💸 !!investirlivreta <montant>",
+            value="Investit une somme dans le Livret A (max 100k). Exemple : !!investirlivreta 1000",
+            inline=False
+        )
+        embed.add_field(
+            name="📈 !!livreta",
+            value="Affiche le solde actuel de ton Livret A.",
+            inline=False
+        )
+        embed.add_field(
+            name="💰 !!retirerlivreta <montant>",
+            value="Retire une somme de ton Livret A. Exemple : !!retirerlivreta 500",
+            inline=False
+        )
+
+        # Commandes liées à l'entreprise
+        embed.add_field(
+            name="🏗️ !!constructionentreprise",
+            value="Construis une entreprise (avec le rôle nécessaire). Exemple : !!constructionentreprise",
+            inline=False
+        )
+        embed.add_field(
+            name="💼 !!collectentreprise",
+            value="Collecte les revenus de ton entreprise. Exemple : !!collectentreprise",
+            inline=False
+        )
+        embed.add_field(
+            name="🚶‍♂️ !!quitterentreprise",
+            value="Quitte ou supprime ton entreprise. Exemple : !!quitterentreprise",
             inline=False
         )
 
@@ -1134,6 +1172,7 @@ async def on_message(message):
 
     # Assurez-vous que le bot continue de traiter les commandes
     await bot.process_commands(message)
+
 #------------------------------------------------------------------------- Lancement du bot
 keep_alive()
 bot.run(token)
