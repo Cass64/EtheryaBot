@@ -358,7 +358,6 @@ async def protect(ctx):
     await ctx.send(f"Le rôle {role_to_add.mention} vous a été retiré après 2 jours. ⏳")
 
 #------------------------------------------------------------------------- Commandes d'économie : /embed
-bot = commands.Bot(command_prefix="!!", intents=discord.Intents.all())
 
 THUMBNAIL_URL = "https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/etheryBot_profil.jpg?raw=true"
 
