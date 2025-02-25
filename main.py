@@ -45,28 +45,14 @@ async def on_ready():
     print("📌 Commandes disponibles :")
     for command in bot.commands:
         print(f"- {command.name}")
-        
+
     try:
+        # Synchroniser les commandes avec Discord
         synced = await bot.tree.sync()  # Synchronisation des commandes slash
         print(f"✅ Commandes slash synchronisées : {[cmd.name for cmd in synced]}")
     except Exception as e:
         print(f"❌ Erreur de synchronisation des commandes slash : {e}")
 
-#------------------------------------------------------------------------- Commandes d'économie : /calcul
-
-@bot.tree.command(name="calcul", description="Calcule un pourcentage d'un nombre")
-@app_commands.describe(nombre="Le nombre de base", pourcentage="Le pourcentage à appliquer (ex: 15 pour 15%)")
-async def calcul(interaction: discord.Interaction, nombre: float, pourcentage: float):
-    await interaction.response.defer()  # ✅ Correctement placé à l'intérieur de la fonction
-
-    resultat = (nombre * pourcentage) / 100
-    embed = discord.Embed(
-        title="📊 Calcul de pourcentage",
-        description=f"{pourcentage}% de {nombre} = **{resultat}**",
-        color=discord.Color.green()
-    )
-
-    await interaction.followup.send(embed=embed)
 
 #------------------------------------------------------------------------- Commandes d'économie : !!break
 
@@ -1020,6 +1006,23 @@ async def collect_entreprise(interaction: discord.Interaction):
         )
         embed_announce.set_footer(text="Surveillez les transactions.")
         await announce_channel.send(embed=embed_announce)
+
+
+#------------------------------------------------------------------------- calcul
+
+@bot.tree.command(name="calcul", description="Calcule un pourcentage d'un nombre")
+@app_commands.describe(nombre="Le nombre de base", pourcentage="Le pourcentage à appliquer (ex: 15 pour 15%)")
+async def calcul(interaction: discord.Interaction, nombre: float, pourcentage: float):
+    await interaction.response.defer()  # ✅ Correctement placé à l'intérieur de la fonction
+
+    resultat = (nombre * pourcentage) / 100
+    embed = discord.Embed(
+        title="📊 Calcul de pourcentage",
+        description=f"{pourcentage}% de {nombre} = **{resultat}**",
+        color=discord.Color.green()
+    )
+
+    await interaction.followup.send(embed=embed)
 
 #------------------------------------------------------------------------- Ignorer les messages des autres bots
 
