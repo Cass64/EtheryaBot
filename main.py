@@ -459,7 +459,7 @@ class EmbedDescriptionModal(discord.ui.Modal):
         self.description = discord.ui.TextInput(
             label="Nouvelle description",
             style=discord.TextStyle.paragraph,
-            max_length=5000
+            max_length=4000
         )
         self.add_item(self.description)
 
