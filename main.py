@@ -489,11 +489,10 @@ class EmbedSecondImageModal(discord.ui.Modal):
 
 @bot.tree.command(name="embed", description="Créer un embed personnalisé")
 async def embed_builder(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
     role_id = 1170326040485318686  # ID du rôle requis
     if not any(role.id == role_id for role in interaction.user.roles):
         return await interaction.response.send_message("❌ Vous n'avez pas la permission d'utiliser cette commande.", ephemeral=True)
-
-    await interaction.response.defer(ephemeral=True)
 
     view = EmbedBuilderView(interaction.user, interaction.channel)
     response = await interaction.followup.send(embed=view.embed, view=view, ephemeral=True)
