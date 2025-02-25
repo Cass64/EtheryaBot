@@ -39,12 +39,11 @@ bot = commands.Bot(command_prefix="!!", intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f"Bot connecté en tant que {bot.user}")
     try:
         synced = await bot.tree.sync()
-        print(f"Synced {len(synced)} commands")
+        print(f"Commandes synchronisées : {[cmd.name for cmd in synced]}")
     except Exception as e:
-        print(e)
+        print(f"Erreur de synchronisation : {e}")
 
 #------------------------------------------------------------------------- Commandes d'économie : /calcul
 
@@ -59,7 +58,8 @@ async def calcul(interaction: discord.Interaction, nombre: float, pourcentage: f
         color=discord.Color.green()
     )
 
-    await interaction.response.send_message(embed=embed)
+   await interaction.response.defer()
+   await interaction.followup.send(embed=embed)
 
 
 #------------------------------------------------------------------------- Commandes d'économie : !!break
