@@ -1082,7 +1082,7 @@ async def on_message(message):
         return
 
     # Vérifie si le message mentionne uniquement le bot
-    if bot.user.mentioned_in(message) and message.content.strip() == f"<@{bot.user.id}>":
+    if bot.user.mentioned_in(message) and message.content.strip().startswith(f"<@{bot.user.id}>"):
         embed = discord.Embed(
             title="📜 Liste des Commandes",
             description="Voici la liste des commandes disponibles :",
