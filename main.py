@@ -779,8 +779,12 @@ async def pretpayer(interaction: discord.Interaction, membre: discord.Member):
 @app_commands.describe(montant="Somme à investir (max 100,000)")
 async def investir_livret(interaction: discord.Interaction, montant: int):
     """Investit une somme dans le Livret A (max 100k)"""
+
+    # Déférer la réponse pour éviter l'erreur "Interaction has already been acknowledged"
+    await interaction.response.defer(thinking=True)  
+
     if montant <= 0 or montant > 100_000:
-        await interaction.response.send_message("❌ Tu dois investir entre **1 et 100,000** 💰.", ephemeral=True)
+        await interaction.followup.send("❌ Tu dois investir entre **1 et 100,000** 💰.", ephemeral=True)
         return
 
     user_id = interaction.user.id
@@ -810,7 +814,12 @@ async def investir_livret(interaction: discord.Interaction, montant: int):
     if salon:
         await salon.send(content=role_ping, embed=embed)
     
-    await interaction.response.send_message(f"✅ Tu as investi **{montant}** 💰 dans ton Livret A ! (Total: {nouveau_montant} 💰) Cela peut prendre quelques heures avant que l'argent soit ajouté à ton livret.", ephemeral=True)
+    # Utiliser `followup.send()` car `response.send_message()` ne peut plus être utilisé
+    await interaction.followup.send(
+        f"✅ Tu as investi **{montant}** 💰 dans ton Livret A ! (Total: {nouveau_montant} 💰) "
+        f"💡 Cela peut prendre quelques heures avant que l'argent soit ajouté à ton livret.",
+        ephemeral=True
+    )
 
 #---------------------------------------------------------------
 
