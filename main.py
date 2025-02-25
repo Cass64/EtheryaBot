@@ -374,14 +374,11 @@ async def protect(ctx):
     await ctx.send(f"Le rôle {role_to_add.mention} vous a été retiré après 2 jours. ⏳")
 
 #------------------------------------------------------------------------- Commandes d'économie : /embed
-
 bot = commands.Bot(command_prefix="!!", intents=discord.Intents.all())
 
 THUMBNAIL_URL = "https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/etheryBot_profil.jpg?raw=true"
 
 # Fonction pour vérifier si une URL est valide
-import re
-
 def is_valid_url(url):
     regex = re.compile(
         r'^(https?://)?'  # http:// ou https:// (optionnel)
@@ -398,10 +395,13 @@ class EmbedBuilderView(discord.ui.View):
         self.embed = discord.Embed(title="Titre", description="Description", color=discord.Color.blue())
         self.embed.set_thumbnail(url=THUMBNAIL_URL)
         self.second_image_url = None
-        self.message = None  # Stocker le message contenant l'embed
+        self.message = None  # Stocke le message contenant l'embed
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        return interaction.user == self.author
+        if interaction.user != self.author:
+            await interaction.response.send_message("❌ Vous ne pouvez pas modifier cet embed.", ephemeral=True)
+            return False
+        return True
 
     @discord.ui.button(label="Modifier le titre", style=discord.ButtonStyle.primary)
     async def edit_title(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -436,7 +436,7 @@ class EmbedBuilderView(discord.ui.View):
             embeds.append(second_embed)
 
         await self.channel.send(embeds=embeds)
-        await interaction.response.send_message("Embed envoyé !", ephemeral=True)
+        await interaction.response.send_message("✅ Embed envoyé !", ephemeral=True)
 
 class EmbedTitleModal(discord.ui.Modal):
     def __init__(self, view: EmbedBuilderView):
