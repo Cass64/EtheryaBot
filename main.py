@@ -123,9 +123,9 @@ async def malus(ctx, membre: discord.Member):
         await ctx.send(f"{ctx.author.mention}, vous n'aviez pas le rôle {role_to_remove_malus.mention}. ❌")
 
     # Attendre 24 heures avant de retirer le rôle
-    await asyncio.sleep(86400)
+    await asyncio.sleep(604800)
     await membre.remove_roles(role_to_add_malus)
-    await ctx.send(f"Le rôle {role_to_add_malus.mention} a été retiré de {membre.mention} après 24 heures. ⏳")
+    await ctx.send(f"Le rôle {role_to_add_malus.mention} a été retiré de {membre.mention} après 1 semaine. ⏳")
 #------------------------------------------------------------------------- Commandes d'économie : !!annihilation
 
 @bot.command(name="annihilation")
