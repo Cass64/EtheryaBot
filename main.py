@@ -1098,8 +1098,8 @@ async def on_message(message):
         )
 
         # Assure-toi de récupérer les objets de rôle pour pouvoir les mentionner
-        role_gravity = discord.utils.get(message.guild.roles, name="[𝑺ץ] Gravité Forte")
-        role_spatial = discord.utils.get(message.guild.roles, name="[𝑺ץ] Spatial")
+        role_gravity = discord.utils.get(message.guild.roles, name="″ [𝑺ץ] Gravité Forte")
+        role_spatial = discord.utils.get(message.guild.roles, name="″ [𝑺ץ] Spatial")
 
         # Ajout des commandes
         embed.add_field(
