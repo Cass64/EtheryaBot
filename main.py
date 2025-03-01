@@ -934,6 +934,11 @@ async def construction_entreprise(interaction: discord.Interaction):
             "❌ Vous n'avez pas la permission de construire une entreprise.", ephemeral=True
         )
 
+    # Donne le rôle "Entrepreneur" à l'utilisateur
+    entrepreneur_role = get(guild.roles, name=ENTREPRENEUR_ROLE)
+    if entrepreneur_role:
+        await user.add_roles(entrepreneur_role)
+
     # Mise à jour de la base de données pour enregistrer la construction
     collection.update_one(
         {"user_id": user.id},
@@ -951,17 +956,7 @@ async def construction_entreprise(interaction: discord.Interaction):
 
     await interaction.response.send_message(embed=embed_user, ephemeral=True)
 
-    # Embed dans le salon d'annonce
-    announce_channel = bot.get_channel(ANNOUNCE_CHANNEL_ID)
-    if announce_channel:
-        embed_announce = discord.Embed(
-            title="📢 Nouvelle Entreprise Construite !",
-            description=f"{user.mention} vient de construire une entreprise ! 🏢",
-            color=discord.Color.blue()
-        )
-        embed_announce.set_footer(text="Vérifiez si tout est en règle.")
-        await announce_channel.send(embed=embed_announce)
-
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Commande pour collecter les revenus de l'entreprise
 @bot.tree.command(name="collectentreprise", description="Collecter les revenus de votre entreprise")
 async def collect_entreprise(interaction: discord.Interaction):
@@ -1011,9 +1006,11 @@ async def collect_entreprise(interaction: discord.Interaction):
 
     await interaction.response.send_message(embed=embed_gain, ephemeral=True)
 
-    # Message dans le salon d'annonce
+    # Message dans le salon d'annonce avec un ping
     announce_channel = bot.get_channel(ANNOUNCE_CHANNEL_ID)
     if announce_channel:
+        await announce_channel.send(f"{user.mention}")  # Ping au-dessus de l'embed
+
         embed_announce = discord.Embed(
             title="📢 Revenus d'Entreprise Collectés",
             description=f"{user.mention} vient de récupérer **{amount:,}** pièces de son entreprise. 💰",
@@ -1022,6 +1019,7 @@ async def collect_entreprise(interaction: discord.Interaction):
         embed_announce.set_footer(text="Surveillez les transactions.")
         await announce_channel.send(embed=embed_announce)
 
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Commande pour quitter l'entreprise
 @bot.tree.command(name="quitterentreprise", description="Quitter ou supprimer votre entreprise")
 async def quitter_entreprise(interaction: discord.Interaction):
@@ -1061,17 +1059,6 @@ async def quitter_entreprise(interaction: discord.Interaction):
     embed_user.set_footer(text="Vous pouvez revenir si vous souhaitez en construire une autre.")
 
     await interaction.response.send_message(embed=embed_user, ephemeral=True)
-
-    # Message dans le salon d'annonce
-    announce_channel = bot.get_channel(ANNOUNCE_CHANNEL_ID)
-    if announce_channel:
-        embed_announce = discord.Embed(
-            title="📢 Un Entrepreneur Quitte Son Entreprise",
-            description=f"{user.mention} vient de quitter son entreprise. 🏢🚶‍♂️",
-            color=discord.Color.blue()
-        )
-        embed_announce.set_footer(text="Un autre entrepreneur peut désormais prendre sa place.")
-        await announce_channel.send(embed=embed_announce)
 #------------------------------------------------------------------------- calcul
 
 @bot.tree.command(name="calcul", description="Calcule un pourcentage d'un nombre")
