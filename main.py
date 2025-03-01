@@ -907,8 +907,16 @@ async def ajouter_interets():
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-PERM_CONSTRUCTION_ROLE_ID = 1343697977893453864
-ENTREPRENEUR_ROLE_ID = 1343697977893453864
+from datetime import datetime, timedelta
+import discord
+import random
+from discord import app_commands
+from discord.ext import commands
+from discord.utils import get
+
+# Définition des rôles et du cooldown
+PERM_CONSTRUCTION_ROLE = "″ [𝑺ץ] Perm Construction"
+ENTREPRENEUR_ROLE = "″ [𝑺ץ] Entrepreneur"
 ANNOUNCE_CHANNEL_ID = 1343698434653159424
 COOLDOWN_TIME = timedelta(hours=24)
 
@@ -917,9 +925,11 @@ COOLDOWN_TIME = timedelta(hours=24)
 @bot.tree.command(name="constructionentreprise", description="Construire une entreprise")
 async def construction_entreprise(interaction: discord.Interaction):
     user = interaction.user
-    role = discord.Object(id=PERM_CONSTRUCTION_ROLE_ID)
+    guild = interaction.guild
 
-    if role not in user.roles:
+    role = get(guild.roles, name=PERM_CONSTRUCTION_ROLE)
+
+    if not role or role not in user.roles:
         return await interaction.response.send_message(
             "❌ Vous n'avez pas la permission de construire une entreprise.", ephemeral=True
         )
@@ -956,20 +966,18 @@ async def construction_entreprise(interaction: discord.Interaction):
 @bot.tree.command(name="collectentreprise", description="Collecter les revenus de votre entreprise")
 async def collect_entreprise(interaction: discord.Interaction):
     user = interaction.user
-    role = discord.Object(id=ENTREPRENEUR_ROLE_ID)
+    guild = interaction.guild
 
-    if role not in user.roles:
+    role = get(guild.roles, name=ENTREPRENEUR_ROLE)
+
+    if not role or role not in user.roles:
         return await interaction.response.send_message(
             "❌ Vous devez être un entrepreneur pour collecter des revenus.", ephemeral=True
         )
 
     # Vérification du cooldown dans MongoDB
     user_data = collection.find_one({"user_id": user.id})
-    if user_data:
-        last_time = user_data.get("last_collect_time", None)
-    else:
-        last_time = None
-
+    last_time = user_data.get("last_collect_time", None) if user_data else None
     now = datetime.utcnow()
 
     if last_time and now - last_time < COOLDOWN_TIME:
@@ -1014,15 +1022,15 @@ async def collect_entreprise(interaction: discord.Interaction):
         embed_announce.set_footer(text="Surveillez les transactions.")
         await announce_channel.send(embed=embed_announce)
 
-
 # Commande pour quitter l'entreprise
 @bot.tree.command(name="quitterentreprise", description="Quitter ou supprimer votre entreprise")
 async def quitter_entreprise(interaction: discord.Interaction):
     user = interaction.user
-    role = discord.Object(id=ENTREPRENEUR_ROLE_ID)
+    guild = interaction.guild
 
-    # Vérifie si l'utilisateur a le rôle entrepreneur
-    if role not in user.roles:
+    role = get(guild.roles, name=ENTREPRENEUR_ROLE)
+
+    if not role or role not in user.roles:
         return await interaction.response.send_message(
             "❌ Vous devez être un entrepreneur pour quitter une entreprise.", ephemeral=True
         )
@@ -1064,8 +1072,6 @@ async def quitter_entreprise(interaction: discord.Interaction):
         )
         embed_announce.set_footer(text="Un autre entrepreneur peut désormais prendre sa place.")
         await announce_channel.send(embed=embed_announce)
-
-
 #------------------------------------------------------------------------- calcul
 
 @bot.tree.command(name="calcul", description="Calcule un pourcentage d'un nombre")
