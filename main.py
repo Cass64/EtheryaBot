@@ -917,7 +917,8 @@ from discord.utils import get
 # Définition des rôles et du cooldown
 PERM_CONSTRUCTION_ROLE = "″ [𝑺ץ] Perm Construction"
 ENTREPRENEUR_ROLE = "″ [𝑺ץ] Entrepreneur"
-ANNOUNCE_CHANNEL_ID = 1343698434653159424
+ANNOUNCE_CHANNEL_ID = 1343698434653159424  # ID du salon où l'annonce est envoyée
+STAFF_USER_ID = 123456789012345678  # Remplace par l'ID de la personne à ping
 COOLDOWN_TIME = timedelta(hours=24)
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1006,10 +1007,12 @@ async def collect_entreprise(interaction: discord.Interaction):
 
     await interaction.response.send_message(embed=embed_gain, ephemeral=True)
 
-    # Message dans le salon d'annonce avec un ping
+    # Message dans le salon d'annonce avec un ping spécifique
     announce_channel = bot.get_channel(ANNOUNCE_CHANNEL_ID)
     if announce_channel:
-        await announce_channel.send(f"{user.mention}")  # Ping au-dessus de l'embed
+        staff_user = guild.get_member(STAFF_USER_ID)
+        if staff_user:
+            await announce_channel.send(f"{staff_user.mention}")  # Ping de la personne du staff
 
         embed_announce = discord.Embed(
             title="📢 Revenus d'Entreprise Collectés",
