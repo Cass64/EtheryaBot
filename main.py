@@ -919,7 +919,7 @@ PERM_CONSTRUCTION_ROLE = "″ [𝑺ץ] Perm Construction"
 ENTREPRENEUR_ROLE = "″ [𝑺ץ] Entrepreneur"
 ANNOUNCE_CHANNEL_ID = 1343698434653159424  # ID du salon d'annonce
 STAFF_USER_ID = 792755123587645461
-COOLDOWN_TIME = timedelta(hours=24)
+COOLDOWN_TIME = timedelta(hours=12)
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Commande pour construire une entreprise
