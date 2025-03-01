@@ -918,7 +918,7 @@ from discord.utils import get
 PERM_CONSTRUCTION_ROLE = "″ [𝑺ץ] Perm Construction"
 ENTREPRENEUR_ROLE = "″ [𝑺ץ] Entrepreneur"
 ANNOUNCE_CHANNEL_ID = 1343698434653159424  # ID du salon où l'annonce est envoyée
-STAFF_USER_ID = 123456789012345678  # Remplace par l'ID de la personne à ping
+STAFF_USER_ID = 792755123587645461
 COOLDOWN_TIME = timedelta(hours=24)
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
