@@ -917,14 +917,15 @@ from discord.utils import get
 # Définition des rôles et du cooldown
 PERM_CONSTRUCTION_ROLE = "″ [𝑺ץ] Perm Construction"
 ENTREPRENEUR_ROLE = "″ [𝑺ץ] Entrepreneur"
-ANNOUNCE_CHANNEL_ID = 1343698434653159424  # ID du salon où l'annonce est envoyée
+ANNOUNCE_CHANNEL_ID = 1343698434653159424  # ID du salon d'annonce
 STAFF_USER_ID = 792755123587645461
 COOLDOWN_TIME = timedelta(hours=24)
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Commande pour construire une entreprise
 @bot.tree.command(name="constructionentreprise", description="Construire une entreprise")
-async def construction_entreprise(interaction: discord.Interaction):
+@app_commands.describe(nom="Choisissez le nom de votre entreprise")
+async def construction_entreprise(interaction: discord.Interaction, nom: str):
     user = interaction.user
     guild = interaction.guild
 
@@ -935,25 +936,40 @@ async def construction_entreprise(interaction: discord.Interaction):
             "❌ Vous n'avez pas la permission de construire une entreprise.", ephemeral=True
         )
 
+    # Vérifier si l'utilisateur a déjà une entreprise
+    user_data = collection.find_one({"user_id": user.id})
+    if user_data and user_data.get("entreprise_constructed", False):
+        return await interaction.response.send_message(
+            "❌ Vous avez déjà une entreprise en activité. Utilisez `/quitterentreprise` pour en créer une autre.", ephemeral=True
+        )
+
     # Donne le rôle "Entrepreneur" à l'utilisateur
     entrepreneur_role = get(guild.roles, name=ENTREPRENEUR_ROLE)
     if entrepreneur_role:
         await user.add_roles(entrepreneur_role)
 
-    # Mise à jour de la base de données pour enregistrer la construction
+    # Enregistre l'entreprise et le cooldown si existant
     collection.update_one(
         {"user_id": user.id},
-        {"$set": {"entreprise_constructed": True}},
+        {
+            "$set": {
+                "entreprise_constructed": True,
+                "nom_entreprise": nom,
+            },
+            "$setOnInsert": {
+                "last_collect_time": None  # Garde le cooldown existant s'il y en avait un
+            }
+        },
         upsert=True
     )
 
     # Embed pour le joueur
     embed_user = discord.Embed(
         title="🏗️ Construction d'Entreprise",
-        description=f"{user.mention}, vous avez construit une entreprise avec succès ! 🎉",
+        description=f"{user.mention}, vous avez construit **{nom}** avec succès ! 🎉",
         color=discord.Color.green()
     )
-    embed_user.set_footer(text="Bonne chance pour votre nouvelle entreprise !")
+    embed_user.set_footer(text="Bonne chance avec votre nouvelle entreprise !")
 
     await interaction.response.send_message(embed=embed_user, ephemeral=True)
 
@@ -971,9 +987,11 @@ async def collect_entreprise(interaction: discord.Interaction):
             "❌ Vous devez être un entrepreneur pour collecter des revenus.", ephemeral=True
         )
 
-    # Vérification du cooldown dans MongoDB
+    # Vérification du cooldown et récupération du nom de l'entreprise
     user_data = collection.find_one({"user_id": user.id})
-    last_time = user_data.get("last_collect_time", None) if user_data else None
+    last_time = user_data.get("last_collect_time", None)
+    nom_entreprise = user_data.get("nom_entreprise", "Votre entreprise")
+
     now = datetime.utcnow()
 
     if last_time and now - last_time < COOLDOWN_TIME:
@@ -987,23 +1005,21 @@ async def collect_entreprise(interaction: discord.Interaction):
     # Génération d'un montant aléatoire entre 25,000 et 50,000
     amount = random.randint(25000, 50000)
 
-    # Mise à jour de la base de données avec la nouvelle collecte et le cooldown
+    # Mise à jour du cooldown uniquement, l'argent sera envoyé plus tard
     collection.update_one(
         {"user_id": user.id},
-        {
-            "$set": {"last_collect_time": now},
-            "$inc": {"balance": amount}
-        },
+        {"$set": {"last_collect_time": now}},
         upsert=True
     )
 
     # Embed de gain
     embed_gain = discord.Embed(
         title="💰 Revenus d'Entreprise",
-        description=f"{user.mention}, vous avez collecté **{amount:,}** pièces grâce à votre entreprise ! 🏦",
+        description=f"{user.mention}, votre entreprise **{nom_entreprise}** a généré des revenus.\n"
+                    f"Vous recevrez **{amount:,}** pièces dans les prochaines heures. 🏦",
         color=discord.Color.gold()
     )
-    embed_gain.set_footer(text="Revenez demain pour un autre retrait.")
+    embed_gain.set_footer(text="L'argent sera ajouté plus tard sur votre compte.")
 
     await interaction.response.send_message(embed=embed_gain, ephemeral=True)
 
@@ -1012,14 +1028,15 @@ async def collect_entreprise(interaction: discord.Interaction):
     if announce_channel:
         staff_user = guild.get_member(STAFF_USER_ID)
         if staff_user:
-            await announce_channel.send(f"{staff_user.mention}")  # Ping de la personne du staff
+            await announce_channel.send(f"{staff_user.mention}") 
 
         embed_announce = discord.Embed(
-            title="📢 Revenus d'Entreprise Collectés",
-            description=f"{user.mention} vient de récupérer **{amount:,}** pièces de son entreprise. 💰",
+            title="📢 Revenus d'Entreprise en attente",
+            description=f"{user.mention} a généré **{amount:,}** pièces avec **{nom_entreprise}**.\n"
+                        f"Le paiement sera traité sous peu. 💰",
             color=discord.Color.blue()
         )
-        embed_announce.set_footer(text="Surveillez les transactions.")
+        embed_announce.set_footer(text="Surveillez les paiements.")
         await announce_channel.send(embed=embed_announce)
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1046,22 +1063,24 @@ async def quitter_entreprise(interaction: discord.Interaction):
     # Retirer le rôle Entrepreneur
     await user.remove_roles(role)
 
-    # Supprimer l'enregistrement de l'entreprise dans la base de données
+    # Supprimer l'entreprise mais garder le cooldown
     collection.update_one(
         {"user_id": user.id},
-        {"$set": {"entreprise_constructed": False}, "$unset": {"last_collect_time": "", "balance": ""}},
+        {"$set": {"entreprise_constructed": False, "nom_entreprise": None}},
         upsert=True
     )
 
     # Embed de confirmation pour l'utilisateur
     embed_user = discord.Embed(
         title="🚫 Quitter l'Entreprise",
-        description=f"{user.mention}, vous avez quitté votre entreprise avec succès. Tous les enregistrements ont été supprimés.",
+        description=f"{user.mention}, vous avez quitté votre entreprise.\n"
+                    "Votre historique de collecte reste enregistré.",
         color=discord.Color.red()
     )
-    embed_user.set_footer(text="Vous pouvez revenir si vous souhaitez en construire une autre.")
+    embed_user.set_footer(text="Vous pouvez reconstruire une entreprise plus tard.")
 
     await interaction.response.send_message(embed=embed_user, ephemeral=True)
+
 #------------------------------------------------------------------------- calcul
 
 @bot.tree.command(name="calcul", description="Calcule un pourcentage d'un nombre")
@@ -1136,34 +1155,34 @@ async def on_message(message):
         
         # Commandes liées au Livret A
         embed.add_field(
-            name="💸 !!investirlivreta <montant>",
+            name="💸 /investirlivreta <montant>",
             value="Investit une somme dans le Livret A (max 100k). Exemple : !!investirlivreta 1000",
             inline=False
         )
         embed.add_field(
-            name="📈 !!livreta",
+            name="📈 /livreta",
             value="Affiche le solde actuel de ton Livret A.",
             inline=False
         )
         embed.add_field(
-            name="💰 !!retirerlivreta <montant>",
+            name="💰 /retirerlivreta <montant>",
             value="Retire une somme de ton Livret A. Exemple : !!retirerlivreta 500",
             inline=False
         )
 
         # Commandes liées à l'entreprise
         embed.add_field(
-            name="🏗️ !!constructionentreprise",
+            name="🏗️ /constructionentreprise",
             value="Construis une entreprise (avec le rôle nécessaire). Exemple : !!constructionentreprise",
             inline=False
         )
         embed.add_field(
-            name="💼 !!collectentreprise",
+            name="💼 /collectentreprise",
             value="Collecte les revenus de ton entreprise. Exemple : !!collectentreprise",
             inline=False
         )
         embed.add_field(
-            name="🚶‍♂️ !!quitterentreprise",
+            name="🚶‍♂️ /quitterentreprise",
             value="Quitte ou supprime ton entreprise. Exemple : !!quitterentreprise",
             inline=False
         )
