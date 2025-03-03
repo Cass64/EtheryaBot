@@ -21,6 +21,8 @@ client = MongoClient(mongo_uri)
 db = client['Cass-Eco2']
 collection = db['commandes']
 collection2 = db['etherya-eco']
+economy_collection = db['economy']
+store_collection = db['store']
 
 # Vérification MongoDB
 try:
@@ -1103,177 +1105,181 @@ async def calcul(interaction: discord.Interaction, nombre: float, pourcentage: f
 #------------------------------------------------------------------------- ECONOMIEW ------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE-------
 #------------------------------------------------------------------------- ECONOMIEW ------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE-------
 
-import discord
-from discord import app_commands
+# Définir les rôles nécessaires
+ROLE_NEEDED = '″ [𝑺ץ] Développeur"  # Remplace par le nom de ton rôle
+ROLE_SECOND = "*"  # Le deuxième rôle pour add-store
 
-# Définir le rôle autorisé pour les commandes économiques
-allowed_role_eco = "″ [𝑺ץ] Développeur" 
-special_role = "*"  # Rôle supplémentaire pour les commandes spéciales
+def get_user_data(user_id):
+    user_data = economy_collection.find_one({"user_id": str(user_id)})
+    if user_data is None:
+        user_data = {"user_id": str(user_id), "cash": 0, "bank": 0, "total": 0, "last_claim": None, "inventory": []}
+        economy_collection.insert_one(user_data)
+    return user_data
 
-# Fonction pour créer un embed personnalisé
-def create_embed(title, description):
-    embed = discord.Embed(title=title, description=description, color=discord.Color.green())
-    return embed
+def save_user_data(user_id, user_data):
+    economy_collection.update_one({"user_id": str(user_id)}, {"$set": user_data})
 
-# Fonction pour vérifier les permissions
-def has_permission_eco(interaction):
-    return any(role.name == allowed_role_eco for role in interaction.user.roles)
+def create_embed(title, description, color=discord.Color.green()):
+    return discord.Embed(title=title, description=description, color=color)
 
-def has_permission_special(interaction):
-    return any(role.name == special_role for role in interaction.user.roles) and has_permission_eco(interaction)
+@bot.event
+async def on_ready():
+    await bot.tree.sync()
+    print(f"Bot connecté en tant que {bot.user}")
 
-# Commande pour ajouter de l'argent à un utilisateur en slash
-@bot.tree.command(name="add_money")
-@app_commands.describe(user="Utilisateur auquel ajouter de l'argent", amount="Montant à ajouter")
-async def add_money(interaction: discord.Interaction, user: discord.Member, amount: int):
-    if not has_permission_special(interaction):
-        await interaction.response.send_message(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
-        return
+# Vérification de rôle avant d'exécuter les commandes
+def check_role(ctx, role_name):
+    return any(role.name == role_name for role in ctx.author.roles)
 
-    collection2.update_one({"user_id": user.id}, {"$inc": {"balance": amount}}, upsert=True)
-    await interaction.response.send_message(embed=create_embed("Ajout d'argent", f"{amount} crédits ont été ajoutés à {user.name}."))
+# Dépôt et retrait
+deposit_withdraw_commands = {"deposit": "déposé", "withdraw": "retiré"}
+for cmd, action in deposit_withdraw_commands.items():
+    @bot.command(name=cmd)
+    async def transaction(ctx, amount: str, transaction_type=cmd, action=action):
+        if not check_role(ctx, ROLE_NEEDED):
+            return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande."))
+        
+        user_data = get_user_data(ctx.author.id)
+        if amount.lower() == "all":
+            amount = user_data["cash"] if transaction_type == "deposit" else user_data["bank"]
+        try:
+            amount = int(amount)
+        except ValueError:
+            return await ctx.send(embed=create_embed("⚠️ Erreur", "Montant invalide."))
 
-# Commande pour retirer de l'argent à un utilisateur en slash
-@bot.tree.command(name="remove_money")
-@app_commands.describe(user="Utilisateur auquel retirer de l'argent", amount="Montant à retirer")
-async def remove_money(interaction: discord.Interaction, user: discord.Member, amount: int):
-    if not has_permission_special(interaction):
-        await interaction.response.send_message(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
-        return
+        if amount <= 0 or (transaction_type == "deposit" and amount > user_data["cash"]) or (transaction_type == "withdraw" and amount > user_data["bank"]):
+            return await ctx.send(embed=create_embed("⚠️ Erreur", "Montant incorrect."))
 
-    collection2.update_one({"user_id": user.id}, {"$inc": {"balance": -amount}}, upsert=True)
-    await interaction.response.send_message(embed=create_embed("Retrait d'argent", f"{amount} crédits ont été retirés à {user.name}."))
+        user_data["cash"] -= amount if transaction_type == "deposit" else -amount
+        user_data["bank"] += amount if transaction_type == "deposit" else -amount
+        user_data["total"] = user_data["cash"] + user_data["bank"]
+        save_user_data(ctx.author.id, user_data)
 
-# Commande pour afficher l'argent d'un utilisateur
+        await ctx.send(embed=create_embed("🏦 Transaction réussie", f"Vous avez {action} `{amount}` 💵."))
+
 @bot.command(name="balance")
-async def balance(ctx, user: discord.Member = None):
-    user = user or ctx.author
-    data = collection2.find_one({"user_id": user.id})
+async def balance(ctx):
+    if not check_role(ctx, ROLE_NEEDED):
+        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande."))
+    
+    user_data = get_user_data(ctx.author.id)
+    embed = create_embed("💰 Votre Balance", f"💵 **Cash** : `{user_data['cash']}`\n🏦 **Banque** : `{user_data['bank']}`\n💰 **Total** : `{user_data['total']}`")
+    await ctx.send(embed=embed)
 
-    if data and "balance" in data:
-        await ctx.send(embed=create_embed(f"Solde de {user.name}", f"{user.name} a {data['balance']} crédits."))
-    else:
-        await ctx.send(embed=create_embed(f"Solde de {user.name}", f"{user.name} n'a pas de solde enregistré."))
+@bot.command(name="work")
+@commands.cooldown(1, 1800, commands.BucketType.user)
+async def work(ctx):
+    if not check_role(ctx, ROLE_NEEDED):
+        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande."))
+    
+    user_data = get_user_data(ctx.author.id)
+    earned_money = random.randint(50, 200)
+    user_data["cash"] += earned_money
+    user_data["total"] = user_data["cash"] + user_data["bank"]
+    save_user_data(ctx.author.id, user_data)
+    await ctx.send(embed=create_embed("💼 Travail Réussi !", f"Vous avez gagné **{earned_money}** 💵 !"))
 
-# Commande de dépôt (only with /)
-@bot.tree.command(name="deposit")
-async def deposit(ctx, amount: int):
-    if not has_permission_eco(ctx):
-        await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
-        return
+@bot.command(name="daily")
+async def daily(ctx):
+    if not check_role(ctx, ROLE_NEEDED):
+        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande."))
+    
+    user_data = get_user_data(ctx.author.id)
+    today = datetime.datetime.utcnow().date()
+    if user_data.get("last_claim") == str(today):
+        return await ctx.send(embed=create_embed("📅 Déjà Réclamé", "Revenez demain !"))
+    reward = random.randint(100, 500)
+    user_data["cash"] += reward
+    user_data["total"] = user_data["cash"] + user_data["bank"]
+    user_data["last_claim"] = str(today)
+    save_user_data(ctx.author.id, user_data)
+    await ctx.send(embed=create_embed("🎁 Récompense Quotidienne", f"Vous avez reçu **{reward}** 💵 !"))
 
-    # Exemple de dépôt d'argent
-    collection2.update_one({"user_id": ctx.author.id}, {"$inc": {"balance": amount}}, upsert=True)
-    await ctx.send(embed=create_embed("Dépôt réussi", f"{amount} crédits ont été déposés sur ton compte."))
-
-# Commande de retrait (only with /)
-@bot.tree.command(name="withdraw")
-async def withdraw(ctx, amount: int):
-    if not has_permission_eco(ctx):
-        await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
-        return
-
-    # Exemple de retrait d'argent
-    collection2.update_one({"user_id": ctx.author.id}, {"$inc": {"balance": -amount}}, upsert=True)
-    await ctx.send(embed=create_embed("Retrait réussi", f"{amount} crédits ont été retirés de ton compte."))
-
-# Commande de transfert (only with /)
-@bot.tree.command(name="transfer")
-async def transfer(ctx, user: discord.Member, amount: int):
-    if not has_permission_eco(ctx):
-        await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
-        return
-
-    # Exemple de transfert d'argent
-    collection2.update_one({"user_id": ctx.author.id}, {"$inc": {"balance": -amount}}, upsert=True)
-    collection2.update_one({"user_id": user.id}, {"$inc": {"balance": amount}}, upsert=True)
-    await ctx.send(embed=create_embed("Transfert réussi", f"{amount} crédits ont été transférés à {user.name}."))
-
-# Commande pour acheter un item du store (only with /)
-@bot.tree.command(name="buy")
-async def buy(ctx, item_name: str):
-    if not has_permission_eco(ctx):
-        await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
-        return
-
-    item = collection2.find_one({"item_name": item_name})
-    if item and item["stock"] > 0:
-        user_data = collection2.find_one({"user_id": ctx.author.id})
-        price = item["price"]
-        if user_data["balance"] >= price:
-            collection2.update_one({"user_id": ctx.author.id}, {"$inc": {"balance": -price, f"inventory.{item_name}": 1}}, upsert=True)
-            collection2.update_one({"item_name": item_name}, {"$inc": {"stock": -1}})
-            await ctx.send(embed=create_embed("Achat réussi", f"Tu as acheté {item_name} pour {price} crédits."))
-        else:
-            await ctx.send(embed=create_embed("Crédits insuffisants", "Tu n'as pas assez de crédits pour acheter cet item."))
-    else:
-        await ctx.send(embed=create_embed("Item introuvable", f"L'item {item_name} n'existe pas ou est en rupture de stock."))
-
-# Commande pour afficher les items dans le store (only with /)
-@bot.tree.command(name="store")
+@bot.command(name="store")
 async def store(ctx):
-    store_items = collection2.find({"item_name": {"$exists": True}})
-    if store_items:
-        items_list = "\n".join([f"{item['item_name']} - {item['price']} crédits - Stock: {item['stock']}" for item in store_items])
-        await ctx.send(embed=create_embed("Store", items_list))
-    else:
-        await ctx.send(embed=create_embed("Store vide", "Il n'y a actuellement aucun item en vente."))
+    if not check_role(ctx, ROLE_NEEDED):
+        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande."))
+    
+    items = list(store_collection.find())
+    if not items:
+        return await ctx.send(embed=create_embed("🏪 Boutique", "Aucun objet disponible."))
+    desc = "\n".join([f"**{item['name']}** - {item['price']} 💵 ({item['stock']} en stock)\n_{item['description']}_" for item in items])
+    await ctx.send(embed=create_embed("🏪 Boutique", desc))
 
-# Commande pour afficher l'inventaire (only with /)
-@bot.tree.command(name="inventory")
-async def inventory(ctx):
-    user_data = collection2.find_one({"user_id": ctx.author.id})
-    if user_data and "inventory" in user_data:
-        inventory_list = "\n".join([f"{item}: {quantity}" for item, quantity in user_data["inventory"].items()])
-        await ctx.send(embed=create_embed("Inventaire", f"Voici ton inventaire:\n{inventory_list}"))
-    else:
-        await ctx.send(embed=create_embed("Inventaire vide", "Tu n'as aucun item dans ton inventaire."))
+@bot.tree.command(name="add-store", description="Ajoute un objet dans le store (réservé aux rôles .Destiny et second_role)")
+@app_commands.checks.has_role(ROLE_DESTINY)  # Vérification du premier rôle
+@app_commands.checks.has_role(ROLE_SECOND)   # Vérification du deuxième rôle
+@app_commands.describe(
+    name="Nom de l'objet",
+    price="Prix de l'objet",
+    stock="Quantité disponible",
+    description="Description de l'objet"
+)
+async def add_store(interaction: discord.Interaction, name: str, price: int, stock: int, description: str):
+    if not (any(role.name == ROLE_NEEDED for role in interaction.user.roles) and any(role.name == ROLE_SECOND for role in interaction.user.roles)):
+        return await interaction.response.send_message(
+            embed=create_embed("⚠️ Accès refusé", "Vous devez avoir les rôles '.Destiny' et 'second_role' pour ajouter un objet dans le store.")
+        )
+    
+    store_collection.insert_one({"name": name, "price": price, "stock": stock, "description": description})
+    
+    embed = discord.Embed(
+        title="✅ Objet ajouté !",
+        description=f"**{name}** a été ajouté au store.\n💰 Prix: `{price}`\n📦 Stock: `{stock}`\n📝 {description}",
+        color=discord.Color.green()
+    )
+    
+    await interaction.response.send_message(embed=embed)
 
-# Commande pour ajouter un item au store en slash
-@bot.tree.command(name="add_item_store")
-@app_commands.describe(item_name="Nom de l'item", price="Prix de l'item", stock="Quantité de l'item")
-async def add_item_store(interaction: discord.Interaction, item_name: str, price: int, stock: int):
-    if not has_permission_special(interaction):
-        await interaction.response.send_message(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
-        return
+@bot.command(name="item-buy")
+async def item_buy(ctx, *, item_name: str):
+    if not check_role(ctx, ROLE_NEEDED):
+        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande."))
+    
+    user_data = get_user_data(ctx.author.id)
+    item = store_collection.find_one({"name": item_name})
 
-    # Ajouter ou mettre à jour l'item dans le store de collection2
-    collection2.update_one({"item_name": item_name}, {"$set": {"price": price}, "$inc": {"stock": stock}}, upsert=True)
-    await interaction.response.send_message(embed=create_embed("Item ajouté", f"L'item {item_name} a été ajouté avec {stock} en stock."))
+    if not item:
+        return await ctx.send(embed=create_embed("❌ Erreur", "L'objet n'existe pas dans le store."))
+    if item['stock'] <= 0:
+        return await ctx.send(embed=create_embed("❌ Stock épuisé", f"L'objet **{item_name}** est en rupture de stock."))
+    if user_data["cash"] < item['price']:
+        return await ctx.send(embed=create_embed("❌ Fonds insuffisants", "Vous n'avez pas assez d'argent pour cet achat."))
 
-# Commande pour retirer un item du store en slash
-@bot.tree.command(name="remove_item_store")
-@app_commands.describe(item_name="Nom de l'item à retirer")
-async def remove_item_store(interaction: discord.Interaction, item_name: str):
-    if not has_permission_special(interaction):
-        await interaction.response.send_message(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
-        return
+    # Mise à jour de l'utilisateur et du stock
+    user_data["cash"] -= item['price']
+    user_data["total"] = user_data["cash"] + user_data["bank"]
+    user_data["inventory"].append(item_name)
+    save_user_data(ctx.author.id, user_data)
 
-    # Retirer un item du store dans collection2
-    collection2.delete_one({"item_name": item_name})
-    await interaction.response.send_message(embed=create_embed("Item supprimé", f"L'item {item_name} a été supprimé du store.")) 
+    # Mise à jour du stock
+    store_collection.update_one({"name": item_name}, {"$inc": {"stock": -1}})
+    
+    await ctx.send(embed=create_embed("✅ Achat Réussi", f"Vous avez acheté **{item_name}** pour **{item['price']} 💵** !"))
 
-# Commande pour ajouter un item à l'inventaire d'un utilisateur
-@bot.tree.command(name="add_item_inventory")
-async def slash_add_item_inventory(interaction: discord.Interaction, user: discord.Member, item_name: str, quantity: int):
-    if not has_permission_special(interaction):
-        await interaction.response.send_message(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."), ephemeral=True)
-        return
+@bot.command(name="item-inventory")
+async def item_inventory(ctx):
+    if not check_role(ctx, ROLE_NEEDED):
+        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande."))
+    
+    user_data = get_user_data(ctx.author.id)
+    inventory = user_data.get("inventory", [])
+    desc = "\n".join(inventory) if inventory else "Votre inventaire est vide."
+    await ctx.send(embed=create_embed("🎒 Inventaire", desc))
 
-    # Ajouter un item à l'inventaire de l'utilisateur dans collection2
-    collection2.update_one({"user_id": user.id}, {"$inc": {f"inventory.{item_name}": quantity}}, upsert=True)
-    await interaction.response.send_message(embed=create_embed("Item ajouté", f"{quantity} {item_name}(s) ont été ajoutés à l'inventaire de {user.name}."))
-
-# Commande pour retirer un item de l'inventaire d'un utilisateur
-@bot.tree.command(name="remove_item_inventory")
-async def slash_remove_item_inventory(interaction: discord.Interaction, user: discord.Member, item_name: str, quantity: int):
-    if not has_permission_special(interaction):
-        await interaction.response.send_message(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."), ephemeral=True)
-        return
-
-    # Retirer un item de l'inventaire de l'utilisateur dans collection2
-    collection2.update_one({"user_id": user.id}, {"$inc": {f"inventory.{item_name}": -quantity}}, upsert=True)
-    await interaction.response.send_message(embed=create_embed("Item retiré", f"{quantity} {item_name}(s) ont été retirés de l'inventaire de {user.name}."))
+@bot.command(name="leaderboard")
+async def leaderboard(ctx, page: int = 1):
+    if not check_role(ctx, ROLE_NEEDED):
+        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande."))
+    
+    all_users = list(economy_collection.find().sort("total", -1))
+    pages = math.ceil(len(all_users) / 10)
+    if page < 1 or page > pages:
+        return await ctx.send(embed=create_embed("⚠️ Erreur", "Page invalide."))
+    desc = "\n".join([f"**#{i+1}** {await bot.fetch_user(int(u['user_id']))} - 💰 `{u['total']}`" for i, u in enumerate(all_users[(page-1)*10:page*10])])
+    embed = create_embed("🏆 Classement Économique", desc)
+    embed.set_footer(text=f"Page {page}/{pages}")
+    await ctx.send(embed=embed)
 
 # Commande .helpE pour afficher un embed d'aide sur les commandes économiques
 @bot.command(name="helpE")
