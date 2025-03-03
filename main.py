@@ -1104,7 +1104,7 @@ async def calcul(interaction: discord.Interaction, nombre: float, pourcentage: f
 #------------------------------------------------------------------------- ECONOMIEW ------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE-------
 
 # Rôle autorisé pour les commandes économiques
-allowed_role_eco = "″ [𝑺ץ] Développeur"  # Remplace par le nom de ton rôle spécifique
+allowed_role_eco = "″ [𝑺ץ] Développeur" 
 special_role = "*"  # Rôle supplémentaire pour les commandes spéciales
 
 # Fonction pour créer un embed personnalisé
@@ -1119,25 +1119,27 @@ def has_permission_eco(ctx):
 def has_permission_special(ctx):
     return any(role.name == special_role for role in ctx.author.roles) and has_permission_eco(ctx)
 
-# Commande pour ajouter de l'argent à un utilisateur
-@bot.command(name="add_money")
-async def add_money(ctx, user: discord.Member, amount: int):
-    if not has_permission_special(ctx):
-        await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
+# Commande pour ajouter de l'argent à un utilisateur en slash
+@bot.tree.command(name="add_money")
+@app_commands.describe(user="Utilisateur auquel ajouter de l'argent", amount="Montant à ajouter")
+async def add_money(interaction: discord.Interaction, user: discord.Member, amount: int):
+    if not has_permission_special(interaction):
+        await interaction.response.send_message(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
         return
 
     collection2.update_one({"user_id": user.id}, {"$inc": {"balance": amount}}, upsert=True)
-    await ctx.send(embed=create_embed("Ajout d'argent", f"{amount} crédits ont été ajoutés à {user.name}."))
+    await interaction.response.send_message(embed=create_embed("Ajout d'argent", f"{amount} crédits ont été ajoutés à {user.name}."))
 
-# Commande pour retirer de l'argent à un utilisateur
-@bot.command(name="remove_money")
-async def remove_money(ctx, user: discord.Member, amount: int):
-    if not has_permission_special(ctx):
-        await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
+# Commande pour retirer de l'argent à un utilisateur en slash
+@bot.tree.command(name="remove_money")
+@app_commands.describe(user="Utilisateur auquel retirer de l'argent", amount="Montant à retirer")
+async def remove_money(interaction: discord.Interaction, user: discord.Member, amount: int):
+    if not has_permission_special(interaction):
+        await interaction.response.send_message(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
         return
 
     collection2.update_one({"user_id": user.id}, {"$inc": {"balance": -amount}}, upsert=True)
-    await ctx.send(embed=create_embed("Retrait d'argent", f"{amount} crédits ont été retirés à {user.name}."))
+    await interaction.response.send_message(embed=create_embed("Retrait d'argent", f"{amount} crédits ont été retirés à {user.name}."))
 
 # Commande pour afficher l'argent d'un utilisateur
 @bot.command(name="balance")
@@ -1223,6 +1225,54 @@ async def inventory(ctx):
         await ctx.send(embed=create_embed("Inventaire", f"Voici ton inventaire:\n{inventory_list}"))
     else:
         await ctx.send(embed=create_embed("Inventaire vide", "Tu n'as aucun item dans ton inventaire."))
+
+# Commande pour ajouter un item au store en slash
+@bot.tree.command(name="add_item_store")
+@app_commands.describe(item_name="Nom de l'item", price="Prix de l'item", stock="Quantité de l'item")
+async def add_item_store(interaction: discord.Interaction, item_name: str, price: int, stock: int):
+    if not has_permission_special(interaction):
+        await interaction.response.send_message(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
+        return
+
+    # Ajouter ou mettre à jour l'item dans le store de collection2
+    collection2.update_one({"item_name": item_name}, {"$set": {"price": price}, "$inc": {"stock": stock}}, upsert=True)
+    await interaction.response.send_message(embed=create_embed("Item ajouté", f"L'item {item_name} a été ajouté avec {stock} en stock."))
+
+# Commande pour retirer un item du store en slash
+@bot.tree.command(name="remove_item_store")
+@app_commands.describe(item_name="Nom de l'item à retirer")
+async def remove_item_store(interaction: discord.Interaction, item_name: str):
+    if not has_permission_special(interaction):
+        await interaction.response.send_message(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
+        return
+
+    # Retirer un item du store dans collection2
+    collection2.delete_one({"item_name": item_name})
+    await interaction.response.send_message(embed=create_embed("Item supprimé", f"L'item {item_name} a été supprimé du store.")) 
+
+
+# Commande pour ajouter un item à l'inventaire d'un utilisateur
+@bot.tree.command(name="add_item_inventory")
+async def slash_add_item_inventory(interaction: discord.Interaction, user: discord.Member, item_name: str, quantity: int):
+    if not has_permission_special(interaction):
+        await interaction.response.send_message(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."), ephemeral=True)
+        return
+
+    # Ajouter un item à l'inventaire de l'utilisateur dans collection2
+    collection2.update_one({"user_id": user.id}, {"$inc": {f"inventory.{item_name}": quantity}}, upsert=True)
+    await interaction.response.send_message(embed=create_embed("Item ajouté", f"{quantity} {item_name}(s) ont été ajoutés à l'inventaire de {user.name}."))
+
+# Commande pour retirer un item de l'inventaire d'un utilisateur
+@bot.tree.command(name="remove_item_inventory")
+async def slash_remove_item_inventory(interaction: discord.Interaction, user: discord.Member, item_name: str, quantity: int):
+    if not has_permission_special(interaction):
+        await interaction.response.send_message(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."), ephemeral=True)
+        return
+
+    # Retirer un item de l'inventaire de l'utilisateur dans collection2
+    collection2.update_one({"user_id": user.id}, {"$inc": {f"inventory.{item_name}": -quantity}}, upsert=True)
+    await interaction.response.send_message(embed=create_embed("Item retiré", f"{quantity} {item_name}(s) ont été retirés de l'inventaire de {user.name}."))
+
 
 # Commande .helpE pour afficher un embed d'aide sur les commandes économiques
 @bot.command(name="helpE")
