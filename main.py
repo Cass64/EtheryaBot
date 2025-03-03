@@ -1103,7 +1103,10 @@ async def calcul(interaction: discord.Interaction, nombre: float, pourcentage: f
 #------------------------------------------------------------------------- ECONOMIEW ------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE-------
 #------------------------------------------------------------------------- ECONOMIEW ------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE-------
 
-# Rôle autorisé pour les commandes économiques
+import discord
+from discord import app_commands
+
+# Définir le rôle autorisé pour les commandes économiques
 allowed_role_eco = "″ [𝑺ץ] Développeur" 
 special_role = "*"  # Rôle supplémentaire pour les commandes spéciales
 
@@ -1113,11 +1116,11 @@ def create_embed(title, description):
     return embed
 
 # Fonction pour vérifier les permissions
-def has_permission_eco(ctx):
-    return any(role.name == allowed_role_eco for role in ctx.author.roles)
+def has_permission_eco(interaction):
+    return any(role.name == allowed_role_eco for role in interaction.user.roles)
 
-def has_permission_special(ctx):
-    return any(role.name == special_role for role in ctx.author.roles) and has_permission_eco(ctx)
+def has_permission_special(interaction):
+    return any(role.name == special_role for role in interaction.user.roles) and has_permission_eco(interaction)
 
 # Commande pour ajouter de l'argent à un utilisateur en slash
 @bot.tree.command(name="add_money")
@@ -1250,7 +1253,6 @@ async def remove_item_store(interaction: discord.Interaction, item_name: str):
     collection2.delete_one({"item_name": item_name})
     await interaction.response.send_message(embed=create_embed("Item supprimé", f"L'item {item_name} a été supprimé du store.")) 
 
-
 # Commande pour ajouter un item à l'inventaire d'un utilisateur
 @bot.tree.command(name="add_item_inventory")
 async def slash_add_item_inventory(interaction: discord.Interaction, user: discord.Member, item_name: str, quantity: int):
@@ -1273,7 +1275,6 @@ async def slash_remove_item_inventory(interaction: discord.Interaction, user: di
     collection2.update_one({"user_id": user.id}, {"$inc": {f"inventory.{item_name}": -quantity}}, upsert=True)
     await interaction.response.send_message(embed=create_embed("Item retiré", f"{quantity} {item_name}(s) ont été retirés de l'inventaire de {user.name}."))
 
-
 # Commande .helpE pour afficher un embed d'aide sur les commandes économiques
 @bot.command(name="helpE")
 async def helpE(ctx):
@@ -1287,21 +1288,19 @@ async def helpE(ctx):
         color=discord.Color(0x00FF00)  # Utilise une couleur verte pour un thème économique
     )
 
-    embed.add_field(name="💸 `.balance`", value="Affiche ton solde actuel sur le serveur.", inline=False)
-    embed.add_field(name="💰 `/deposit <montant>`", value="Dépose de l'argent sur ton compte.", inline=False)
-    embed.add_field(name="🏧 `/withdraw <montant>`", value="Retire de l'argent de ton compte.", inline=False)
-    embed.add_field(name="🔄 `/transfer <utilisateur> <montant>`", value="Transfère de l'argent à un autre utilisateur.", inline=False)
-    embed.add_field(name="📦 `/inventory`", value="Affiche ton inventaire.", inline=False)
-    embed.add_field(name="🛒 `/buy <item>`", value="Achète des objets de ton inventaire.", inline=False)
-    embed.add_field(name="🛍 `/store`", value="Affiche les items en vente.", inline=False)
+    embed.add_field(name="💸 .balance", value="Affiche ton solde actuel sur le serveur.", inline=False)
+    embed.add_field(name="💰 /deposit <montant>", value="Dépose de l'argent sur ton compte.", inline=False)
+    embed.add_field(name="🏧 /withdraw <montant>", value="Retire de l'argent de ton compte.", inline=False)
+    embed.add_field(name="🔄 /transfer <utilisateur> <montant>", value="Transfère de l'argent à un autre utilisateur.", inline=False)
+    embed.add_field(name="📦 /inventory", value="Affiche ton inventaire.", inline=False)
+    embed.add_field(name="🛒 /buy <item>", value="Achète des objets de ton inventaire.", inline=False)
+    embed.add_field(name="🛍 /store", value="Affiche les items en vente.", inline=False)
 
     embed.set_thumbnail(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/etheryaBot_profil.jpg?raw=true")
     embed.set_footer(text="Utilise ces commandes avec sagesse ! 💡")
     embed.set_image(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/etheryaBot_banniere.png?raw=true")
 
     await ctx.send(embed=embed)
-
-
 
 #------------------------------------------------------------------------- Ignorer les messages des autres bots
 @bot.event
