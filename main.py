@@ -1097,6 +1097,194 @@ async def calcul(interaction: discord.Interaction, nombre: float, pourcentage: f
     )
 
     await interaction.followup.send(embed=embed)
+    
+#------------------------------------------------------------------------- ECONOMIEW ------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE-------
+#------------------------------------------------------------------------- ECONOMIEW ------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE-------
+#------------------------------------------------------------------------- ECONOMIEW ------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE-------
+#------------------------------------------------------------------------- ECONOMIEW ------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE-------
+
+# Rôle autorisé pour les commandes économiques
+allowed_role_eco = "″ [𝑺ץ] Développeur"  # Remplace par le nom de ton rôle spécifique
+
+# Fonction pour vérifier si l'utilisateur a le bon rôle
+def has_permission_eco(ctx):
+    return any(role.name == allowed_role for role in ctx.author.roles)
+
+# Commande de balance avec préfixe et slash
+@bot.command(name="balance")
+async def balance(ctx):
+    if not has_permission_eco(ctx):
+        await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
+        return
+
+    user_data = db.users.find_one({"user_id": ctx.author.id})
+    if user_data:
+        balance = user_data.get("balance", 0)
+        await ctx.send(embed=create_embed(f"Balance de {ctx.author.name}", f"Tu as {balance} crédits."))
+    else:
+        await ctx.send(embed=create_embed("Données introuvables", "Données utilisateur introuvables."))
+
+# Commande de dépôt avec préfixe et slash
+@bot.command(name="deposit")
+async def deposit(ctx, amount: int):
+    if not has_permission_eco(ctx):
+        await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
+        return
+
+    if amount <= 0:
+        await ctx.send(embed=create_embed("Erreur", "Le montant doit être positif."))
+        return
+
+    user_data = db.users.find_one({"user_id": ctx.author.id})
+    if not user_data:
+        db.users.insert_one({"user_id": ctx.author.id, "balance": 0, "inventory": {}})
+
+    db.users.update_one({"user_id": ctx.author.id}, {"$inc": {"balance": amount}})
+    await ctx.send(embed=create_embed("Dépôt effectué", f"{amount} crédits ont été déposés sur ton compte."))
+
+# Commande de retrait avec préfixe et slash
+@bot.command(name="withdraw")
+async def withdraw(ctx, amount: int):
+    if not has_permission_eco(ctx):
+        await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
+        return
+
+    if amount <= 0:
+        await ctx.send(embed=create_embed("Erreur", "Le montant doit être positif."))
+        return
+
+    user_data = db.users.find_one({"user_id": ctx.author.id})
+    if user_data:
+        balance = user_data.get("balance", 0)
+        if balance >= amount:
+            db.users.update_one({"user_id": ctx.author.id}, {"$inc": {"balance": -amount}})
+            await ctx.send(embed=create_embed("Retrait effectué", f"{amount} crédits ont été retirés de ton compte."))
+        else:
+            await ctx.send(embed=create_embed("Fonds insuffisants", "Tu n'as pas assez d'argent sur ton compte."))
+    else:
+        await ctx.send(embed=create_embed("Données introuvables", "Données utilisateur introuvables."))
+
+# Commande de transfert avec préfixe et slash
+@bot.command(name="transfer")
+async def transfer(ctx, target: discord.Member, amount: int):
+    if not has_permission_eco(ctx):
+        await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
+        return
+
+    if amount <= 0:
+        await ctx.send(embed=create_embed("Erreur", "Le montant doit être positif."))
+        return
+
+    sender_data = db.users.find_one({"user_id": ctx.author.id})
+    target_data = db.users.find_one({"user_id": target.id})
+
+    if sender_data and target_data:
+        sender_balance = sender_data.get("balance", 0)
+        if sender_balance >= amount:
+            db.users.update_one({"user_id": ctx.author.id}, {"$inc": {"balance": -amount}})
+            db.users.update_one({"user_id": target.id}, {"$inc": {"balance": amount}})
+            await ctx.send(embed=create_embed("Transfert effectué", f"{amount} crédits ont été transférés à {target.name}."))
+        else:
+            await ctx.send(embed=create_embed("Fonds insuffisants", "Tu n'as pas assez d'argent pour effectuer le transfert."))
+    else:
+        await ctx.send(embed=create_embed("Données introuvables", "Données utilisateur introuvables."))
+
+# Commande pour voir l'inventaire avec préfixe et slash
+@bot.command(name="inventory")
+async def inventory(ctx):
+    if not has_permission_eco(ctx):
+        await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
+        return
+
+    user_data = db.users.find_one({"user_id": ctx.author.id})
+    if user_data:
+        inventory = user_data.get("inventory", {})
+        if inventory:
+            inventory_list = "\n".join([f"{item}: {quantity}" for item, quantity in inventory.items()])
+            await ctx.send(embed=create_embed(f"Inventaire de {ctx.author.name}", inventory_list))
+        else:
+            await ctx.send(embed=create_embed("Inventaire vide", "Ton inventaire est vide."))
+    else:
+        await ctx.send(embed=create_embed("Données introuvables", "Données utilisateur introuvables."))
+
+# Commande d'achat avec préfixe et slash
+@bot.command(name="buy")
+async def buy(ctx, item: str, amount: int):
+    if not has_permission_eco(ctx):
+        await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
+        return
+
+    # Vérifie si l'utilisateur a assez d'argent et que l'item est disponible
+    user_data = db.users.find_one({"user_id": ctx.author.id})
+    if user_data:
+        price = 100  # Remplace par le prix réel de l'item
+        balance = user_data.get("balance", 0)
+        if balance >= price * amount:
+            db.users.update_one({"user_id": ctx.author.id}, {"$inc": {"balance": -price * amount}})
+            db.users.update_one({"user_id": ctx.author.id}, {"$inc": {f"inventory.{item}": amount}})
+            await ctx.send(embed=create_embed("Achat effectué", f"Tu as acheté {amount} {item}(s)."))
+        else:
+            await ctx.send(embed=create_embed("Fonds insuffisants", "Tu n'as pas assez d'argent pour acheter cet item."))
+    else:
+        await ctx.send(embed=create_embed("Données introuvables", "Données utilisateur introuvables."))
+
+# Ajout des slash commands (discord.py v2.0+)
+@bot.tree.command(name="balance")
+async def slash_balance(interaction: discord.Interaction):
+    if not has_permission_eco(interaction):
+        await interaction.response.send_message(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."), ephemeral=True)
+        return
+
+    user_data = db.users.find_one({"user_id": interaction.user.id})
+    if user_data:
+        balance = user_data.get("balance", 0)
+        await interaction.response.send_message(embed=create_embed(f"Balance de {interaction.user.name}", f"Tu as {balance} crédits."))
+    else:
+        await interaction.response.send_message(embed=create_embed("Données introuvables", "Données utilisateur introuvables."))
+
+@bot.tree.command(name="deposit")
+async def slash_deposit(interaction: discord.Interaction, amount: int):
+    if not has_permission_eco(interaction):
+        await interaction.response.send_message(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."), ephemeral=True)
+        return
+
+    if amount <= 0:
+        await interaction.response.send_message(embed=create_embed("Erreur", "Le montant doit être positif."), ephemeral=True)
+        return
+
+    user_data = db.users.find_one({"user_id": interaction.user.id})
+    if not user_data:
+        db.users.insert_one({"user_id": interaction.user.id, "balance": 0, "inventory": {}})
+
+    db.users.update_one({"user_id": interaction.user.id}, {"$inc": {"balance": amount}})
+    await interaction.response.send_message(embed=create_embed("Dépôt effectué", f"{amount} crédits ont été déposés sur ton compte."))
+
+# Commande .helpE pour afficher un embed d'aide sur les commandes économiques
+@bot.command(name="helpE")
+async def helpE(ctx):
+    if not has_permission_eco(ctx):
+        await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
+        return
+
+    embed = discord.Embed(
+        title="Commandes économiques - Aide",
+        description="Voici une liste des commandes économiques disponibles pour le moment. **Ces commandes sont uniquement à but de test et n'ont pas pour le moment pour but de remplacer le bot économique actuel.**",
+        color=discord.Color(0xFFFFFF)
+    )
+
+    embed.add_field(name="`.balance`", value="Affiche le solde actuel de l'utilisateur.")
+    embed.add_field(name="`.deposit <montant>`", value="Permet à l'utilisateur de déposer de l'argent sur son compte.")
+    embed.add_field(name="`.withdraw <montant>`", value="Permet à l'utilisateur de retirer de l'argent de son compte.")
+    embed.add_field(name="`.transfer <utilisateur> <montant>`", value="Permet à l'utilisateur de transférer de l'argent à un autre membre.")
+    embed.add_field(name="`.inventory`", value="Affiche l'inventaire de l'utilisateur.")
+    embed.add_field(name="`.buy <item> <quantité>`", value="Permet à l'utilisateur d'acheter un item de l'inventaire.")
+
+    embed.set_thumbnail(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/etheryBot_profil.jpg?raw=true")
+    embed.set_footer(text="Utilise ces commandes avec sagesse !")
+    embed.set_image(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/etheryaBot_banniere.png?raw=true")
+
+    await ctx.send(embed=embed)
+
 
 #------------------------------------------------------------------------- Ignorer les messages des autres bots
 @bot.event
@@ -1197,38 +1385,6 @@ async def on_message(message):
     # Assurez-vous que le bot continue de traiter les commandes
     await bot.process_commands(message)
 #------------------------------------------------------------------------- auto clan
-async def on_member_join(member):
-    # Liste des rôles à attribuer
-    roles_to_assign = [
-        "″ [𝑺ץ] Frostar", 
-        "″ [𝑺ץ] Ténébros", 
-        "″ [𝑺ץ] Luminis", 
-        "″ [𝑺ץ] Valkari"
-    ]
-    
-    # Vérifie si l'utilisateur a déjà un des rôles
-    existing_roles = [role.name for role in member.roles]
-    if not any(role in roles_to_assign for role in existing_roles):
-        # Choisir un rôle au hasard dans la liste
-        role_name = random.choice(roles_to_assign)
-        role = discord.utils.get(member.guild.roles, name=role_name)
-        
-        if role:
-            # Ajouter le rôle à l'utilisateur
-            await member.add_roles(role)
-            
-            # Créer l'embed
-            embed = discord.Embed(
-                title="🎉 Un nouveau membre rejoint !",
-                description=f"{member.mention} vient de rejoindre le serveur et a été assigné au rôle **{role_name}**.",
-                color=discord.Color.white()
-            )
-            embed.set_footer(text="Bienvenue parmi nous !")
-            
-            # Envoyer l'embed dans le salon spécifié
-            channel = bot.get_channel(1344065559826006047)  # ID du salon
-            if channel:
-                await channel.send(embed=embed)
 
 #------------------------------------------------------------------------- Lancement du bot
 keep_alive()
