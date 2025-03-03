@@ -1105,159 +1105,114 @@ async def calcul(interaction: discord.Interaction, nombre: float, pourcentage: f
 
 # Rôle autorisé pour les commandes économiques
 allowed_role_eco = "″ [𝑺ץ] Développeur"  # Remplace par le nom de ton rôle spécifique
+special_role = "″ [𝑺ץ] Administrateur"  # Rôle supplémentaire pour les commandes spéciales
 
-# Fonction pour vérifier si l'utilisateur a le bon rôle
+# Fonction pour créer un embed personnalisé
+def create_embed(title, description):
+    embed = discord.Embed(title=title, description=description, color=discord.Color.green())
+    return embed
+
+# Fonction pour vérifier les permissions
 def has_permission_eco(ctx):
-    return any(role.name == allowed_role_eco for role in ctx.author.roles)
+    return any(role.name == allowed_role_eco for role in ctx.author.roles) and any(role.name == special_role for role in ctx.author.roles)
 
-# Commande de balance avec préfixe et slash
+# Commande pour ajouter de l'argent à un utilisateur
+@bot.command(name="add_money")
+async def add_money(ctx, user: discord.Member, amount: int):
+    if not has_permission_eco(ctx):
+        await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
+        return
+
+    # Mettre à jour le solde de l'utilisateur dans la collection2
+    collection2.update_one({"user_id": user.id}, {"$inc": {"balance": amount}}, upsert=True)
+    await ctx.send(embed=create_embed("Ajout d'argent", f"{amount} crédits ont été ajoutés à {user.name}."))
+
+# Commande pour retirer de l'argent à un utilisateur
+@bot.command(name="remove_money")
+async def remove_money(ctx, user: discord.Member, amount: int):
+    if not has_permission_eco(ctx):
+        await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
+        return
+
+    # Retirer de l'argent de l'utilisateur dans la collection2
+    collection2.update_one({"user_id": user.id}, {"$inc": {"balance": -amount}}, upsert=True)
+    await ctx.send(embed=create_embed("Retrait d'argent", f"{amount} crédits ont été retirés à {user.name}."))
+
+# Commande pour afficher l'argent d'un utilisateur
 @bot.command(name="balance")
-async def balance(ctx):
-    if not has_permission_eco(ctx):
-        await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
-        return
+async def balance(ctx, user: discord.Member = None):
+    user = user or ctx.author  # Si aucun utilisateur n'est spécifié, prend l'utilisateur qui appelle la commande
+    data = collection2.find_one({"user_id": user.id})
 
-    user_data = db.users.find_one({"user_id": ctx.author.id})
-    if user_data:
-        balance = user_data.get("balance", 0)
-        await ctx.send(embed=create_embed(f"Balance de {ctx.author.name}", f"Tu as {balance} crédits."))
+    if data and "balance" in data:
+        await ctx.send(embed=create_embed(f"Solde de {user.name}", f"{user.name} a {data['balance']} crédits."))
     else:
-        await ctx.send(embed=create_embed("Données introuvables", "Données utilisateur introuvables."))
+        await ctx.send(embed=create_embed(f"Solde de {user.name}", f"{user.name} n'a pas de solde enregistré."))
 
-# Commande de dépôt avec préfixe et slash
-@bot.command(name="deposit")
-async def deposit(ctx, amount: int):
+# Commande pour ajouter un item au store
+@bot.command(name="add_item_store")
+async def add_item_store(ctx, item_name: str, price: int, stock: int):
     if not has_permission_eco(ctx):
         await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
         return
 
-    if amount <= 0:
-        await ctx.send(embed=create_embed("Erreur", "Le montant doit être positif."))
-        return
+    # Ajouter ou mettre à jour l'item dans le store de collection2
+    collection2.update_one({"item_name": item_name}, {"$set": {"price": price}, "$inc": {"stock": stock}}, upsert=True)
+    await ctx.send(embed=create_embed("Item ajouté", f"L'item {item_name} a été ajouté avec {stock} en stock."))
 
-    user_data = db.users.find_one({"user_id": ctx.author.id})
-    if not user_data:
-        db.users.insert_one({"user_id": ctx.author.id, "balance": 0, "inventory": {}})
-
-    db.users.update_one({"user_id": ctx.author.id}, {"$inc": {"balance": amount}})
-    await ctx.send(embed=create_embed("Dépôt effectué", f"{amount} crédits ont été déposés sur ton compte."))
-
-# Commande de retrait avec préfixe et slash
-@bot.command(name="withdraw")
-async def withdraw(ctx, amount: int):
+# Commande pour retirer un item du store
+@bot.command(name="remove_item_store")
+async def remove_item_store(ctx, item_name: str):
     if not has_permission_eco(ctx):
         await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
         return
 
-    if amount <= 0:
-        await ctx.send(embed=create_embed("Erreur", "Le montant doit être positif."))
-        return
+    # Retirer un item du store dans collection2
+    collection2.delete_one({"item_name": item_name})
+    await ctx.send(embed=create_embed("Item supprimé", f"L'item {item_name} a été supprimé du store."))
 
-    user_data = db.users.find_one({"user_id": ctx.author.id})
-    if user_data:
-        balance = user_data.get("balance", 0)
-        if balance >= amount:
-            db.users.update_one({"user_id": ctx.author.id}, {"$inc": {"balance": -amount}})
-            await ctx.send(embed=create_embed("Retrait effectué", f"{amount} crédits ont été retirés de ton compte."))
+# Commande pour afficher les items dans le store
+@bot.command(name="store")
+async def store(ctx):
+    store_items = collection2.find({"item_name": {"$exists": True}})
+    if store_items:
+        items_list = "\n".join([f"{item['item_name']} - {item['price']} crédits - Stock: {item['stock']}" for item in store_items])
+        await ctx.send(embed=create_embed("Store", items_list))
+    else:
+        await ctx.send(embed=create_embed("Store vide", "Il n'y a actuellement aucun item en vente."))
+
+# Commande pour acheter un item du store
+@bot.command(name="buy_item")
+async def buy_item(ctx, item_name: str):
+    user_data = collection2.find_one({"user_id": ctx.author.id})
+
+    # Vérifier si l'utilisateur a suffisamment de crédits
+    if user_data and "balance" in user_data:
+        item = collection2.find_one({"item_name": item_name})
+        if item and item["stock"] > 0:
+            price = item["price"]
+            if user_data["balance"] >= price:
+                # Déduire les crédits et ajouter l'item à l'inventaire de l'utilisateur
+                collection2.update_one({"user_id": ctx.author.id}, {"$inc": {"balance": -price, f"inventory.{item_name}": 1}}, upsert=True)
+                # Réduire le stock de l'item
+                collection2.update_one({"item_name": item_name}, {"$inc": {"stock": -1}})
+                await ctx.send(embed=create_embed("Achat réussi", f"Tu as acheté {item_name} pour {price} crédits."))
+            else:
+                await ctx.send(embed=create_embed("Crédits insuffisants", "Tu n'as pas assez de crédits pour acheter cet item."))
         else:
-            await ctx.send(embed=create_embed("Fonds insuffisants", "Tu n'as pas assez d'argent sur ton compte."))
+            await ctx.send(embed=create_embed("Item introuvable", f"L'item {item_name} n'existe pas ou est en rupture de stock."))
     else:
-        await ctx.send(embed=create_embed("Données introuvables", "Données utilisateur introuvables."))
+        await ctx.send(embed=create_embed("Solde insuffisant", "Tu n'as pas de solde enregistré."))
 
-# Commande de transfert avec préfixe et slash
-@bot.command(name="transfer")
-async def transfer(ctx, target: discord.Member, amount: int):
-    if not has_permission_eco(ctx):
-        await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
-        return
-
-    if amount <= 0:
-        await ctx.send(embed=create_embed("Erreur", "Le montant doit être positif."))
-        return
-
-    sender_data = db.users.find_one({"user_id": ctx.author.id})
-    target_data = db.users.find_one({"user_id": target.id})
-
-    if sender_data and target_data:
-        sender_balance = sender_data.get("balance", 0)
-        if sender_balance >= amount:
-            db.users.update_one({"user_id": ctx.author.id}, {"$inc": {"balance": -amount}})
-            db.users.update_one({"user_id": target.id}, {"$inc": {"balance": amount}})
-            await ctx.send(embed=create_embed("Transfert effectué", f"{amount} crédits ont été transférés à {target.name}."))
-        else:
-            await ctx.send(embed=create_embed("Fonds insuffisants", "Tu n'as pas assez d'argent pour effectuer le transfert."))
-    else:
-        await ctx.send(embed=create_embed("Données introuvables", "Données utilisateur introuvables."))
-
-# Commande pour voir l'inventaire avec préfixe et slash
+# Commande pour afficher l'inventaire d'un utilisateur
 @bot.command(name="inventory")
 async def inventory(ctx):
-    if not has_permission_eco(ctx):
-        await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
-        return
-
-    user_data = db.users.find_one({"user_id": ctx.author.id})
-    if user_data:
-        inventory = user_data.get("inventory", {})
-        if inventory:
-            inventory_list = "\n".join([f"{item}: {quantity}" for item, quantity in inventory.items()])
-            await ctx.send(embed=create_embed(f"Inventaire de {ctx.author.name}", inventory_list))
-        else:
-            await ctx.send(embed=create_embed("Inventaire vide", "Ton inventaire est vide."))
+    user_data = collection2.find_one({"user_id": ctx.author.id})
+    if user_data and "inventory" in user_data:
+        inventory_list = "\n".join([f"{item}: {quantity}" for item, quantity in user_data["inventory"].items()])
+        await ctx.send(embed=create_embed("Inventaire", f"Voici ton inventaire:\n{inventory_list}"))
     else:
-        await ctx.send(embed=create_embed("Données introuvables", "Données utilisateur introuvables."))
-
-# Commande d'achat avec préfixe et slash
-@bot.command(name="buy")
-async def buy(ctx, item: str, amount: int):
-    if not has_permission_eco(ctx):
-        await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
-        return
-
-    # Vérifie si l'utilisateur a assez d'argent et que l'item est disponible
-    user_data = db.users.find_one({"user_id": ctx.author.id})
-    if user_data:
-        price = 100  # Remplace par le prix réel de l'item
-        balance = user_data.get("balance", 0)
-        if balance >= price * amount:
-            db.users.update_one({"user_id": ctx.author.id}, {"$inc": {"balance": -price * amount}})
-            db.users.update_one({"user_id": ctx.author.id}, {"$inc": {f"inventory.{item}": amount}})
-            await ctx.send(embed=create_embed("Achat effectué", f"Tu as acheté {amount} {item}(s)."))
-        else:
-            await ctx.send(embed=create_embed("Fonds insuffisants", "Tu n'as pas assez d'argent pour acheter cet item."))
-    else:
-        await ctx.send(embed=create_embed("Données introuvables", "Données utilisateur introuvables."))
-
-# Ajout des slash commands (discord.py v2.0+)
-@bot.tree.command(name="balance")
-async def slash_balance(interaction: discord.Interaction):
-    if not has_permission_eco(interaction):
-        await interaction.response.send_message(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."), ephemeral=True)
-        return
-
-    user_data = db.users.find_one({"user_id": interaction.user.id})
-    if user_data:
-        balance = user_data.get("balance", 0)
-        await interaction.response.send_message(embed=create_embed(f"Balance de {interaction.user.name}", f"Tu as {balance} crédits."))
-    else:
-        await interaction.response.send_message(embed=create_embed("Données introuvables", "Données utilisateur introuvables."))
-
-@bot.tree.command(name="deposit")
-async def slash_deposit(interaction: discord.Interaction, amount: int):
-    if not has_permission_eco(interaction):
-        await interaction.response.send_message(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."), ephemeral=True)
-        return
-
-    if amount <= 0:
-        await interaction.response.send_message(embed=create_embed("Erreur", "Le montant doit être positif."), ephemeral=True)
-        return
-
-    user_data = db.users.find_one({"user_id": interaction.user.id})
-    if not user_data:
-        db.users.insert_one({"user_id": interaction.user.id, "balance": 0, "inventory": {}})
-
-    db.users.update_one({"user_id": interaction.user.id}, {"$inc": {"balance": amount}})
-    await interaction.response.send_message(embed=create_embed("Dépôt effectué", f"{amount} crédits ont été déposés sur ton compte."))
+        await ctx.send(embed=create_embed("Inventaire vide", "Tu n'as aucun item dans ton inventaire."))
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------- .helpE
 
