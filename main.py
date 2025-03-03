@@ -1207,7 +1207,7 @@ async def store(ctx):
     await ctx.send(embed=create_embed("🏪 Boutique", desc))
 
 @bot.tree.command(name="add-store", description="Ajoute un objet dans le store (réservé aux rôles .Destiny et second_role)")
-@app_commands.checks.has_role(ROLE_DESTINY)  # Vérification du premier rôle
+@app_commands.checks.has_role(ROLE_NEEDED)  # Vérification du premier rôle
 @app_commands.checks.has_role(ROLE_SECOND)   # Vérification du deuxième rôle
 @app_commands.describe(
     name="Nom de l'objet",
@@ -1218,7 +1218,7 @@ async def store(ctx):
 async def add_store(interaction: discord.Interaction, name: str, price: int, stock: int, description: str):
     if not (any(role.name == ROLE_NEEDED for role in interaction.user.roles) and any(role.name == ROLE_SECOND for role in interaction.user.roles)):
         return await interaction.response.send_message(
-            embed=create_embed("⚠️ Accès refusé", "Vous devez avoir les rôles '.Destiny' et 'second_role' pour ajouter un objet dans le store.")
+            embed=create_embed("⚠️ Accès refusé", "Vous devez avoir les rôles 'Développeur' et '*' pour ajouter un objet dans le store.")
         )
     
     store_collection.insert_one({"name": name, "price": price, "stock": stock, "description": description})
