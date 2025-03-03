@@ -35,7 +35,7 @@ token = os.getenv('TOKEN_BOT_DISCORD')
 
 # Intents et configuration du bot
 intents = discord.Intents.all()
-bot = commands.Bot(command_prefix="!!", intents=intents)
+bot = commands.Bot(command_prefix=".", intents=intents)
 
 @bot.event
 async def on_ready():
