@@ -20,7 +20,7 @@ mongo_uri = os.getenv("MONGO_URI")
 client = MongoClient(mongo_uri)
 db = client['Cass-Eco2']
 collection = db['commandes']
-collection = db['etherya-eco']
+collection2 = db['etherya-eco']
 
 # Vérification MongoDB
 try:
