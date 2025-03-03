@@ -1105,7 +1105,7 @@ async def calcul(interaction: discord.Interaction, nombre: float, pourcentage: f
 
 # Rôle autorisé pour les commandes économiques
 allowed_role_eco = "″ [𝑺ץ] Développeur"  # Remplace par le nom de ton rôle spécifique
-special_role = "″ [𝑺ץ] Administrateur"  # Rôle supplémentaire pour les commandes spéciales
+special_role = "*"  # Rôle supplémentaire pour les commandes spéciales
 
 # Fonction pour créer un embed personnalisé
 def create_embed(title, description):
@@ -1114,34 +1114,35 @@ def create_embed(title, description):
 
 # Fonction pour vérifier les permissions
 def has_permission_eco(ctx):
-    return any(role.name == allowed_role_eco for role in ctx.author.roles) and any(role.name == special_role for role in ctx.author.roles)
+    return any(role.name == allowed_role_eco for role in ctx.author.roles)
+
+def has_permission_special(ctx):
+    return any(role.name == special_role for role in ctx.author.roles) and has_permission_eco(ctx)
 
 # Commande pour ajouter de l'argent à un utilisateur
 @bot.command(name="add_money")
 async def add_money(ctx, user: discord.Member, amount: int):
-    if not has_permission_eco(ctx):
+    if not has_permission_special(ctx):
         await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
         return
 
-    # Mettre à jour le solde de l'utilisateur dans la collection2
     collection2.update_one({"user_id": user.id}, {"$inc": {"balance": amount}}, upsert=True)
     await ctx.send(embed=create_embed("Ajout d'argent", f"{amount} crédits ont été ajoutés à {user.name}."))
 
 # Commande pour retirer de l'argent à un utilisateur
 @bot.command(name="remove_money")
 async def remove_money(ctx, user: discord.Member, amount: int):
-    if not has_permission_eco(ctx):
+    if not has_permission_special(ctx):
         await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
         return
 
-    # Retirer de l'argent de l'utilisateur dans la collection2
     collection2.update_one({"user_id": user.id}, {"$inc": {"balance": -amount}}, upsert=True)
     await ctx.send(embed=create_embed("Retrait d'argent", f"{amount} crédits ont été retirés à {user.name}."))
 
 # Commande pour afficher l'argent d'un utilisateur
 @bot.command(name="balance")
 async def balance(ctx, user: discord.Member = None):
-    user = user or ctx.author  # Si aucun utilisateur n'est spécifié, prend l'utilisateur qui appelle la commande
+    user = user or ctx.author
     data = collection2.find_one({"user_id": user.id})
 
     if data and "balance" in data:
@@ -1149,30 +1150,62 @@ async def balance(ctx, user: discord.Member = None):
     else:
         await ctx.send(embed=create_embed(f"Solde de {user.name}", f"{user.name} n'a pas de solde enregistré."))
 
-# Commande pour ajouter un item au store
-@bot.command(name="add_item_store")
-async def add_item_store(ctx, item_name: str, price: int, stock: int):
+# Commande de dépôt (only with /)
+@bot.slash_command(name="deposit")
+async def deposit(ctx, amount: int):
     if not has_permission_eco(ctx):
         await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
         return
 
-    # Ajouter ou mettre à jour l'item dans le store de collection2
-    collection2.update_one({"item_name": item_name}, {"$set": {"price": price}, "$inc": {"stock": stock}}, upsert=True)
-    await ctx.send(embed=create_embed("Item ajouté", f"L'item {item_name} a été ajouté avec {stock} en stock."))
+    # Exemple de dépôt d'argent
+    collection2.update_one({"user_id": ctx.author.id}, {"$inc": {"balance": amount}}, upsert=True)
+    await ctx.send(embed=create_embed("Dépôt réussi", f"{amount} crédits ont été déposés sur ton compte."))
 
-# Commande pour retirer un item du store
-@bot.command(name="remove_item_store")
-async def remove_item_store(ctx, item_name: str):
+# Commande de retrait (only with /)
+@bot.slash_command(name="withdraw")
+async def withdraw(ctx, amount: int):
     if not has_permission_eco(ctx):
         await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
         return
 
-    # Retirer un item du store dans collection2
-    collection2.delete_one({"item_name": item_name})
-    await ctx.send(embed=create_embed("Item supprimé", f"L'item {item_name} a été supprimé du store."))
+    # Exemple de retrait d'argent
+    collection2.update_one({"user_id": ctx.author.id}, {"$inc": {"balance": -amount}}, upsert=True)
+    await ctx.send(embed=create_embed("Retrait réussi", f"{amount} crédits ont été retirés de ton compte."))
 
-# Commande pour afficher les items dans le store
-@bot.command(name="store")
+# Commande de transfert (only with /)
+@bot.slash_command(name="transfer")
+async def transfer(ctx, user: discord.Member, amount: int):
+    if not has_permission_eco(ctx):
+        await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
+        return
+
+    # Exemple de transfert d'argent
+    collection2.update_one({"user_id": ctx.author.id}, {"$inc": {"balance": -amount}}, upsert=True)
+    collection2.update_one({"user_id": user.id}, {"$inc": {"balance": amount}}, upsert=True)
+    await ctx.send(embed=create_embed("Transfert réussi", f"{amount} crédits ont été transférés à {user.name}."))
+
+# Commande pour acheter un item du store (only with /)
+@bot.slash_command(name="buy")
+async def buy(ctx, item_name: str):
+    if not has_permission_eco(ctx):
+        await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
+        return
+
+    item = collection2.find_one({"item_name": item_name})
+    if item and item["stock"] > 0:
+        user_data = collection2.find_one({"user_id": ctx.author.id})
+        price = item["price"]
+        if user_data["balance"] >= price:
+            collection2.update_one({"user_id": ctx.author.id}, {"$inc": {"balance": -price, f"inventory.{item_name}": 1}}, upsert=True)
+            collection2.update_one({"item_name": item_name}, {"$inc": {"stock": -1}})
+            await ctx.send(embed=create_embed("Achat réussi", f"Tu as acheté {item_name} pour {price} crédits."))
+        else:
+            await ctx.send(embed=create_embed("Crédits insuffisants", "Tu n'as pas assez de crédits pour acheter cet item."))
+    else:
+        await ctx.send(embed=create_embed("Item introuvable", f"L'item {item_name} n'existe pas ou est en rupture de stock."))
+
+# Commande pour afficher les items dans le store (only with /)
+@bot.slash_command(name="store")
 async def store(ctx):
     store_items = collection2.find({"item_name": {"$exists": True}})
     if store_items:
@@ -1181,31 +1214,8 @@ async def store(ctx):
     else:
         await ctx.send(embed=create_embed("Store vide", "Il n'y a actuellement aucun item en vente."))
 
-# Commande pour acheter un item du store
-@bot.command(name="buy_item")
-async def buy_item(ctx, item_name: str):
-    user_data = collection2.find_one({"user_id": ctx.author.id})
-
-    # Vérifier si l'utilisateur a suffisamment de crédits
-    if user_data and "balance" in user_data:
-        item = collection2.find_one({"item_name": item_name})
-        if item and item["stock"] > 0:
-            price = item["price"]
-            if user_data["balance"] >= price:
-                # Déduire les crédits et ajouter l'item à l'inventaire de l'utilisateur
-                collection2.update_one({"user_id": ctx.author.id}, {"$inc": {"balance": -price, f"inventory.{item_name}": 1}}, upsert=True)
-                # Réduire le stock de l'item
-                collection2.update_one({"item_name": item_name}, {"$inc": {"stock": -1}})
-                await ctx.send(embed=create_embed("Achat réussi", f"Tu as acheté {item_name} pour {price} crédits."))
-            else:
-                await ctx.send(embed=create_embed("Crédits insuffisants", "Tu n'as pas assez de crédits pour acheter cet item."))
-        else:
-            await ctx.send(embed=create_embed("Item introuvable", f"L'item {item_name} n'existe pas ou est en rupture de stock."))
-    else:
-        await ctx.send(embed=create_embed("Solde insuffisant", "Tu n'as pas de solde enregistré."))
-
-# Commande pour afficher l'inventaire d'un utilisateur
-@bot.command(name="inventory")
+# Commande pour afficher l'inventaire (only with /)
+@bot.slash_command(name="inventory")
 async def inventory(ctx):
     user_data = collection2.find_one({"user_id": ctx.author.id})
     if user_data and "inventory" in user_data:
@@ -1213,8 +1223,6 @@ async def inventory(ctx):
         await ctx.send(embed=create_embed("Inventaire", f"Voici ton inventaire:\n{inventory_list}"))
     else:
         await ctx.send(embed=create_embed("Inventaire vide", "Tu n'as aucun item dans ton inventaire."))
-
-#-------------------------------------------------------------------------------------------------------------------------------------------------- .helpE
 
 # Commande .helpE pour afficher un embed d'aide sur les commandes économiques
 @bot.command(name="helpE")
@@ -1229,54 +1237,20 @@ async def helpE(ctx):
         color=discord.Color(0x00FF00)  # Utilise une couleur verte pour un thème économique
     )
 
-    # Commande balance
-    embed.add_field(
-        name="💸 `.balance`",
-        value="Affiche ton solde actuel sur le serveur.",
-        inline=False
-    )
+    embed.add_field(name="💸 `.balance`", value="Affiche ton solde actuel sur le serveur.", inline=False)
+    embed.add_field(name="💰 `/deposit <montant>`", value="Dépose de l'argent sur ton compte.", inline=False)
+    embed.add_field(name="🏧 `/withdraw <montant>`", value="Retire de l'argent de ton compte.", inline=False)
+    embed.add_field(name="🔄 `/transfer <utilisateur> <montant>`", value="Transfère de l'argent à un autre utilisateur.", inline=False)
+    embed.add_field(name="📦 `/inventory`", value="Affiche ton inventaire.", inline=False)
+    embed.add_field(name="🛒 `/buy <item>`", value="Achète des objets de ton inventaire.", inline=False)
+    embed.add_field(name="🛍 `/store`", value="Affiche les items en vente.", inline=False)
 
-    # Commande deposit
-    embed.add_field(
-        name="💰 `.deposit <montant>`",
-        value="Dépose de l'argent sur ton compte.",
-        inline=False
-    )
-
-    # Commande withdraw
-    embed.add_field(
-        name="🏧 `.withdraw <montant>`",
-        value="Retire de l'argent de ton compte.",
-        inline=False
-    )
-
-    # Commande transfer
-    embed.add_field(
-        name="🔄 `.transfer <utilisateur> <montant>`",
-        value="Transfère de l'argent à un autre utilisateur.",
-        inline=False
-    )
-
-    # Commande inventory
-    embed.add_field(
-        name="📦 `.inventory`",
-        value="Affiche ton inventaire.",
-        inline=False
-    )
-
-    # Commande buy
-    embed.add_field(
-        name="🛒 `.buy <item> <quantité>`",
-        value="Achète des objets de ton inventaire.",
-        inline=False
-    )
-
-    # Ajouter une image de présentation et un footer pour le style
     embed.set_thumbnail(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/etheryaBot_profil.jpg?raw=true")
     embed.set_footer(text="Utilise ces commandes avec sagesse ! 💡")
     embed.set_image(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/etheryaBot_banniere.png?raw=true")
 
     await ctx.send(embed=embed)
+
 
 
 #------------------------------------------------------------------------- Ignorer les messages des autres bots
