@@ -1118,37 +1118,37 @@ async def on_message(message):
 
         # Ajout des commandes
         embed.add_field(
-            name="💥 !!break <membre>",
+            name="💥 .break <membre>",
             value="Retire un rôle spécifique à un membre. Exemple : !!break @Utilisateur",
             inline=False
         )
         embed.add_field(
-            name="⏳ !!malus <membre>",
+            name="⏳ .malus <membre>",
             value="Ajoute un rôle malus à un membre pour une durée prédéfinie de 24 heures. Exemple : !!malus @Utilisateur",
             inline=False
         )
         embed.add_field(
-            name="☠️ !!annihilation <membre>",
+            name="☠️ .annihilation <membre>",
             value="Cible un membre pour l'anéantissement. Exemple : !!annihilation @Utilisateur",
             inline=False
         )
         embed.add_field(
-            name="🌌 !!gravity <membre>",
+            name="🌌 .gravity <membre>",
             value=f"Ajoute le rôle {role_gravity.mention} à un membre. Exemple : !!gravity @Utilisateur",  # Mention du rôle ici
             inline=False
         )
         embed.add_field(
-            name="🚀 !!spatial <membre>",
+            name="🚀 .spatial <membre>",
             value=f"Ajoute temporairement le rôle {role_spatial.mention} à un membre. Exemple : !!spatial @Utilisateur",  # Mention du rôle ici
             inline=False
         )
         embed.add_field(
-            name="🏥 !!heal",
+            name="🏥 .heal",
             value="Retire les malus et soigne l'utilisateur exécutant la commande.",
             inline=False
         )
         embed.add_field(
-            name="🛡️ !!protect",
+            name="🛡️ .protect",
             value="Protège temporairement l'utilisateur des vols. Exemple : !!protect",
             inline=False
         )
