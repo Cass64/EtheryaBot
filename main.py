@@ -1120,27 +1120,27 @@ async def on_message(message):
         # Ajout des commandes
         embed.add_field(
             name="💥 .break <membre>",
-            value="Retire un rôle spécifique à un membre. Exemple : !!break @Utilisateur",
+            value="Retire un rôle spécifique à un membre. Exemple : .break @Utilisateur",
             inline=False
         )
         embed.add_field(
             name="⏳ .malus <membre>",
-            value="Ajoute un rôle malus à un membre pour une durée prédéfinie de 24 heures. Exemple : !!malus @Utilisateur",
+            value="Ajoute un rôle malus à un membre pour une durée prédéfinie de 24 heures. Exemple : .malus @Utilisateur",
             inline=False
         )
         embed.add_field(
             name="☠️ .annihilation <membre>",
-            value="Cible un membre pour l'anéantissement. Exemple : !!annihilation @Utilisateur",
+            value="Cible un membre pour l'anéantissement. Exemple : .annihilation @Utilisateur",
             inline=False
         )
         embed.add_field(
             name="🌌 .gravity <membre>",
-            value=f"Ajoute le rôle {role_gravity.mention} à un membre. Exemple : !!gravity @Utilisateur",  # Mention du rôle ici
+            value=f"Ajoute le rôle {role_gravity.mention} à un membre. Exemple : .gravity @Utilisateur",  # Mention du rôle ici
             inline=False
         )
         embed.add_field(
             name="🚀 .spatial <membre>",
-            value=f"Ajoute temporairement le rôle {role_spatial.mention} à un membre. Exemple : !!spatial @Utilisateur",  # Mention du rôle ici
+            value=f"Ajoute temporairement le rôle {role_spatial.mention} à un membre. Exemple : .spatial @Utilisateur",  # Mention du rôle ici
             inline=False
         )
         embed.add_field(
@@ -1150,14 +1150,14 @@ async def on_message(message):
         )
         embed.add_field(
             name="🛡️ .protect",
-            value="Protège temporairement l'utilisateur des vols. Exemple : !!protect",
+            value="Protège temporairement l'utilisateur des vols. Exemple : .protect",
             inline=False
         )
         
         # Commandes liées au Livret A
         embed.add_field(
             name="💸 /investirlivreta <montant>",
-            value="Investit une somme dans le Livret A (max 100k). Exemple : !!investirlivreta 1000",
+            value="Investit une somme dans le Livret A (max 100k). Exemple : .investirlivreta 1000",
             inline=False
         )
         embed.add_field(
@@ -1167,24 +1167,24 @@ async def on_message(message):
         )
         embed.add_field(
             name="💰 /retirerlivreta <montant>",
-            value="Retire une somme de ton Livret A. Exemple : !!retirerlivreta 500",
+            value="Retire une somme de ton Livret A. Exemple : /retirerlivreta 500",
             inline=False
         )
 
         # Commandes liées à l'entreprise
         embed.add_field(
             name="🏗️ /constructionentreprise",
-            value="Construis une entreprise (avec le rôle nécessaire). Exemple : !!constructionentreprise",
+            value="Construis une entreprise (avec le rôle nécessaire). Exemple : /constructionentreprise",
             inline=False
         )
         embed.add_field(
             name="💼 /collectentreprise",
-            value="Collecte les revenus de ton entreprise. Exemple : !!collectentreprise",
+            value="Collecte les revenus de ton entreprise. Exemple : /collectentreprise",
             inline=False
         )
         embed.add_field(
             name="🚶‍♂️ /quitterentreprise",
-            value="Quitte ou supprime ton entreprise. Exemple : !!quitterentreprise",
+            value="Quitte ou supprime ton entreprise. Exemple : /quitterentreprise",
             inline=False
         )
 
