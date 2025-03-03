@@ -1108,7 +1108,7 @@ allowed_role_eco = "″ [𝑺ץ] Développeur"  # Remplace par le nom de ton rô
 
 # Fonction pour vérifier si l'utilisateur a le bon rôle
 def has_permission_eco(ctx):
-    return any(role.name == allowed_role for role in ctx.author.roles)
+    return any(role.name == allowed_role_eco for role in ctx.author.roles)
 
 # Commande de balance avec préfixe et slash
 @bot.command(name="balance")
