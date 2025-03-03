@@ -1151,7 +1151,7 @@ async def balance(ctx, user: discord.Member = None):
         await ctx.send(embed=create_embed(f"Solde de {user.name}", f"{user.name} n'a pas de solde enregistré."))
 
 # Commande de dépôt (only with /)
-@bot.slash_command(name="deposit")
+@bot.tree.command(name="deposit")
 async def deposit(ctx, amount: int):
     if not has_permission_eco(ctx):
         await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
@@ -1162,7 +1162,7 @@ async def deposit(ctx, amount: int):
     await ctx.send(embed=create_embed("Dépôt réussi", f"{amount} crédits ont été déposés sur ton compte."))
 
 # Commande de retrait (only with /)
-@bot.slash_command(name="withdraw")
+@bot.tree.command(name="withdraw")
 async def withdraw(ctx, amount: int):
     if not has_permission_eco(ctx):
         await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
@@ -1173,7 +1173,7 @@ async def withdraw(ctx, amount: int):
     await ctx.send(embed=create_embed("Retrait réussi", f"{amount} crédits ont été retirés de ton compte."))
 
 # Commande de transfert (only with /)
-@bot.slash_command(name="transfer")
+@bot.tree.command(name="transfer")
 async def transfer(ctx, user: discord.Member, amount: int):
     if not has_permission_eco(ctx):
         await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
@@ -1185,7 +1185,7 @@ async def transfer(ctx, user: discord.Member, amount: int):
     await ctx.send(embed=create_embed("Transfert réussi", f"{amount} crédits ont été transférés à {user.name}."))
 
 # Commande pour acheter un item du store (only with /)
-@bot.slash_command(name="buy")
+@bot.tree.command(name="buy")
 async def buy(ctx, item_name: str):
     if not has_permission_eco(ctx):
         await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
@@ -1205,7 +1205,7 @@ async def buy(ctx, item_name: str):
         await ctx.send(embed=create_embed("Item introuvable", f"L'item {item_name} n'existe pas ou est en rupture de stock."))
 
 # Commande pour afficher les items dans le store (only with /)
-@bot.slash_command(name="store")
+@bot.tree.command(name="store")
 async def store(ctx):
     store_items = collection2.find({"item_name": {"$exists": True}})
     if store_items:
@@ -1215,7 +1215,7 @@ async def store(ctx):
         await ctx.send(embed=create_embed("Store vide", "Il n'y a actuellement aucun item en vente."))
 
 # Commande pour afficher l'inventaire (only with /)
-@bot.slash_command(name="inventory")
+@bot.tree.command(name="inventory")
 async def inventory(ctx):
     user_data = collection2.find_one({"user_id": ctx.author.id})
     if user_data and "inventory" in user_data:
