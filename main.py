@@ -1259,6 +1259,8 @@ async def slash_deposit(interaction: discord.Interaction, amount: int):
     db.users.update_one({"user_id": interaction.user.id}, {"$inc": {"balance": amount}})
     await interaction.response.send_message(embed=create_embed("Dépôt effectué", f"{amount} crédits ont été déposés sur ton compte."))
 
+#-------------------------------------------------------------------------------------------------------------------------------------------------- .helpE
+
 # Commande .helpE pour afficher un embed d'aide sur les commandes économiques
 @bot.command(name="helpE")
 async def helpE(ctx):
@@ -1267,20 +1269,56 @@ async def helpE(ctx):
         return
 
     embed = discord.Embed(
-        title="Commandes économiques - Aide",
-        description="Voici une liste des commandes économiques disponibles pour le moment. **Ces commandes sont uniquement à but de test et n'ont pas pour le moment pour but de remplacer le bot économique actuel.**",
-        color=discord.Color(0xFFFFFF)
+        title="🪙 Commandes économiques - Aide",
+        description="Voici une liste des commandes économiques disponibles pour le moment. **Ces commandes sont à but de test et ne remplaceront pas le bot économique actuel.**",
+        color=discord.Color(0x00FF00)  # Utilise une couleur verte pour un thème économique
     )
 
-    embed.add_field(name="`.balance`", value="Affiche le solde actuel de l'utilisateur.")
-    embed.add_field(name="`.deposit <montant>`", value="Permet à l'utilisateur de déposer de l'argent sur son compte.")
-    embed.add_field(name="`.withdraw <montant>`", value="Permet à l'utilisateur de retirer de l'argent de son compte.")
-    embed.add_field(name="`.transfer <utilisateur> <montant>`", value="Permet à l'utilisateur de transférer de l'argent à un autre membre.")
-    embed.add_field(name="`.inventory`", value="Affiche l'inventaire de l'utilisateur.")
-    embed.add_field(name="`.buy <item> <quantité>`", value="Permet à l'utilisateur d'acheter un item de l'inventaire.")
+    # Commande balance
+    embed.add_field(
+        name="💸 `.balance`",
+        value="Affiche ton solde actuel sur le serveur.",
+        inline=False
+    )
 
-    embed.set_thumbnail(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/etheryBot_profil.jpg?raw=true")
-    embed.set_footer(text="Utilise ces commandes avec sagesse !")
+    # Commande deposit
+    embed.add_field(
+        name="💰 `.deposit <montant>`",
+        value="Dépose de l'argent sur ton compte.",
+        inline=False
+    )
+
+    # Commande withdraw
+    embed.add_field(
+        name="🏧 `.withdraw <montant>`",
+        value="Retire de l'argent de ton compte.",
+        inline=False
+    )
+
+    # Commande transfer
+    embed.add_field(
+        name="🔄 `.transfer <utilisateur> <montant>`",
+        value="Transfère de l'argent à un autre utilisateur.",
+        inline=False
+    )
+
+    # Commande inventory
+    embed.add_field(
+        name="📦 `.inventory`",
+        value="Affiche ton inventaire.",
+        inline=False
+    )
+
+    # Commande buy
+    embed.add_field(
+        name="🛒 `.buy <item> <quantité>`",
+        value="Achète des objets de ton inventaire.",
+        inline=False
+    )
+
+    # Ajouter une image de présentation et un footer pour le style
+    embed.set_thumbnail(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/etheryaBot_profil.jpg?raw=true")
+    embed.set_footer(text="Utilise ces commandes avec sagesse ! 💡")
     embed.set_image(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/etheryaBot_banniere.png?raw=true")
 
     await ctx.send(embed=embed)
