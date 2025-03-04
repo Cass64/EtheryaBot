@@ -1204,7 +1204,7 @@ async def store(ctx):
     desc = "\n".join([f"**{item['name']}** - {item['price']} 💵 ({item['stock']} en stock)\n_{item['description']}_" for item in items])
     await ctx.send(embed=create_embed("🏪 Boutique", desc))
 
-@bot.tree.command(name="add-store", description="Ajoute un objet dans le store (réservé aux rôles .Destiny et second_role)")
+@bot.tree.command(name="add-store", description="Ajoute un objet dans le store")
 @app_commands.checks.has_role(ROLE_NEEDED)  # Vérification du premier rôle
 @app_commands.checks.has_role(ROLE_SECOND)   # Vérification du deuxième rôle
 @app_commands.describe(
@@ -1229,7 +1229,7 @@ async def add_store(interaction: discord.Interaction, name: str, price: int, sto
     
     await interaction.response.send_message(embed=embed)
 
-@bot.tree.command(name="remove-store", description="Supprime un objet du store (réservé aux rôles .Destiny et second_role)")
+@bot.tree.command(name="remove-store", description="Supprime un objet du store")
 @app_commands.checks.has_role(ROLE_NEEDED)
 @app_commands.checks.has_role(ROLE_SECOND)
 @app_commands.describe(name="Nom de l'objet à supprimer")
@@ -1253,7 +1253,7 @@ async def remove_store(interaction: discord.Interaction, name: str):
     await interaction.response.send_message(embed=embed)
 
 
-@bot.tree.command(name="decrease-stock", description="Diminue le stock d'un objet dans le store (réservé aux rôles .Destiny et second_role)")
+@bot.tree.command(name="decrease-stock", description="Diminue le stock d'un objet dans le store")
 @app_commands.checks.has_role(ROLE_NEEDED)
 @app_commands.checks.has_role(ROLE_SECOND)
 @app_commands.describe(
@@ -1280,7 +1280,7 @@ async def decrease_stock(interaction: discord.Interaction, name: str, amount: in
     
     await interaction.response.send_message(embed=embed)
 
-@bot.tree.command(name="add-inventory", description="Ajoute un objet dans l'inventaire d'un utilisateur (réservé aux rôles .Destiny et second_role)")
+@bot.tree.command(name="add-inventory", description="Ajoute un objet dans l'inventaire d'un utilisateur")
 @app_commands.checks.has_role(ROLE_NEEDED)  # Vérification du premier rôle
 @app_commands.checks.has_role(ROLE_SECOND)  # Vérification du deuxième rôle
 @app_commands.describe(
@@ -1313,7 +1313,7 @@ async def add_inventory(interaction: discord.Interaction, user: discord.Member, 
     await interaction.response.send_message(embed=embed)
 
 
-@bot.tree.command(name="decrease-inventory", description="Diminue la quantité d'un objet dans l'inventaire d'un utilisateur (réservé aux rôles .Destiny et second_role)")
+@bot.tree.command(name="decrease-inventory", description="Diminue la quantité d'un objet dans l'inventaire d'un utilisateur")
 @app_commands.checks.has_role(ROLE_NEEDED)  # Vérification du premier rôle
 @app_commands.checks.has_role(ROLE_SECOND)  # Vérification du deuxième rôle
 @app_commands.describe(
@@ -1335,6 +1335,13 @@ async def decrease_inventory(interaction: discord.Interaction, user: discord.Mem
     if not item:
         return await interaction.response.send_message(
             embed=create_embed("❌ Objet introuvable", f"L'utilisateur {user.mention} ne possède pas `{name}` dans son inventaire."),
+            ephemeral=True
+        )
+
+    # Vérification si l'utilisateur a assez de l'objet à réduire
+    if item["quantity"] < quantity:
+        return await interaction.response.send_message(
+            embed=create_embed("⚠️ Erreur", f"L'utilisateur {user.mention} n'a pas assez de `{name}` pour réduire cette quantité."),
             ephemeral=True
         )
 
