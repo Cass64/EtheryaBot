@@ -1255,47 +1255,41 @@ async def remove_store(interaction: discord.Interaction, name: str):
     
     await interaction.response.send_message(embed=embed)
 
-# Commande pour ajouter un objet dans l'inventaire
-@bot.tree.command(name="add-inventory", description="Ajoute un objet dans l'inventaire d'un utilisateur")
-@app_commands.checks.has_role(ROLE_NEEDED)
-async def add_inventory(interaction: discord.Interaction, user: discord.Member, name: str, quantity: int):
+# Commande add_inventory
+@bot.tree.command(name="add-inventory", description="Ajoute un item à l'inventaire")
+async def add_inventory(interaction: discord.Interaction, name: str, quantity: int):
     if quantity <= 0:
         return await interaction.response.send_message(
-            embed=create_embed("⚠️ Erreur", "La quantité doit être supérieure à 0.", color=discord.Color.red()),
-            ephemeral=True
-        )
-
-    # Vérifie si l'objet existe dans le store
-    item = store_collection.find_one({"name": name})
-    if not item:
-        return await interaction.response.send_message(
-            embed=create_embed("⚠️ Erreur", f"L'objet `{name}` n'existe pas dans le store.", color=discord.Color.red()),
-            ephemeral=True
+            embed=create_embed("⚠️ Erreur", "La quantité doit être supérieure à 0.", color=discord.Color.red())
         )
 
     # Récupère les données de l'utilisateur
-    user_data = get_user_data(user.id)
-
-    # Récupère l'inventaire ou initialise une liste vide si aucun objet
+    user_data = get_user_data(interaction.user.id)
     inventory = user_data.get("inventory", [])
 
-    # Cherche si l'objet existe déjà dans l'inventaire
+    # Vérification de la structure de l'inventaire
+    if any(not isinstance(item, dict) or "name" not in item or "quantity" not in item for item in inventory):
+        return await interaction.response.send_message(
+            embed=create_embed("⚠️ Erreur", "L'inventaire contient des éléments mal formatés. Veuillez vérifier.", color=discord.Color.red())
+        )
+
+    # Recherche de l'item dans l'inventaire
     item_in_inventory = next((item for item in inventory if item["name"] == name), None)
 
     if item_in_inventory:
-        # Si l'objet existe, on augmente la quantité
+        # Si l'item existe, on augmente sa quantité
         item_in_inventory["quantity"] += quantity
     else:
-        # Sinon, on ajoute un nouvel objet avec la quantité donnée
+        # Sinon, on ajoute un nouvel item
         inventory.append({"name": name, "quantity": quantity})
 
-    # Mise à jour de l'inventaire dans les données de l'utilisateur
+    # Mise à jour des données de l'utilisateur
     user_data["inventory"] = inventory
-    save_user_data(user.id, user_data)
+    save_user_data(interaction.user.id, user_data)
 
-    # Confirmation
+    # Réponse de succès
     await interaction.response.send_message(
-        embed=create_embed("🎒 Objet ajouté", f"**{quantity}x {name}** a été ajouté à l'inventaire de {user.mention}.", color=discord.Color.green())
+        embed=create_embed("🎒 Inventaire mis à jour", f"L'item **{name}** a été ajouté à votre inventaire avec `{quantity}` unité(s).", color=discord.Color.green())
     )
 
 @bot.tree.command(name="inventory", description="Affiche l'inventaire de l'utilisateur")
