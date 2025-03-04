@@ -1298,24 +1298,53 @@ async def add_inventory(interaction: discord.Interaction, user: discord.Member, 
         embed=create_embed("🎒 Objet ajouté", f"**{quantity}x {name}** a été ajouté à l'inventaire de {user.mention}.", color=discord.Color.green())
     )
 
-# Commande pour afficher l'inventaire stylisé
 @bot.tree.command(name="inventory", description="Affiche l'inventaire de l'utilisateur")
 async def inventory(interaction: discord.Interaction):
     user_data = get_user_data(interaction.user.id)
     inventory = user_data.get("inventory", [])
-    
+
     if not inventory:
         return await interaction.response.send_message(
             embed=create_embed("🎒 Inventaire", "Votre inventaire est vide.", color=discord.Color.red())
         )
-    
-    items_desc = "\n".join([f"**{item['name']}** - {item['quantity']} en stock" for item in inventory])
-    
+
+    items_desc = "\n".join([f"**{item['name']}** - {item['quantity']} en stock" if isinstance(item, dict) else f"Invalid Item" for item in inventory])
+
     await interaction.response.send_message(
         embed=create_embed("🎒 Inventaire", f"Voici vos objets:\n{items_desc}", color=discord.Color.blue())
     )
 
-# Ajout d'argent à un utilisateur
+# Commande pour réduire le stock d'un item sans le supprimer
+@bot.tree.command(name="decrease-store", description="Réduit le stock d'un item dans le store sans le supprimer.")
+@app_commands.checks.has_role(ROLE_NEEDED)
+async def decrease_store(interaction: discord.Interaction, name: str, quantity: int):
+    if quantity <= 0:
+        return await interaction.response.send_message(
+            embed=create_embed("⚠️ Erreur", "La quantité doit être supérieure à 0.", color=discord.Color.red()),
+            ephemeral=True
+        )
+
+    # Vérifie si l'objet existe dans le store
+    item = store_collection.find_one({"name": name})
+    if not item:
+        return await interaction.response.send_message(
+            embed=create_embed("⚠️ Erreur", f"L'objet `{name}` n'existe pas dans le store.", color=discord.Color.red()),
+            ephemeral=True
+        )
+
+    # Réduit le stock de l'objet
+    if item["stock"] >= quantity:
+        new_stock = item["stock"] - quantity
+        store_collection.update_one({"name": name}, {"$set": {"stock": new_stock}})
+        await interaction.response.send_message(
+            embed=create_embed("📦 Stock réduit", f"Le stock de **{name}** a été réduit de `{quantity}`. Nouveau stock: `{new_stock}`", color=discord.Color.green())
+        )
+    else:
+        return await interaction.response.send_message(
+            embed=create_embed("⚠️ Erreur", f"Le stock de **{name}** est insuffisant pour retirer `{quantity}`.", color=discord.Color.red()),
+            ephemeral=True
+        )
+
 @bot.tree.command(name="add-money", description="Ajoute de l'argent à un utilisateur")
 @app_commands.checks.has_role(ROLE_NEEDED)
 async def add_money(interaction: discord.Interaction, user: discord.Member, amount: int):
@@ -1340,7 +1369,7 @@ async def add_money(interaction: discord.Interaction, user: discord.Member, amou
         embed=create_embed("💰 Argent ajouté", f"**{amount} 💵** a été ajouté au solde de {user.mention}.", color=discord.Color.green())
     )
 
-# Retirer de l'argent à un utilisateur
+# Retirer de l'argent à un utilisateur avec couleur spécifique
 @bot.tree.command(name="remove-money", description="Retire de l'argent du solde d'un utilisateur")
 @app_commands.checks.has_role(ROLE_NEEDED)
 async def remove_money(interaction: discord.Interaction, user: discord.Member, amount: int):
@@ -1371,7 +1400,6 @@ async def remove_money(interaction: discord.Interaction, user: discord.Member, a
     await interaction.response.send_message(
         embed=create_embed("💸 Argent retiré", f"**{amount} 💵** a été retiré du solde de {user.mention}.", color=discord.Color.green())
     )
-
 
 #-------------------------------------------------------------------------------------------------------------INVENTORY---------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------LEADERBOARD--------------------------------------------------------------------------------------------------------------------------------------
