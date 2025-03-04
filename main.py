@@ -1193,33 +1193,6 @@ async def work(ctx):
     save_user_data(ctx.author.id, user_data)
     await ctx.send(embed=create_embed("💼 Travail Réussi !", f"Vous avez gagné **{earned_money}** 💵 !"))
 
-@bot.command(name="daily")
-async def daily(ctx):
-    if not check_role(ctx, ROLE_NEEDED):
-        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande."))
-
-    user_data = get_user_data(ctx.author.id)
-    now = int(datetime.utcnow().timestamp())
-    cooldown_duration = 86400  # 24 heures en secondes
-
-    last_claim_time = user_data.get("last_claim", 0)
-    time_since_last_claim = now - last_claim_time
-
-    if time_since_last_claim < cooldown_duration:
-        remaining_time = cooldown_duration - time_since_last_claim
-        hours = remaining_time // 3600
-        minutes = (remaining_time % 3600) // 60
-        return await ctx.send(embed=create_embed("📅 Déjà Réclamé", f"Revenez dans {int(hours)} heures et {int(minutes)} minutes !"))
-
-    reward = random.randint(100, 500)
-    user_data["cash"] += reward
-    user_data["total"] = user_data["cash"] + user_data["bank"]
-    user_data["last_claim"] = now  # Enregistrer le timestamp
-
-    save_user_data(ctx.author.id, user_data)
-    await ctx.send(embed=create_embed("🎁 Récompense Quotidienne", f"Vous avez reçu **{reward}** 💵 !"))
-
-
 @bot.command(name="store")
 async def store(ctx):
     if not check_role(ctx, ROLE_NEEDED):
@@ -1296,12 +1269,33 @@ async def item_inventory(ctx):
 async def leaderboard(ctx, page: int = 1):
     if not check_role(ctx, ROLE_NEEDED):
         return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande."))
-    
+
+    # Vérifier et ajouter tous les membres du serveur à la base de données
+    for member in ctx.guild.members:
+        existing_user = economy_collection.find_one({"user_id": str(member.id)})
+        if not existing_user:
+            economy_collection.insert_one({
+                "user_id": str(member.id),
+                "cash": 0,
+                "bank": 0,
+                "total": 0,  # total = cash + bank
+                "last_work": 0,
+                "last_claim": 0
+            })
+
+    # Récupérer et trier tous les utilisateurs
     all_users = list(economy_collection.find().sort("total", -1))
     pages = math.ceil(len(all_users) / 10)
+
     if page < 1 or page > pages:
         return await ctx.send(embed=create_embed("⚠️ Erreur", "Page invalide."))
-    desc = "\n".join([f"**#{i+1}** {await bot.fetch_user(int(u['user_id']))} - 💰 `{u['total']}`" for i, u in enumerate(all_users[(page-1)*10:page*10])])
+
+    # Générer le leaderboard
+    desc = "\n".join([
+        f"**#{(page-1)*10 + i + 1}** {ctx.guild.get_member(int(u['user_id'])) or 'Membre inconnu'} - 💰 `{u['total']}`"
+        for i, u in enumerate(all_users[(page-1)*10:page*10])
+    ])
+
     embed = create_embed("🏆 Classement Économique", desc)
     embed.set_footer(text=f"Page {page}/{pages}")
     await ctx.send(embed=embed)
@@ -1328,6 +1322,22 @@ async def helpE(ctx):
     embed.add_field(name="🛍 /store", value="Affiche les objets en vente.", inline=False)
 
     await ctx.send(embed=embed)
+
+@bot.event
+async def on_member_join(member):
+    existing_user = economy_collection.find_one({"user_id": str(member.id)})
+    
+    if not existing_user:
+        economy_collection.insert_one({
+            "user_id": str(member.id),
+            "cash": 0,
+            "bank": 0,
+            "total": 0,  # total = cash + bank
+            "last_work": 0,
+            "last_claim": 0
+        })
+        print(f"{member.name} ajouté à la base de données avec un solde initial.")
+
 #------------------------------------------------------------------------- Ignorer les messages des autres bots
 @bot.event
 async def on_message(message):
