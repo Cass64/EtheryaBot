@@ -1265,40 +1265,67 @@ async def item_inventory(ctx):
     desc = "\n".join(inventory) if inventory else "Votre inventaire est vide."
     await ctx.send(embed=create_embed("🎒 Inventaire", desc))
 
+
+#-------------------------------------------------------------------------------------------------------------INVENTORY---------------------------------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------LEADERBOARD--------------------------------------------------------------------------------------------------------------------------------------
+
+class LeaderboardView(discord.ui.View):
+    def __init__(self, ctx, all_users, page):
+        super().__init__(timeout=60)  # Expire après 60 secondes
+        self.ctx = ctx
+        self.all_users = all_users
+        self.page = page
+        self.pages = math.ceil(len(all_users) / 10)
+
+    def get_embed(self):
+        """Génère un embed pour afficher la page actuelle du leaderboard"""
+        start_idx = (self.page - 1) * 10
+        end_idx = start_idx + 10
+        desc = "\n".join([f"**#{i+1}** {self.ctx.bot.get_user(int(u['user_id']))} - 💰 `{u['total']}`" for i, u in enumerate(self.all_users[start_idx:end_idx], start=start_idx+1)])
+
+        embed = discord.Embed(title="🏆 Classement Économique", description=desc, color=discord.Color.gold())
+        embed.set_footer(text=f"Page {self.page}/{self.pages}")
+        return embed
+
+    @discord.ui.button(label="⏪ Précédent", style=discord.ButtonStyle.primary, disabled=True)
+    async def previous_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.page > 1:
+            self.page -= 1
+            self.next_page.disabled = False  # Activer le bouton "Suivant"
+            if self.page == 1:
+                button.disabled = True  # Désactiver "Précédent" si on est à la première page
+
+            await interaction.response.edit_message(embed=self.get_embed(), view=self)
+
+    @discord.ui.button(label="Suivant ⏩", style=discord.ButtonStyle.primary)
+    async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.page < self.pages:
+            self.page += 1
+            self.previous_page.disabled = False  # Activer le bouton "Précédent"
+            if self.page == self.pages:
+                button.disabled = True  # Désactiver "Suivant" si on est à la dernière page
+
+            await interaction.response.edit_message(embed=self.get_embed(), view=self)
+
+
 @bot.command(name="leaderboard")
 async def leaderboard(ctx, page: int = 1):
     if not check_role(ctx, ROLE_NEEDED):
         return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande."))
 
-    # Vérifier et ajouter tous les membres du serveur à la base de données
-    for member in ctx.guild.members:
-        existing_user = economy_collection.find_one({"user_id": str(member.id)})
-        if not existing_user:
-            economy_collection.insert_one({
-                "user_id": str(member.id),
-                "cash": 0,
-                "bank": 0,
-                "total": 0,  # total = cash + bank
-                "last_work": 0,
-                "last_claim": 0
-            })
-
-    # Récupérer et trier tous les utilisateurs
     all_users = list(economy_collection.find().sort("total", -1))
-    pages = math.ceil(len(all_users) / 10)
+    if not all_users:
+        return await ctx.send(embed=create_embed("🏆 Classement Économique", "Aucun utilisateur dans la base de données."))
 
+    pages = math.ceil(len(all_users) / 10)
     if page < 1 or page > pages:
         return await ctx.send(embed=create_embed("⚠️ Erreur", "Page invalide."))
 
-    # Générer le leaderboard
-    desc = "\n".join([
-        f"**#{(page-1)*10 + i + 1}** {ctx.guild.get_member(int(u['user_id'])) or 'Membre inconnu'} - 💰 `{u['total']}`"
-        for i, u in enumerate(all_users[(page-1)*10:page*10])
-    ])
+    view = LeaderboardView(ctx, all_users, page)
+    await ctx.send(embed=view.get_embed(), view=view)
 
-    embed = create_embed("🏆 Classement Économique", desc)
-    embed.set_footer(text=f"Page {page}/{pages}")
-    await ctx.send(embed=embed)
+#------------------------------------------------------------------------------------------------------------LEADERBOARD----------------------------------------------------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------------------HELPE--------------------------------------------------------------------------------------------------------------------------------------------
 
 # Commande .helpE pour afficher un embed d'aide sur les commandes économiques
 @bot.command(name="helpE")
