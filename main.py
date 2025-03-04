@@ -1180,6 +1180,12 @@ async def work(ctx):
     save_user_data(ctx.author.id, user_data)
     await ctx.send(embed=create_embed("💼 Travail Réussi !", f"Vous avez gagné **{earned_money}** 💵 !"))
 
+# Gestion des erreurs (ajouter en bas du fichier)
+@work.error
+async def work_error(ctx, error):
+    if isinstance(error, commands.CommandOnCooldown):
+        await ctx.send(embed=create_embed("⏳ Cooldown", f"Vous devez attendre **{round(error.retry_after // 60)} minutes** avant d'utiliser cette commande à nouveau."))
+
 @bot.command(name="daily")
 async def daily(ctx):
     if not check_role(ctx, ROLE_NEEDED):
@@ -1187,14 +1193,25 @@ async def daily(ctx):
     
     user_data = get_user_data(ctx.author.id)
     today = datetime.datetime.utcnow().date()
-    if user_data.get("last_claim") == str(today):
+    
+    # Vérifier si last_claim existe et la convertir en date
+    last_claim = user_data.get("last_claim")
+    if last_claim:
+        last_claim = datetime.datetime.strptime(last_claim, "%Y-%m-%d").date()
+    
+    # Vérifier si l'utilisateur a déjà réclamé aujourd'hui
+    if last_claim == today:
         return await ctx.send(embed=create_embed("📅 Déjà Réclamé", "Revenez demain !"))
+    
+    # Récompense aléatoire
     reward = random.randint(100, 500)
     user_data["cash"] += reward
     user_data["total"] = user_data["cash"] + user_data["bank"]
-    user_data["last_claim"] = str(today)
+    user_data["last_claim"] = str(today)  # Sauvegarder la date sous forme de string
     save_user_data(ctx.author.id, user_data)
+    
     await ctx.send(embed=create_embed("🎁 Récompense Quotidienne", f"Vous avez reçu **{reward}** 💵 !"))
+
 
 @bot.command(name="store")
 async def store(ctx):
@@ -1285,30 +1302,25 @@ async def leaderboard(ctx, page: int = 1):
 # Commande .helpE pour afficher un embed d'aide sur les commandes économiques
 @bot.command(name="helpE")
 async def helpE(ctx):
-    if not has_permission_eco(ctx):
-        await ctx.send(embed=create_embed("Permission refusée", "Tu n'as pas la permission d'utiliser cette commande."))
+    if not check_role(ctx, ROLE_NEEDED):  # Vérification correcte du rôle
+        await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande."))
         return
 
     embed = discord.Embed(
         title="🪙 Commandes économiques - Aide",
-        description="Voici une liste des commandes économiques disponibles pour le moment. **Ces commandes sont à but de test et ne remplaceront pas le bot économique actuel.**",
-        color=discord.Color(0x00FF00)  # Utilise une couleur verte pour un thème économique
+        description="Voici une liste des commandes économiques disponibles.",
+        color=discord.Color.green()
     )
 
-    embed.add_field(name="💸 .balance", value="Affiche ton solde actuel sur le serveur.", inline=False)
-    embed.add_field(name="💰 /deposit <montant>", value="Dépose de l'argent sur ton compte.", inline=False)
-    embed.add_field(name="🏧 /withdraw <montant>", value="Retire de l'argent de ton compte.", inline=False)
-    embed.add_field(name="🔄 /transfer <utilisateur> <montant>", value="Transfère de l'argent à un autre utilisateur.", inline=False)
+    embed.add_field(name="💸 .balance", value="Affiche ton solde actuel.", inline=False)
+    embed.add_field(name="💰 /deposit <montant>", value="Dépose de l'argent en banque.", inline=False)
+    embed.add_field(name="🏧 /withdraw <montant>", value="Retire de l'argent de la banque.", inline=False)
+    embed.add_field(name="🔄 /transfer <utilisateur> <montant>", value="Transfère de l'argent.", inline=False)
     embed.add_field(name="📦 /inventory", value="Affiche ton inventaire.", inline=False)
-    embed.add_field(name="🛒 /buy <item>", value="Achète des objets de ton inventaire.", inline=False)
-    embed.add_field(name="🛍 /store", value="Affiche les items en vente.", inline=False)
-
-    embed.set_thumbnail(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/etheryaBot_profil.jpg?raw=true")
-    embed.set_footer(text="Utilise ces commandes avec sagesse ! 💡")
-    embed.set_image(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/etheryaBot_banniere.png?raw=true")
+    embed.add_field(name="🛒 /buy <item>", value="Achète un objet.", inline=False)
+    embed.add_field(name="🛍 /store", value="Affiche les objets en vente.", inline=False)
 
     await ctx.send(embed=embed)
-
 #------------------------------------------------------------------------- Ignorer les messages des autres bots
 @bot.event
 async def on_message(message):
