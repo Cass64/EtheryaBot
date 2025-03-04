@@ -1395,6 +1395,50 @@ async def remove_money(interaction: discord.Interaction, user: discord.Member, a
         embed=create_embed("💸 Argent retiré", f"**{amount} 💵** a été retiré du solde de {user.mention}.", color=discord.Color.green())
     )
 
+# Commande decrease_inventory
+@bot.tree.command(name="decrease-inventory", description="Diminue la quantité d'un item dans l'inventaire et supprime l'item si la quantité devient 0")
+async def decrease_inventory(interaction: discord.Interaction, name: str, quantity: int):
+    if quantity <= 0:
+        return await interaction.response.send_message(
+            embed=create_embed("⚠️ Erreur", "La quantité à retirer doit être supérieure à 0.", color=discord.Color.red())
+        )
+
+    # Récupère les données de l'utilisateur
+    user_data = get_user_data(interaction.user.id)
+    inventory = user_data.get("inventory", [])
+
+    # Vérification de la structure de l'inventaire
+    if any(not isinstance(item, dict) or "name" not in item or "quantity" not in item for item in inventory):
+        return await interaction.response.send_message(
+            embed=create_embed("⚠️ Erreur", "L'inventaire contient des éléments mal formatés. Veuillez vérifier.", color=discord.Color.red())
+        )
+
+    # Recherche de l'item dans l'inventaire
+    item_in_inventory = next((item for item in inventory if item["name"] == name), None)
+
+    if item_in_inventory:
+        # Si l'item existe et que la quantité est suffisante, on diminue la quantité
+        if item_in_inventory["quantity"] >= quantity:
+            item_in_inventory["quantity"] -= quantity
+            # Si la quantité devient 0, on supprime l'item de l'inventaire
+            if item_in_inventory["quantity"] == 0:
+                inventory.remove(item_in_inventory)  # Suppression de l'item
+                await interaction.response.send_message(
+                    embed=create_embed("🎒 Inventaire mis à jour", f"L'item **{name}** a été supprimé de votre inventaire car sa quantité est devenue 0.", color=discord.Color.green())
+                )
+            else:
+                await interaction.response.send_message(
+                    embed=create_embed("🎒 Inventaire mis à jour", f"La quantité de l'item **{name}** a été réduite de `{quantity}`.", color=discord.Color.green())
+                )
+        else:
+            await interaction.response.send_message(
+                embed=create_embed("⚠️ Erreur", f"Vous n'avez pas assez de l'item **{name}** pour diminuer cette quantité.", color=discord.Color.red())
+            )
+    else:
+        await interaction.response.send_message(
+            embed=create_embed("⚠️ Erreur", f"L'item **{name}** n'est pas dans votre inventaire.", color=discord.Color.red())
+        )
+
 #-------------------------------------------------------------------------------------------------------------INVENTORY---------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------LEADERBOARD--------------------------------------------------------------------------------------------------------------------------------------
 
