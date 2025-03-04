@@ -1281,7 +1281,10 @@ class LeaderboardView(discord.ui.View):
         """Génère un embed pour afficher la page actuelle du leaderboard"""
         start_idx = (self.page - 1) * 10
         end_idx = start_idx + 10
-        desc = "\n".join([f"**#{i+1}** {self.ctx.bot.get_user(int(u['user_id']))} - 💰 `{u['total']}`" for i, u in enumerate(self.all_users[start_idx:end_idx], start=start_idx+1)])
+        desc = "\n".join([
+            f"**#{i}** {self.ctx.bot.get_user(int(u['user_id']))} - 💰 `{u['total']}`"
+            for i, u in enumerate(self.all_users[start_idx:end_idx], start=(self.page - 1) * 10 + 1)
+])
 
         embed = discord.Embed(title="🏆 Classement Économique", description=desc, color=discord.Color.gold())
         embed.set_footer(text=f"Page {self.page}/{self.pages}")
