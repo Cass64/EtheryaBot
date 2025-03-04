@@ -1168,48 +1168,55 @@ async def balance(ctx):
     await ctx.send(embed=embed)
 
 @bot.command(name="work")
-@commands.cooldown(1, 1800, commands.BucketType.user)
 async def work(ctx):
     if not check_role(ctx, ROLE_NEEDED):
         return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande."))
-    
+
     user_data = get_user_data(ctx.author.id)
+    cooldown_duration = 1800  # 30 minutes en secondes
+    now = int(datetime.utcnow().timestamp())
+
+    last_work_time = user_data.get("last_work", 0)
+    time_since_last_work = now - last_work_time
+
+    if time_since_last_work < cooldown_duration:
+        remaining_time = cooldown_duration - time_since_last_work
+        minutes = remaining_time // 60
+        seconds = remaining_time % 60
+        return await ctx.send(embed=create_embed("⏳ Cooldown", f"Vous devez attendre {int(minutes)} minutes et {int(seconds)} secondes avant de retravailler."))
+
     earned_money = random.randint(50, 200)
     user_data["cash"] += earned_money
     user_data["total"] = user_data["cash"] + user_data["bank"]
+    user_data["last_work"] = now  # Enregistrer le timestamp
+
     save_user_data(ctx.author.id, user_data)
     await ctx.send(embed=create_embed("💼 Travail Réussi !", f"Vous avez gagné **{earned_money}** 💵 !"))
-
-# Gestion des erreurs (ajouter en bas du fichier)
-@work.error
-async def work_error(ctx, error):
-    if isinstance(error, commands.CommandOnCooldown):
-        await ctx.send(embed=create_embed("⏳ Cooldown", f"Vous devez attendre **{round(error.retry_after // 60)} minutes** avant d'utiliser cette commande à nouveau."))
 
 @bot.command(name="daily")
 async def daily(ctx):
     if not check_role(ctx, ROLE_NEEDED):
         return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande."))
-    
+
     user_data = get_user_data(ctx.author.id)
-    today = datetime.datetime.utcnow().date()
-    
-    # Vérifier si last_claim existe et la convertir en date
-    last_claim = user_data.get("last_claim")
-    if last_claim:
-        last_claim = datetime.datetime.strptime(last_claim, "%Y-%m-%d").date()
-    
-    # Vérifier si l'utilisateur a déjà réclamé aujourd'hui
-    if last_claim == today:
-        return await ctx.send(embed=create_embed("📅 Déjà Réclamé", "Revenez demain !"))
-    
-    # Récompense aléatoire
+    now = int(datetime.utcnow().timestamp())
+    cooldown_duration = 86400  # 24 heures en secondes
+
+    last_claim_time = user_data.get("last_claim", 0)
+    time_since_last_claim = now - last_claim_time
+
+    if time_since_last_claim < cooldown_duration:
+        remaining_time = cooldown_duration - time_since_last_claim
+        hours = remaining_time // 3600
+        minutes = (remaining_time % 3600) // 60
+        return await ctx.send(embed=create_embed("📅 Déjà Réclamé", f"Revenez dans {int(hours)} heures et {int(minutes)} minutes !"))
+
     reward = random.randint(100, 500)
     user_data["cash"] += reward
     user_data["total"] = user_data["cash"] + user_data["bank"]
-    user_data["last_claim"] = str(today)  # Sauvegarder la date sous forme de string
+    user_data["last_claim"] = now  # Enregistrer le timestamp
+
     save_user_data(ctx.author.id, user_data)
-    
     await ctx.send(embed=create_embed("🎁 Récompense Quotidienne", f"Vous avez reçu **{reward}** 💵 !"))
 
 
