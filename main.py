@@ -1229,6 +1229,58 @@ async def add_store(interaction: discord.Interaction, name: str, price: int, sto
     
     await interaction.response.send_message(embed=embed)
 
+@bot.tree.command(name="remove-store", description="Supprime un objet du store (réservé aux rôles .Destiny et second_role)")
+@app_commands.checks.has_role(ROLE_NEEDED)
+@app_commands.checks.has_role(ROLE_SECOND)
+@app_commands.describe(name="Nom de l'objet à supprimer")
+async def remove_store(interaction: discord.Interaction, name: str):
+    item = store_collection.find_one({"name": name})
+    
+    if not item:
+        return await interaction.response.send_message(
+            embed=create_embed("❌ Objet introuvable", f"L'objet `{name}` n'existe pas dans le store."),
+            ephemeral=True
+        )
+    
+    store_collection.delete_one({"name": name})
+
+    embed = discord.Embed(
+        title="🗑️ Objet supprimé",
+        description=f"L'objet **{name}** a été supprimé du store.",
+        color=discord.Color.red()
+    )
+    
+    await interaction.response.send_message(embed=embed)
+
+
+@bot.tree.command(name="decrease-stock", description="Diminue le stock d'un objet dans le store (réservé aux rôles .Destiny et second_role)")
+@app_commands.checks.has_role(ROLE_NEEDED)
+@app_commands.checks.has_role(ROLE_SECOND)
+@app_commands.describe(
+    name="Nom de l'objet",
+    amount="Quantité à retirer"
+)
+async def decrease_stock(interaction: discord.Interaction, name: str, amount: int):
+    item = store_collection.find_one({"name": name})
+    
+    if not item:
+        return await interaction.response.send_message(
+            embed=create_embed("❌ Objet introuvable", f"L'objet `{name}` n'existe pas dans le store."),
+            ephemeral=True
+        )
+
+    new_stock = max(0, item["stock"] - amount)  # Empêche le stock de devenir négatif
+    store_collection.update_one({"name": name}, {"$set": {"stock": new_stock}})
+    
+    embed = discord.Embed(
+        title="📉 Stock mis à jour",
+        description=f"Le stock de **{name}** a été réduit de `{amount}`.\n📦 Nouveau stock: `{new_stock}`",
+        color=discord.Color.orange()
+    )
+    
+    await interaction.response.send_message(embed=embed)
+
+
 @bot.command(name="item-buy")
 async def item_buy(ctx, *, item_name: str):
     if not check_role(ctx, ROLE_NEEDED):
