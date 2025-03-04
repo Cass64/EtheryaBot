@@ -1107,8 +1107,8 @@ async def calcul(interaction: discord.Interaction, nombre: float, pourcentage: f
 #------------------------------------------------------------------------- ECONOMIEW ------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE-------
 
 # Définir les rôles nécessaires
-ROLE_NEEDED = "″ [𝑺ץ] Développeur"  # Remplace par le nom de ton rôle
-ROLE_SECOND = "*"  # Le deuxième rôle pour add-store
+ROLE_NEEDED = "″ [𝑺ץ] Développeur" 
+ROLE_SECOND = "*"  
 
 def get_user_data(user_id):
     user_data = economy_collection.find_one({"user_id": str(user_id)})
