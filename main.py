@@ -1323,7 +1323,7 @@ async def item_inventory(ctx):
 
 class LeaderboardView(discord.ui.View):
     def __init__(self, ctx, all_users, page):
-        super().__init__(timeout=60)  # Expire après 60 secondes
+        super().__init__(timeout=60)  
         self.ctx = ctx
         self.all_users = all_users
         self.page = page
@@ -1346,9 +1346,9 @@ class LeaderboardView(discord.ui.View):
     async def previous_page(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.page > 1:
             self.page -= 1
-            self.next_page.disabled = False  # Activer le bouton "Suivant"
+            self.next_page.disabled = False  
             if self.page == 1:
-                button.disabled = True  # Désactiver "Précédent" si on est à la première page
+                button.disabled = True  
 
             await interaction.response.edit_message(embed=self.get_embed(), view=self)
 
@@ -1356,9 +1356,9 @@ class LeaderboardView(discord.ui.View):
     async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.page < self.pages:
             self.page += 1
-            self.previous_page.disabled = False  # Activer le bouton "Précédent"
+            self.previous_page.disabled = False  
             if self.page == self.pages:
-                button.disabled = True  # Désactiver "Suivant" si on est à la dernière page
+                button.disabled = True  
 
             await interaction.response.edit_message(embed=self.get_embed(), view=self)
 
