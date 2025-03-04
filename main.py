@@ -1280,6 +1280,85 @@ async def decrease_stock(interaction: discord.Interaction, name: str, amount: in
     
     await interaction.response.send_message(embed=embed)
 
+@bot.tree.command(name="add-inventory", description="Ajoute un objet dans l'inventaire d'un utilisateur (réservé aux rôles .Destiny et second_role)")
+@app_commands.checks.has_role(ROLE_NEEDED)  # Vérification du premier rôle
+@app_commands.checks.has_role(ROLE_SECOND)  # Vérification du deuxième rôle
+@app_commands.describe(
+    user="Utilisateur qui reçoit l'objet",
+    name="Nom de l'objet",
+    quantity="Quantité à ajouter"
+)
+async def add_inventory(interaction: discord.Interaction, user: discord.Member, name: str, quantity: int):
+    # Vérifie que la quantité est valide
+    if quantity <= 0:
+        return await interaction.response.send_message(
+            embed=create_embed("⚠️ Erreur", "La quantité doit être supérieure à 0."),
+            ephemeral=True
+        )
+
+    # Ajoute l'objet à l'inventaire ou augmente la quantité si déjà présent
+    inventory_collection.update_one(
+        {"user_id": user.id, "name": name},
+        {"$inc": {"quantity": quantity}},
+        upsert=True  # Crée l'entrée si elle n'existe pas
+    )
+
+    # Embed de confirmation
+    embed = discord.Embed(
+        title="🎒 Objet ajouté",
+        description=f"**{quantity}x {name}** a été ajouté à l’inventaire de {user.mention}.",
+        color=discord.Color.green()
+    )
+
+    await interaction.response.send_message(embed=embed)
+
+
+@bot.tree.command(name="decrease-inventory", description="Diminue la quantité d'un objet dans l'inventaire d'un utilisateur (réservé aux rôles .Destiny et second_role)")
+@app_commands.checks.has_role(ROLE_NEEDED)  # Vérification du premier rôle
+@app_commands.checks.has_role(ROLE_SECOND)  # Vérification du deuxième rôle
+@app_commands.describe(
+    user="Utilisateur dont on réduit l'objet",
+    name="Nom de l'objet",
+    quantity="Quantité à retirer"
+)
+async def decrease_inventory(interaction: discord.Interaction, user: discord.Member, name: str, quantity: int):
+    # Vérifie que la quantité demandée est valide
+    if quantity <= 0:
+        return await interaction.response.send_message(
+            embed=create_embed("⚠️ Erreur", "La quantité doit être supérieure à 0."),
+            ephemeral=True
+        )
+
+    # Recherche de l'objet dans l'inventaire du joueur
+    item = inventory_collection.find_one({"user_id": user.id, "name": name})
+    
+    if not item:
+        return await interaction.response.send_message(
+            embed=create_embed("❌ Objet introuvable", f"L'utilisateur {user.mention} ne possède pas `{name}` dans son inventaire."),
+            ephemeral=True
+        )
+
+    # Calcule la nouvelle quantité
+    new_quantity = item["quantity"] - quantity
+
+    if new_quantity > 0:
+        # Mise à jour de la quantité si elle reste positive
+        inventory_collection.update_one({"user_id": user.id, "name": name}, {"$set": {"quantity": new_quantity}})
+        embed = discord.Embed(
+            title="📉 Inventaire mis à jour",
+            description=f"Le stock de **{name}** pour {user.mention} a été réduit de `{quantity}`.\n📦 Nouvelle quantité: `{new_quantity}`",
+            color=discord.Color.orange()
+        )
+    else:
+        # Supprime complètement l'objet si la quantité tombe à 0 ou en dessous
+        inventory_collection.delete_one({"user_id": user.id, "name": name})
+        embed = discord.Embed(
+            title="🗑️ Objet retiré",
+            description=f"Le stock de **{name}** pour {user.mention} a été complètement retiré de son inventaire.",
+            color=discord.Color.red()
+        )
+
+    await interaction.response.send_message(embed=embed)
 
 @bot.command(name="item-buy")
 async def item_buy(ctx, *, item_name: str):
