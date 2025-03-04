@@ -24,6 +24,7 @@ collection = db['commandes']
 collection2 = db['etherya-eco']
 economy_collection = db['economy']
 store_collection = db['store']
+inventory_collection = db["inventory"]
 
 # Vérification MongoDB
 try:
