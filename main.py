@@ -1111,6 +1111,7 @@ async def calcul(interaction: discord.Interaction, nombre: float, pourcentage: f
 ROLE_NEEDED = "″ [𝑺ץ] Développeur" 
 ROLE_SECOND = "*"  
 
+# Fonction pour récupérer les données de l'utilisateur
 def get_user_data(user_id):
     user_data = economy_collection.find_one({"user_id": str(user_id)})
     if user_data is None:
@@ -1118,60 +1119,58 @@ def get_user_data(user_id):
         economy_collection.insert_one(user_data)
     return user_data
 
+# Fonction pour sauvegarder les données de l'utilisateur
 def save_user_data(user_id, user_data):
     economy_collection.update_one({"user_id": str(user_id)}, {"$set": user_data})
 
+# Fonction pour créer un embed avec couleur dynamique
 def create_embed(title, description, color=discord.Color.green()):
     return discord.Embed(title=title, description=description, color=color)
-
-@bot.event
-async def on_ready():
-    await bot.tree.sync()
-    print(f"Bot connecté en tant que {bot.user}")
 
 # Vérification de rôle avant d'exécuter les commandes
 def check_role(ctx, role_name):
     return any(role.name == role_name for role in ctx.author.roles)
 
-# Dépôt et retrait
+# Commandes de dépôt et retrait
 deposit_withdraw_commands = {"deposit": "déposé", "withdraw": "retiré"}
 for cmd, action in deposit_withdraw_commands.items():
     @bot.command(name=cmd)
     async def transaction(ctx, amount: str, transaction_type=cmd, action=action):
         if not check_role(ctx, ROLE_NEEDED):
-            return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande."))
-        
+            return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande.", color=discord.Color.red()))
+
         user_data = get_user_data(ctx.author.id)
         if amount.lower() == "all":
             amount = user_data["cash"] if transaction_type == "deposit" else user_data["bank"]
         try:
             amount = int(amount)
         except ValueError:
-            return await ctx.send(embed=create_embed("⚠️ Erreur", "Montant invalide."))
+            return await ctx.send(embed=create_embed("⚠️ Erreur", "Montant invalide.", color=discord.Color.red()))
 
         if amount <= 0 or (transaction_type == "deposit" and amount > user_data["cash"]) or (transaction_type == "withdraw" and amount > user_data["bank"]):
-            return await ctx.send(embed=create_embed("⚠️ Erreur", "Montant incorrect."))
+            return await ctx.send(embed=create_embed("⚠️ Erreur", "Montant incorrect.", color=discord.Color.red()))
 
         user_data["cash"] -= amount if transaction_type == "deposit" else -amount
         user_data["bank"] += amount if transaction_type == "deposit" else -amount
         user_data["total"] = user_data["cash"] + user_data["bank"]
         save_user_data(ctx.author.id, user_data)
 
-        await ctx.send(embed=create_embed("🏦 Transaction réussie", f"Vous avez {action} `{amount}` 💵."))
+        await ctx.send(embed=create_embed("🏦 Transaction réussie", f"Vous avez {action} `{amount}` 💵.", color=discord.Color.green()))
 
 @bot.command(name="balance")
-async def balance(ctx):
+async def balance(ctx, user: discord.Member = None):
     if not check_role(ctx, ROLE_NEEDED):
-        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande."))
-    
-    user_data = get_user_data(ctx.author.id)
-    embed = create_embed("💰 Votre Balance", f"💵 **Cash** : `{user_data['cash']}`\n🏦 **Banque** : `{user_data['bank']}`\n💰 **Total** : `{user_data['total']}`")
+        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande.", color=discord.Color.red()))
+
+    user = user or ctx.author  # Si aucun utilisateur spécifié, utiliser l'auteur de la commande
+    user_data = get_user_data(user.id)
+    embed = create_embed("💰 Balance", f"**{user.mention}**\n💵 **Cash**: `{user_data['cash']}`\n🏦 **Banque**: `{user_data['bank']}`\n💰 **Total**: `{user_data['total']}`", color=discord.Color.blue())
     await ctx.send(embed=embed)
 
 @bot.command(name="work")
 async def work(ctx):
     if not check_role(ctx, ROLE_NEEDED):
-        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande."))
+        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande.", color=discord.Color.red()))
 
     user_data = get_user_data(ctx.author.id)
     cooldown_duration = 1800  # 30 minutes en secondes
@@ -1184,7 +1183,7 @@ async def work(ctx):
         remaining_time = cooldown_duration - time_since_last_work
         minutes = remaining_time // 60
         seconds = remaining_time % 60
-        return await ctx.send(embed=create_embed("⏳ Cooldown", f"Vous devez attendre {int(minutes)} minutes et {int(seconds)} secondes avant de retravailler."))
+        return await ctx.send(embed=create_embed("⏳ Cooldown", f"Vous devez attendre {int(minutes)} minutes et {int(seconds)} secondes avant de retravailler.", color=discord.Color.orange()))
 
     earned_money = random.randint(50, 200)
     user_data["cash"] += earned_money
@@ -1192,22 +1191,25 @@ async def work(ctx):
     user_data["last_work"] = now  # Enregistrer le timestamp
 
     save_user_data(ctx.author.id, user_data)
-    await ctx.send(embed=create_embed("💼 Travail Réussi !", f"Vous avez gagné **{earned_money}** 💵 !"))
+    await ctx.send(embed=create_embed("💼 Travail Réussi !", f"Vous avez gagné **{earned_money}** 💵 !", color=discord.Color.green()))
 
 @bot.command(name="store")
 async def store(ctx):
     if not check_role(ctx, ROLE_NEEDED):
-        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande."))
-    
+        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande.", color=discord.Color.red()))
+
     items = list(store_collection.find())
     if not items:
-        return await ctx.send(embed=create_embed("🏪 Boutique", "Aucun objet disponible."))
+        return await ctx.send(embed=create_embed("🏪 Boutique", "Aucun objet disponible.", color=discord.Color.yellow()))
+    
     desc = "\n".join([f"**{item['name']}** - {item['price']} 💵 ({item['stock']} en stock)\n_{item['description']}_" for item in items])
-    await ctx.send(embed=create_embed("🏪 Boutique", desc))
+    await ctx.send(embed=create_embed("🏪 Boutique", desc, color=discord.Color.purple()))
+
+# Commandes Slash - Store Management
 
 @bot.tree.command(name="add-store", description="Ajoute un objet dans le store")
-@app_commands.checks.has_role(ROLE_NEEDED)  # Vérification du premier rôle
-@app_commands.checks.has_role(ROLE_SECOND)   # Vérification du deuxième rôle
+@app_commands.checks.has_role(ROLE_NEEDED)
+@app_commands.checks.has_role(ROLE_SECOND)
 @app_commands.describe(
     name="Nom de l'objet",
     price="Prix de l'objet",
@@ -1217,7 +1219,7 @@ async def store(ctx):
 async def add_store(interaction: discord.Interaction, name: str, price: int, stock: int, description: str):
     if not (any(role.name == ROLE_NEEDED for role in interaction.user.roles) and any(role.name == ROLE_SECOND for role in interaction.user.roles)):
         return await interaction.response.send_message(
-            embed=create_embed("⚠️ Accès refusé", "Vous devez avoir les rôles 'Développeur' et '*' pour ajouter un objet dans le store.")
+            embed=create_embed("⚠️ Accès refusé", "Vous devez avoir les rôles 'Développeur' et '*' pour ajouter un objet dans le store.", color=discord.Color.red())
         )
     
     store_collection.insert_one({"name": name, "price": price, "stock": stock, "description": description})
@@ -1239,7 +1241,7 @@ async def remove_store(interaction: discord.Interaction, name: str):
     
     if not item:
         return await interaction.response.send_message(
-            embed=create_embed("❌ Objet introuvable", f"L'objet `{name}` n'existe pas dans le store."),
+            embed=create_embed("❌ Objet introuvable", f"L'objet `{name}` n'existe pas dans le store.", color=discord.Color.red()),
             ephemeral=True
         )
     
@@ -1253,41 +1255,21 @@ async def remove_store(interaction: discord.Interaction, name: str):
     
     await interaction.response.send_message(embed=embed)
 
-
-@bot.tree.command(name="decrease-stock", description="Diminue le stock d'un objet dans le store")
-@app_commands.checks.has_role(ROLE_NEEDED)
-@app_commands.checks.has_role(ROLE_SECOND)
-@app_commands.describe(
-    name="Nom de l'objet",
-    amount="Quantité à retirer"
-)
-async def decrease_stock(interaction: discord.Interaction, name: str, amount: int):
-    item = store_collection.find_one({"name": name})
-    
-    if not item:
-        return await interaction.response.send_message(
-            embed=create_embed("❌ Objet introuvable", f"L'objet `{name}` n'existe pas dans le store."),
-            ephemeral=True
-        )
-
-    new_stock = max(0, item["stock"] - amount)  # Empêche le stock de devenir négatif
-    store_collection.update_one({"name": name}, {"$set": {"stock": new_stock}})
-    
-    embed = discord.Embed(
-        title="📉 Stock mis à jour",
-        description=f"Le stock de **{name}** a été réduit de `{amount}`.\n📦 Nouveau stock: `{new_stock}`",
-        color=discord.Color.orange()
-    )
-    
-    await interaction.response.send_message(embed=embed)
-
-# Commande pour ajouter un objet dans l'inventaire d'un utilisateur
+# Commande pour ajouter un objet dans l'inventaire
 @bot.tree.command(name="add-inventory", description="Ajoute un objet dans l'inventaire d'un utilisateur")
-@app_commands.checks.has_role(ROLE_NEEDED)  # Vérification du rôle nécessaire
+@app_commands.checks.has_role(ROLE_NEEDED)
 async def add_inventory(interaction: discord.Interaction, user: discord.Member, name: str, quantity: int):
     if quantity <= 0:
         return await interaction.response.send_message(
-            embed=create_embed("⚠️ Erreur", "La quantité doit être supérieure à 0."),
+            embed=create_embed("⚠️ Erreur", "La quantité doit être supérieure à 0.", color=discord.Color.red()),
+            ephemeral=True
+        )
+
+    # Vérifie si l'objet existe dans le store
+    item = store_collection.find_one({"name": name})
+    if not item:
+        return await interaction.response.send_message(
+            embed=create_embed("⚠️ Erreur", f"L'objet `{name}` n'existe pas dans le store.", color=discord.Color.red()),
             ephemeral=True
         )
 
@@ -1298,11 +1280,11 @@ async def add_inventory(interaction: discord.Interaction, user: discord.Member, 
     inventory = user_data.get("inventory", [])
 
     # Cherche si l'objet existe déjà dans l'inventaire
-    item = next((item for item in inventory if item["name"] == name), None)
+    item_in_inventory = next((item for item in inventory if item["name"] == name), None)
 
-    if item:
+    if item_in_inventory:
         # Si l'objet existe, on augmente la quantité
-        item["quantity"] += quantity
+        item_in_inventory["quantity"] += quantity
     else:
         # Sinon, on ajoute un nouvel objet avec la quantité donnée
         inventory.append({"name": name, "quantity": quantity})
@@ -1313,65 +1295,33 @@ async def add_inventory(interaction: discord.Interaction, user: discord.Member, 
 
     # Confirmation
     await interaction.response.send_message(
-        embed=create_embed("🎒 Objet ajouté", f"**{quantity}x {name}** a été ajouté à l'inventaire de {user.mention}.")
+        embed=create_embed("🎒 Objet ajouté", f"**{quantity}x {name}** a été ajouté à l'inventaire de {user.mention}.", color=discord.Color.green())
     )
 
-
-# Commande pour diminuer la quantité d'un objet dans l'inventaire d'un utilisateur
-@bot.tree.command(name="decrease-inventory", description="Diminue la quantité d'un objet dans l'inventaire d'un utilisateur")
-@app_commands.checks.has_role(ROLE_NEEDED)  # Vérification du rôle nécessaire
-async def decrease_inventory(interaction: discord.Interaction, user: discord.Member, name: str, quantity: int):
-    if quantity <= 0:
-        return await interaction.response.send_message(
-            embed=create_embed("⚠️ Erreur", "La quantité doit être supérieure à 0."),
-            ephemeral=True
-        )
-
-    # Récupère les données de l'utilisateur
-    user_data = get_user_data(user.id)
-
-    # Récupère l'inventaire ou initialise une liste vide si aucun objet
+# Commande pour afficher l'inventaire stylisé
+@bot.tree.command(name="inventory", description="Affiche l'inventaire de l'utilisateur")
+async def inventory(interaction: discord.Interaction):
+    user_data = get_user_data(interaction.user.id)
     inventory = user_data.get("inventory", [])
-
-    # Cherche l'objet dans l'inventaire
-    item = next((item for item in inventory if item["name"] == name), None)
-
-    if not item:
+    
+    if not inventory:
         return await interaction.response.send_message(
-            embed=create_embed("❌ Objet introuvable", f"L'utilisateur {user.mention} n'a pas d'objet `{name}` dans son inventaire."),
-            ephemeral=True
+            embed=create_embed("🎒 Inventaire", "Votre inventaire est vide.", color=discord.Color.red())
         )
-
-    if item["quantity"] < quantity:
-        return await interaction.response.send_message(
-            embed=create_embed("⚠️ Erreur", f"{user.mention} n'a pas assez de `{name}` pour cette opération."),
-            ephemeral=True
-        )
-
-    # Réduit la quantité de l'objet
-    item["quantity"] -= quantity
-
-    if item["quantity"] <= 0:
-        # Si la quantité atteint 0 ou moins, on supprime l'objet de l'inventaire
-        inventory.remove(item)
-
-    # Mise à jour de l'inventaire dans les données de l'utilisateur
-    user_data["inventory"] = inventory
-    save_user_data(user.id, user_data)
-
-    # Confirmation
+    
+    items_desc = "\n".join([f"**{item['name']}** - {item['quantity']} en stock" for item in inventory])
+    
     await interaction.response.send_message(
-        embed=create_embed("📉 Inventaire mis à jour", f"**{quantity}x {name}** a été retiré de l'inventaire de {user.mention}.")
+        embed=create_embed("🎒 Inventaire", f"Voici vos objets:\n{items_desc}", color=discord.Color.blue())
     )
 
-
-# Commande pour ajouter de l'argent à un utilisateur
-@bot.tree.command(name="add-money", description="Ajoute de l'argent au solde d'un utilisateur")
-@app_commands.checks.has_role(ROLE_NEEDED)  # Vérification du rôle nécessaire
+# Ajout d'argent à un utilisateur
+@bot.tree.command(name="add-money", description="Ajoute de l'argent à un utilisateur")
+@app_commands.checks.has_role(ROLE_NEEDED)
 async def add_money(interaction: discord.Interaction, user: discord.Member, amount: int):
     if amount <= 0:
         return await interaction.response.send_message(
-            embed=create_embed("⚠️ Erreur", "Le montant doit être supérieur à 0."),
+            embed=create_embed("⚠️ Erreur", "Le montant doit être supérieur à 0.", color=discord.Color.red()),
             ephemeral=True
         )
 
@@ -1387,17 +1337,16 @@ async def add_money(interaction: discord.Interaction, user: discord.Member, amou
 
     # Confirmation
     await interaction.response.send_message(
-        embed=create_embed("💰 Argent ajouté", f"**{amount} 💵** a été ajouté au solde de {user.mention}.")
+        embed=create_embed("💰 Argent ajouté", f"**{amount} 💵** a été ajouté au solde de {user.mention}.", color=discord.Color.green())
     )
 
-
-# Commande pour retirer de l'argent du solde d'un utilisateur
+# Retirer de l'argent à un utilisateur
 @bot.tree.command(name="remove-money", description="Retire de l'argent du solde d'un utilisateur")
-@app_commands.checks.has_role(ROLE_NEEDED)  # Vérification du rôle nécessaire
+@app_commands.checks.has_role(ROLE_NEEDED)
 async def remove_money(interaction: discord.Interaction, user: discord.Member, amount: int):
     if amount <= 0:
         return await interaction.response.send_message(
-            embed=create_embed("⚠️ Erreur", "Le montant doit être supérieur à 0."),
+            embed=create_embed("⚠️ Erreur", "Le montant doit être supérieur à 0.", color=discord.Color.red()),
             ephemeral=True
         )
 
@@ -1407,7 +1356,7 @@ async def remove_money(interaction: discord.Interaction, user: discord.Member, a
     # Vérifie si l'utilisateur a assez d'argent
     if user_data["cash"] < amount:
         return await interaction.response.send_message(
-            embed=create_embed("⚠️ Erreur", f"{user.mention} n'a pas assez d'argent pour cette opération."),
+            embed=create_embed("⚠️ Erreur", f"{user.mention} n'a pas assez d'argent pour cette opération.", color=discord.Color.red()),
             ephemeral=True
         )
 
@@ -1420,44 +1369,8 @@ async def remove_money(interaction: discord.Interaction, user: discord.Member, a
 
     # Confirmation
     await interaction.response.send_message(
-        embed=create_embed("💸 Argent retiré", f"**{amount} 💵** a été retiré du solde de {user.mention}.")
+        embed=create_embed("💸 Argent retiré", f"**{amount} 💵** a été retiré du solde de {user.mention}.", color=discord.Color.green())
     )
-
-@bot.command(name="item-buy")
-async def item_buy(ctx, *, item_name: str):
-    if not check_role(ctx, ROLE_NEEDED):
-        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande."))
-    
-    user_data = get_user_data(ctx.author.id)
-    item = store_collection.find_one({"name": item_name})
-
-    if not item:
-        return await ctx.send(embed=create_embed("❌ Erreur", "L'objet n'existe pas dans le store."))
-    if item['stock'] <= 0:
-        return await ctx.send(embed=create_embed("❌ Stock épuisé", f"L'objet **{item_name}** est en rupture de stock."))
-    if user_data["cash"] < item['price']:
-        return await ctx.send(embed=create_embed("❌ Fonds insuffisants", "Vous n'avez pas assez d'argent pour cet achat."))
-
-    # Mise à jour de l'utilisateur et du stock
-    user_data["cash"] -= item['price']
-    user_data["total"] = user_data["cash"] + user_data["bank"]
-    user_data["inventory"].append(item_name)
-    save_user_data(ctx.author.id, user_data)
-
-    # Mise à jour du stock
-    store_collection.update_one({"name": item_name}, {"$inc": {"stock": -1}})
-    
-    await ctx.send(embed=create_embed("✅ Achat Réussi", f"Vous avez acheté **{item_name}** pour **{item['price']} 💵** !"))
-
-@bot.command(name="item-inventory")
-async def item_inventory(ctx):
-    if not check_role(ctx, ROLE_NEEDED):
-        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande."))
-    
-    user_data = get_user_data(ctx.author.id)
-    inventory = user_data.get("inventory", [])
-    desc = "\n".join(inventory) if inventory else "Votre inventaire est vide."
-    await ctx.send(embed=create_embed("🎒 Inventaire", desc))
 
 
 #-------------------------------------------------------------------------------------------------------------INVENTORY---------------------------------------------------------------------------------------------------------------------------------------
