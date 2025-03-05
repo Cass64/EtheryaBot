@@ -1511,7 +1511,7 @@ async def clear_inventory(interaction: discord.Interaction, user: discord.User):
         )
 
     user_data["inventory"] = []  # Vide l'inventaire
-    update_user_data(user.id, user_data)  # Sauvegarde les modifications
+    save_user_data(user.id, user_data)  # Sauvegarde les modifications
 
     embed = create_embed(
         "🗑️ Inventaire vidé", 
