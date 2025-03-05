@@ -1330,7 +1330,7 @@ async def inventory(interaction: discord.Interaction):
 
     # Création de l'embed
     embed = create_embed("🎒 Inventaire", items_desc, color=discord.Color.blue())
-    embed.set_thumbnail(url="https://i.imgur.com/NnR4Hs2.png")  # Icône d'inventaire
+    embed.set_thumbnail(url="https://imgur.com/6jMGQys")  # Icône d'inventaire
     embed.set_footer(text=f"Inventaire de {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
 
     # Envoyer la réponse
@@ -1518,7 +1518,7 @@ async def clear_inventory(interaction: discord.Interaction, user: discord.User):
         f"L'inventaire de {user.mention} a été **supprimé avec succès**.", 
         color=discord.Color.orange()
     )
-    embed.set_thumbnail(url="https://i.imgur.com/bTwPRbX.png")  # Icône poubelle
+    embed.set_thumbnail(url="https://imgur.com/6jMGQys")  # Icône poubelle
     embed.set_footer(text=f"Action effectuée par {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
 
     await interaction.followup.send(embed=embed)
