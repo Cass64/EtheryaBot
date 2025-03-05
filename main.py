@@ -1549,7 +1549,7 @@ async def clear_inventory(interaction: discord.Interaction, user: discord.User):
 async def item_info(interaction: discord.Interaction, item: str = None):
     if item:
         # Recherche l'item par son nom
-        item_data = store.find_one({"name": item})
+        item_data = store_collection.find_one({"name": item})
         if not item_data:
             await interaction.response.send_message("❌ Item non trouvé.", ephemeral=True)
             return
@@ -1564,7 +1564,7 @@ async def item_info(interaction: discord.Interaction, item: str = None):
         await interaction.response.send_message(embed=embed)
     else:
         # Liste des items sous forme de menu déroulant
-        items = list(store.find({"stock": {"$gt": 0}}))  # Seulement les items en stock
+        items = list(store_collection.find({"stock": {"$gt": 0}}))  # Seulement les items en stock
         if not items:
             await interaction.response.send_message("❌ Aucun item disponible en stock.", ephemeral=True)
             return
