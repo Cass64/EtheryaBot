@@ -1294,17 +1294,19 @@ async def add_inventory(interaction: discord.Interaction, name: str, quantity: i
 
 @bot.tree.command(name="inventory", description="Affiche l'inventaire de l'utilisateur")
 async def inventory(interaction: discord.Interaction):
+    await interaction.response.defer()  # Déférer pour éviter l'expiration de l'interaction
+
     user_data = get_user_data(interaction.user.id)
     inventory = user_data.get("inventory", [])
 
     if not inventory:
-        return await interaction.response.send_message(
+        return await interaction.followup.send(
             embed=create_embed("🎒 Inventaire", "Votre inventaire est vide.", color=discord.Color.red())
         )
 
     items_desc = "\n".join([f"**{item['name']}** - {item['quantity']} en stock" if isinstance(item, dict) else f"Invalid Item" for item in inventory])
 
-    await interaction.response.send_message(
+    await interaction.followup.send(
         embed=create_embed("🎒 Inventaire", f"Voici vos objets:\n{items_desc}", color=discord.Color.blue())
     )
 
