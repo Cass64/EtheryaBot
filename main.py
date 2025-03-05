@@ -1544,6 +1544,51 @@ async def clear_inventory(interaction: discord.Interaction, user: discord.User):
 
     await interaction.followup.send(embed=embed)
 
+@bot.tree.command(name="item-info", description="Voir les informations d'un item en stock")
+@app_commands.describe(item="Nom de l'item à rechercher")
+async def item_info(interaction: discord.Interaction, item: str = None):
+    if item:
+        # Recherche l'item par son nom
+        item_data = store.find_one({"name": item})
+        if not item_data:
+            await interaction.response.send_message("❌ Item non trouvé.", ephemeral=True)
+            return
+        
+        # Création de l'embed détaillé
+        embed = discord.Embed(title=f"📦 {item_data['name']}", color=discord.Color.green())
+        embed.add_field(name="Description", value=item_data["description"], inline=False)
+        embed.add_field(name="Prix", value=f"{item_data['price']} 💰", inline=True)
+        embed.add_field(name="Stock", value=f"{item_data['stock']} unités", inline=True)
+        embed.set_footer(text="Utilisez /item-buy pour acheter cet item.")
+        
+        await interaction.response.send_message(embed=embed)
+    else:
+        # Liste des items sous forme de menu déroulant
+        items = list(store.find({"stock": {"$gt": 0}}))  # Seulement les items en stock
+        if not items:
+            await interaction.response.send_message("❌ Aucun item disponible en stock.", ephemeral=True)
+            return
+        
+        options = [discord.SelectOption(label=item["name"], description=f"Prix : {item['price']} 💰") for item in items]
+
+        class ItemDropdown(discord.ui.Select):
+            def __init__(self):
+                super().__init__(placeholder="Sélectionnez un item...", options=options)
+
+            async def callback(self, interaction: discord.Interaction):
+                selected_item = store.find_one({"name": self.values[0]})
+                embed = discord.Embed(title=f"📦 {selected_item['name']}", color=discord.Color.green())
+                embed.add_field(name="Description", value=selected_item["description"], inline=False)
+                embed.add_field(name="Prix", value=f"{selected_item['price']} 💰", inline=True)
+                embed.add_field(name="Stock", value=f"{selected_item['stock']} unités", inline=True)
+                embed.set_footer(text="Utilisez /item-buy pour acheter cet item.")
+                await interaction.response.edit_message(embed=embed, view=None)
+
+        view = discord.ui.View()
+        view.add_item(ItemDropdown())
+
+        await interaction.response.send_message("📜 Sélectionnez un item pour voir ses informations :", view=view)
+
 #-------------------------------------------------------------------------------------------------------------INVENTORY---------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------LEADERBOARD--------------------------------------------------------------------------------------------------------------------------------------
 
