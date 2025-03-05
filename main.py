@@ -1236,6 +1236,71 @@ async def work(ctx):
     save_user_data(ctx.author.id, user_data)
     await ctx.send(embed=create_embed("💼 Travail Réussi !", f"Vous avez gagné **{earned_money}** 💵 !", color=discord.Color.green()))
 
+@bot.command(name="deposit", description="Déposer de l'argent dans la banque")
+async def deposit(ctx, amount: str):
+    # Vérification des rôles
+    if not has_required_roles(ctx.author):
+        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir les rôles '{ROLE_NEEDED}' et '{ROLE_SECOND}' pour utiliser cette commande.", color=discord.Color.red()))
+
+    # Récupérer les données de l'utilisateur
+    user_data = get_user_data(ctx.author.id)
+
+    # Gestion du montant
+    if amount.lower() == "all":
+        amount = user_data["cash"]
+    
+    try:
+        amount = int(amount)
+    except ValueError:
+        return await ctx.send(embed=create_embed("⚠️ Erreur", "Montant invalide.", color=discord.Color.red()))
+
+    if amount <= 0 or amount > user_data["cash"]:
+        return await ctx.send(embed=create_embed("⚠️ Erreur", "Montant incorrect ou insuffisant.", color=discord.Color.red()))
+
+    # Mise à jour des données : retirer de la trésorerie et ajouter à la banque
+    user_data["cash"] -= amount
+    user_data["bank"] += amount
+    user_data["total"] = user_data["cash"] + user_data["bank"]
+
+    # Sauvegarder les données de l'utilisateur
+    save_user_data(ctx.author.id, user_data)
+
+    # Confirmation du dépôt
+    await ctx.send(embed=create_embed("🏦 Dépôt réussi", f"Vous avez déposé `{amount}` 💵 dans votre banque.", color=discord.Color.green()))
+
+@bot.command(name="withdraw", description="Retirer de l'argent de la banque")
+async def withdraw(ctx, amount: str):
+    # Vérification des rôles
+    if not has_required_roles(ctx.author):
+        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir les rôles '{ROLE_NEEDED}' et '{ROLE_SECOND}' pour utiliser cette commande.", color=discord.Color.red()))
+
+    # Récupérer les données de l'utilisateur
+    user_data = get_user_data(ctx.author.id)
+
+    # Gestion du montant
+    if amount.lower() == "all":
+        amount = user_data["bank"]
+    
+    try:
+        amount = int(amount)
+    except ValueError:
+        return await ctx.send(embed=create_embed("⚠️ Erreur", "Montant invalide.", color=discord.Color.red()))
+
+    if amount <= 0 or amount > user_data["bank"]:
+        return await ctx.send(embed=create_embed("⚠️ Erreur", "Montant incorrect ou insuffisant.", color=discord.Color.red()))
+
+    # Mise à jour des données : ajouter à la trésorerie et retirer de la banque
+    user_data["cash"] += amount
+    user_data["bank"] -= amount
+    user_data["total"] = user_data["cash"] + user_data["bank"]
+
+    # Sauvegarder les données de l'utilisateur
+    save_user_data(ctx.author.id, user_data)
+
+    # Confirmation du retrait
+    await ctx.send(embed=create_embed("🏦 Retrait réussi", f"Vous avez retiré `{amount}` 💵 de votre banque.", color=discord.Color.green()))
+
+
 @bot.command(name="store")
 async def store(ctx):
     if not check_role(ctx, ROLE_NEEDED):
