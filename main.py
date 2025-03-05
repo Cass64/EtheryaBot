@@ -13,6 +13,7 @@ from datetime import datetime
 from datetime import timedelta
 import math
 import aiocron
+import logging
 
 load_dotenv()
 
@@ -1107,14 +1108,22 @@ async def calcul(interaction: discord.Interaction, nombre: float, pourcentage: f
 #------------------------------------------------------------------------- ECONOMIEW ------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE-------
 #------------------------------------------------------------------------- ECONOMIEW ------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE-------
 
-# Définir les rôles nécessaires
-ROLE_NEEDED = "″ [𝑺ץ] Développeur" 
-ROLE_SECOND = "*"  
+# Logger pour les erreurs
+logging.basicConfig(level=logging.INFO)
+
+# Rôles nécessaires
+ROLE_NEEDED = "[𝑺ץ] Développeur"
+ROLE_SECOND = "*"
+
+# Fonction pour vérifier si l'utilisateur a les rôles nécessaires
+def has_required_roles(user):
+    return any(role.name == ROLE_NEEDED for role in user.roles) and any(role.name == ROLE_SECOND for role in user.roles)
 
 # Fonction pour récupérer les données de l'utilisateur
 def get_user_data(user_id):
     user_data = economy_collection.find_one({"user_id": str(user_id)})
-    if user_data is None:
+    if not user_data:
+        # Si les données n'existent pas, on crée un nouveau document
         user_data = {"user_id": str(user_id), "cash": 0, "bank": 0, "total": 0, "last_claim": None, "inventory": []}
         economy_collection.insert_one(user_data)
     return user_data
@@ -1123,39 +1132,44 @@ def get_user_data(user_id):
 def save_user_data(user_id, user_data):
     economy_collection.update_one({"user_id": str(user_id)}, {"$set": user_data})
 
-# Fonction pour créer un embed avec couleur dynamique
+# Fonction pour créer un embed avec une couleur dynamique
 def create_embed(title, description, color=discord.Color.green()):
     return discord.Embed(title=title, description=description, color=color)
 
-# Vérification de rôle avant d'exécuter les commandes
-def check_role(ctx, role_name):
-    return any(role.name == role_name for role in ctx.author.roles)
+# Commande générique pour la gestion des transactions
+async def transaction(ctx, amount: str, transaction_type="deposit", action="déposé"):
+    # Vérification des rôles
+    if not has_required_roles(ctx.author):
+        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir les rôles '{ROLE_NEEDED}' et '{ROLE_SECOND}' pour utiliser cette commande.", color=discord.Color.red()))
 
-# Commandes de dépôt et retrait
-deposit_withdraw_commands = {"deposit": "déposé", "withdraw": "retiré"}
-for cmd, action in deposit_withdraw_commands.items():
-    @bot.command(name=cmd)
-    async def transaction(ctx, amount: str, transaction_type=cmd, action=action):
-        if not check_role(ctx, ROLE_NEEDED):
-            return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande.", color=discord.Color.red()))
+    # Récupérer les données de l'utilisateur
+    user_data = get_user_data(ctx.author.id)
 
-        user_data = get_user_data(ctx.author.id)
-        if amount.lower() == "all":
-            amount = user_data["cash"] if transaction_type == "deposit" else user_data["bank"]
-        try:
-            amount = int(amount)
-        except ValueError:
-            return await ctx.send(embed=create_embed("⚠️ Erreur", "Montant invalide.", color=discord.Color.red()))
+    # Gestion du montant
+    if amount.lower() == "all":
+        amount = user_data["cash"] if transaction_type == "deposit" else user_data["bank"]
+    
+    try:
+        amount = int(amount)
+    except ValueError:
+        return await ctx.send(embed=create_embed("⚠️ Erreur", "Montant invalide.", color=discord.Color.red()))
 
-        if amount <= 0 or (transaction_type == "deposit" and amount > user_data["cash"]) or (transaction_type == "withdraw" and amount > user_data["bank"]):
-            return await ctx.send(embed=create_embed("⚠️ Erreur", "Montant incorrect.", color=discord.Color.red()))
+    if amount <= 0 or (transaction_type == "deposit" and amount > user_data["cash"]) or (transaction_type == "withdraw" and amount > user_data["bank"]):
+        return await ctx.send(embed=create_embed("⚠️ Erreur", "Montant incorrect.", color=discord.Color.red()))
 
-        user_data["cash"] -= amount if transaction_type == "deposit" else -amount
-        user_data["bank"] += amount if transaction_type == "deposit" else -amount
-        user_data["total"] = user_data["cash"] + user_data["bank"]
-        save_user_data(ctx.author.id, user_data)
+    # Mise à jour des données
+    if transaction_type == "deposit":
+        user_data["cash"] -= amount
+        user_data["bank"] += amount
+    else:
+        user_data["cash"] += amount
+        user_data["bank"] -= amount
+    
+    user_data["total"] = user_data["cash"] + user_data["bank"]
+    save_user_data(ctx.author.id, user_data)
 
-        await ctx.send(embed=create_embed("🏦 Transaction réussie", f"Vous avez {action} `{amount}` 💵.", color=discord.Color.green()))
+    # Confirmation de la transaction
+    await ctx.send(embed=create_embed("🏦 Transaction réussie", f"Vous avez {action} `{amount}` 💵.", color=discord.Color.green()))
 
 @bot.command(name="balance")
 async def balance(ctx, user: discord.Member = None):
@@ -1260,111 +1274,67 @@ async def remove_store(interaction: discord.Interaction, name: str):
     
     await interaction.response.send_message(embed=embed)
 
-# Commande add_inventory
-@bot.tree.command(name="add-inventory", description="Ajoute un item à l'inventaire")
-@app_commands.checks.has_role(ROLE_NEEDED)
-@app_commands.checks.has_role(ROLE_SECOND)
-async def add_inventory(interaction: discord.Interaction, name: str, quantity: int, member: discord.Member = None):
-    try:
-        # Si l'utilisateur n'a pas les bons rôles, retour
-        if not (any(role.name == ROLE_NEEDED for role in interaction.user.roles) and any(role.name == ROLE_SECOND for role in interaction.user.roles)):
-            return await interaction.response.send_message(
-                embed=create_embed("⚠️ Accès refusé", "Vous devez avoir les rôles 'Développeur' et '*' pour ajouter un objet dans l'inventaire.", color=discord.Color.red())
-            )
-
-        if quantity <= 0:
-            return await interaction.response.send_message(
-                embed=create_embed("⚠️ Erreur", "La quantité doit être supérieure à 0.", color=discord.Color.red())
-            )
-
-        # Vérification que l'item existe dans le store
-        store = get_store_data()  # Supposons que tu as une fonction pour récupérer le store
-        item_in_store = next((item for item in store if item["name"] == name), None)
-
-        if not item_in_store:
-            return await interaction.response.send_message(
-                embed=create_embed("⚠️ Erreur", f"L'item **{name}** n'existe pas dans le store.", color=discord.Color.red())
-            )
-
-        # Déterminer quel utilisateur modifier l'inventaire
-        target_user = member if member else interaction.user
-
-        # Récupère les données de l'utilisateur
-        user_data = get_user_data(target_user.id)
-        inventory = user_data.get("inventory", [])
-
-        # Vérification de la structure de l'inventaire
-        if any(not isinstance(item, dict) or "name" not in item or "quantity" not in item for item in inventory):
-            return await interaction.response.send_message(
-                embed=create_embed("⚠️ Erreur", "L'inventaire contient des éléments mal formatés. Veuillez vérifier.", color=discord.Color.red())
-            )
-
-        # Recherche de l'item dans l'inventaire
-        item_in_inventory = next((item for item in inventory if item["name"] == name), None)
-
-        if item_in_inventory:
-            # Si l'item existe, on augmente sa quantité
-            item_in_inventory["quantity"] += quantity
-        else:
-            # Sinon, on ajoute un nouvel item
-            inventory.append({"name": name, "quantity": quantity})
-
-        # Mise à jour des données de l'utilisateur
-        user_data["inventory"] = inventory
-        save_user_data(target_user.id, user_data)
-
-        # Réponse de succès
-        await interaction.response.send_message(
-            embed=create_embed("🎒 Inventaire mis à jour", f"L'item **{name}** a été ajouté à l'inventaire de {target_user.display_name} avec `{quantity}` unité(s).", color=discord.Color.green())
+# Commande pour ajouter un item à l'inventaire d'un autre utilisateur
+@bot.tree.command(name="add-inventory", description="Ajoute un item dans l'inventaire d'un autre utilisateur.")
+async def add_inventory(interaction: discord.Interaction, name: str, quantity: int, member: discord.Member):
+    if not has_required_roles(interaction.user):
+        return await interaction.response.send_message(
+            embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir les rôles '{ROLE_NEEDED}' et '{ROLE_SECOND}' pour ajouter un item dans l'inventaire.", color=discord.Color.red())
         )
 
-    except Exception as e:
-        print(f"Erreur lors de l'exécution de la commande 'add-inventory': {e}")
-        await interaction.response.send_message(
-            embed=create_embed("⚠️ Erreur", "Une erreur est survenue lors de l'ajout de l'item.", color=discord.Color.red())
+    if quantity <= 0:
+        return await interaction.response.send_message(
+            embed=create_embed("⚠️ Erreur", "La quantité doit être supérieure à 0.", color=discord.Color.red())
         )
 
+    # Vérification de l'inventaire de la personne ciblée
+    user_data = get_user_data(member.id)
+    inventory = user_data.get("inventory", [])
+
+    # Recherche de l'item dans l'inventaire de l'utilisateur ciblé
+    item_in_inventory = next((item for item in inventory if item["name"] == name), None)
+
+    if item_in_inventory:
+        # Si l'item existe déjà, on augmente simplement la quantité
+        item_in_inventory["quantity"] += quantity
+    else:
+        # Sinon, on ajoute un nouvel item dans l'inventaire
+        inventory.append({"name": name, "quantity": quantity})
+
+    # Mise à jour des données de l'utilisateur
+    user_data["inventory"] = inventory
+    save_user_data(member.id, user_data)
+
+    # Confirmation de l'ajout d'inventaire
+    await interaction.response.send_message(
+        embed=create_embed("🎉 Inventaire mis à jour", f"L'item **{name}** a été ajouté à l'inventaire de {member.display_name} avec `{quantity}` unité(s).", color=discord.Color.green())
+    )
+# Commande pour afficher l'inventaire d'un utilisateur
 @bot.tree.command(name="inventory", description="Affiche l'inventaire de l'utilisateur")
 async def inventory(interaction: discord.Interaction, member: discord.Member = None):
-    try:
-        # Si un membre est spécifié, utiliser ce membre pour récupérer l'inventaire
-        target_user = member if member else interaction.user
+    target_user = member if member else interaction.user
+    await interaction.response.defer()  # Permet de différer l'interaction pour éviter l'expiration
 
-        # Si tu veux différer l'interaction (prendre plus de temps)
-        await interaction.response.defer()  # Évite l'expiration de l'interaction
+    user_data = get_user_data(target_user.id)
+    inventory = user_data.get("inventory", [])
 
-        # Récupérer les données de l'utilisateur cible
-        user_data = get_user_data(target_user.id)
-        inventory = user_data.get("inventory", [])
-
-        # Vérifier si l'inventaire est vide
-        if not inventory:
-            return await interaction.followup.send(
-                embed=create_embed("🎒 Inventaire", f"L'inventaire de {target_user.display_name} est vide.", color=discord.Color.red())
-            )
-
-        # Construire la description des items dans l'inventaire
-        items_desc = "\n\n".join([
-            f"**📦 {item.get('name', 'Objet Inconnu')}**\n"
-            f"╰ *{item.get('description', 'Aucune description disponible')}*\n"
-            f"➡ **Quantité :** `{item.get('quantity', 'N/A')}`"
-            if isinstance(item, dict) else "❌ **Objet invalide**"
-            for item in inventory
-        ])
-
-        # Création de l'embed
-        embed = create_embed(f"🎒 Inventaire de {target_user.display_name}", items_desc, color=discord.Color.blue())
-        embed.set_thumbnail(url="https://i.imgur.com/2XuxSIU.jpeg")  # Icône d'inventaire
-        embed.set_footer(text=f"Inventaire de {target_user.display_name}", icon_url=target_user.avatar.url)
-
-        # Envoyer la réponse
-        await interaction.followup.send(embed=embed)
-
-    except Exception as e:
-        print(f"Erreur lors de l'exécution de la commande 'inventory': {e}")
-        await interaction.followup.send(
-            embed=create_embed("Erreur", "Une erreur est survenue lors de l'affichage de l'inventaire.", color=discord.Color.red())
+    if not inventory:
+        return await interaction.followup.send(
+            embed=create_embed("🎒 Inventaire", f"L'inventaire de {target_user.display_name} est vide.", color=discord.Color.red())
         )
+
+    items_desc = "\n\n".join([
+        f"**📦 {item.get('name', 'Objet Inconnu')}**\n"
+        f"╰ *{item.get('description', 'Aucune description disponible')}*\n"
+        f"➡ **Quantité :** `{item.get('quantity', 'N/A')}`"
+        for item in inventory
+    ])
+
+    embed = create_embed(f"🎒 Inventaire de {target_user.display_name}", items_desc, color=discord.Color.blue())
+    embed.set_thumbnail(url="https://i.imgur.com/2XuxSIU.jpeg")
+    embed.set_footer(text=f"Inventaire de {target_user.display_name}", icon_url=target_user.avatar.url)
+
+    await interaction.followup.send(embed=embed)
 
 
 # Commande pour réduire le stock d'un item sans le supprimer
@@ -1472,68 +1442,55 @@ async def remove_money(interaction: discord.Interaction, user: discord.Member, a
         embed=create_embed("💸 Argent retiré", f"**{amount} 💵** a été retiré du solde de {user.mention}.", color=discord.Color.green())
     )
 
-# Commande decrease_inventory
-@bot.tree.command(name="decrease-inventory", description="Diminue la quantité d'un item dans l'inventaire et supprime l'item si la quantité devient 0")
+# Commande pour retirer un item de l'inventaire d'un autre utilisateur
+@bot.tree.command(name="decrease-inventory", description="Réduit la quantité d'un item dans l'inventaire d'un autre utilisateur.")
 @app_commands.checks.has_role(ROLE_NEEDED)
 @app_commands.checks.has_role(ROLE_SECOND)
-async def decrease_inventory(interaction: discord.Interaction, name: str, quantity: int, member: discord.Member = None):
-    try:
-        # Si l'utilisateur n'a pas les bons rôles, retour
-        if not (any(role.name == ROLE_NEEDED for role in interaction.user.roles) and any(role.name == ROLE_SECOND for role in interaction.user.roles)):
-            return await interaction.response.send_message(
-                embed=create_embed("⚠️ Accès refusé", "Vous devez avoir les rôles 'Développeur' et '*' pour retirer un objet dans l'inventaire.", color=discord.Color.red())
-            )
-
-        if quantity <= 0:
-            return await interaction.response.send_message(
-                embed=create_embed("⚠️ Erreur", "La quantité à retirer doit être supérieure à 0.", color=discord.Color.red())
-            )
-
-        # Déterminer quel utilisateur modifier l'inventaire
-        target_user = member if member else interaction.user
-
-        # Récupère les données de l'utilisateur
-        user_data = get_user_data(target_user.id)
-        inventory = user_data.get("inventory", [])
-
-        # Vérification de la structure de l'inventaire
-        if any(not isinstance(item, dict) or "name" not in item or "quantity" not in item for item in inventory):
-            return await interaction.response.send_message(
-                embed=create_embed("⚠️ Erreur", "L'inventaire contient des éléments mal formatés. Veuillez vérifier.", color=discord.Color.red())
-            )
-
-        # Recherche de l'item dans l'inventaire
-        item_in_inventory = next((item for item in inventory if item["name"] == name), None)
-
-        if item_in_inventory:
-            # Si l'item existe et que la quantité est suffisante, on diminue la quantité
-            if item_in_inventory["quantity"] >= quantity:
-                item_in_inventory["quantity"] -= quantity
-                # Si la quantité devient 0, on supprime l'item de l'inventaire
-                if item_in_inventory["quantity"] == 0:
-                    inventory.remove(item_in_inventory)  # Suppression de l'item
-                    await interaction.response.send_message(
-                        embed=create_embed("🎒 Inventaire mis à jour", f"L'item **{name}** a été supprimé de l'inventaire de {target_user.display_name} car sa quantité est devenue 0.", color=discord.Color.green())
-                    )
-                else:
-                    await interaction.response.send_message(
-                        embed=create_embed("🎒 Inventaire mis à jour", f"La quantité de l'item **{name}** a été réduite de `{quantity}` pour {target_user.display_name}.", color=discord.Color.green())
-                    )
-            else:
-                await interaction.response.send_message(
-                    embed=create_embed("⚠️ Erreur", f"{target_user.display_name} n'a pas assez de l'item **{name}** pour diminuer cette quantité.", color=discord.Color.red())
-                )
-        else:
-            await interaction.response.send_message(
-                embed=create_embed("⚠️ Erreur", f"L'item **{name}** n'est pas dans l'inventaire de {target_user.display_name}.", color=discord.Color.red())
-            )
-
-    except Exception as e:
-        print(f"Erreur lors de l'exécution de la commande 'decrease-inventory': {e}")
-        await interaction.response.send_message(
-            embed=create_embed("⚠️ Erreur", "Une erreur est survenue lors de la diminution de l'item.", color=discord.Color.red())
+async def decrease_inventory(interaction: discord.Interaction, name: str, quantity: int, member: discord.Member):
+    if not has_required_roles(interaction.user):
+        return await interaction.response.send_message(
+            embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir les rôles '{ROLE_NEEDED}' et '{ROLE_SECOND}' pour retirer un item de l'inventaire.", color=discord.Color.red())
         )
-        
+
+    if quantity <= 0:
+        return await interaction.response.send_message(
+            embed=create_embed("⚠️ Erreur", "La quantité doit être supérieure à 0.", color=discord.Color.red())
+        )
+
+    # Vérification de l'inventaire de la personne ciblée
+    user_data = get_user_data(member.id)
+    inventory = user_data.get("inventory", [])
+
+    # Recherche de l'item dans l'inventaire de l'utilisateur ciblé
+    item_in_inventory = next((item for item in inventory if item["name"] == name), None)
+
+    if not item_in_inventory:
+        return await interaction.response.send_message(
+            embed=create_embed("⚠️ Erreur", f"L'item **{name}** n'existe pas dans l'inventaire de {member.display_name}.", color=discord.Color.red())
+        )
+
+    # Vérification de la quantité
+    if item_in_inventory["quantity"] < quantity:
+        return await interaction.response.send_message(
+            embed=create_embed("⚠️ Erreur", f"Il n'y a pas assez de **{name}** dans l'inventaire de {member.display_name} pour retirer `{quantity}`.", color=discord.Color.red())
+        )
+
+    # Réduction de la quantité
+    item_in_inventory["quantity"] -= quantity
+
+    # Si la quantité atteint zéro, on retire l'item de l'inventaire
+    if item_in_inventory["quantity"] == 0:
+        inventory.remove(item_in_inventory)
+
+    # Mise à jour des données de l'utilisateur
+    user_data["inventory"] = inventory
+    save_user_data(member.id, user_data)
+
+    # Confirmation de la réduction d'inventaire
+    await interaction.response.send_message(
+        embed=create_embed("🎒 Inventaire mis à jour", f"L'item **{name}** a été retiré de l'inventaire de {member.display_name} avec `{quantity}` unité(s).", color=discord.Color.green())
+    )
+
 @bot.tree.command(name="clear_inventory", description="Supprime tout l'inventaire d'un utilisateur.")
 @app_commands.describe(user="L'utilisateur dont l'inventaire sera supprimé")
 @app_commands.checks.has_role(ROLE_NEEDED)
