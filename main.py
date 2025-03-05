@@ -1540,23 +1540,28 @@ async def decrease_inventory(interaction: discord.Interaction, name: str, quanti
 @app_commands.checks.has_role(ROLE_NEEDED)
 @app_commands.checks.has_role(ROLE_SECOND)
 async def clear_inventory(interaction: discord.Interaction, user: discord.User):
+    # Vérification des rôles nécessaires pour accéder à la commande
     if not (any(role.name == ROLE_NEEDED for role in interaction.user.roles) and any(role.name == ROLE_SECOND for role in interaction.user.roles)):
         return await interaction.response.send_message(
-            embed=create_embed("⚠️ Accès refusé", "Vous devez avoir les rôles 'Développeur' et '*' pour supprimer l'invetaire.", color=discord.Color.red())
+            embed=create_embed("⚠️ Accès refusé", "Vous devez avoir les rôles 'Développeur' et '*' pour supprimer l'inventaire.", color=discord.Color.red())
         )
         
     await interaction.response.defer()
 
+    # Récupération des données de l'utilisateur
     user_data = get_user_data(user.id)
-    
-    if not user_data.get("inventory"):
+
+    # Vérification si l'utilisateur a un inventaire
+    if not user_data or not user_data.get("inventory"):
         return await interaction.followup.send(
             embed=create_embed("🗑️ Inventaire", f"L'inventaire de {user.mention} est déjà vide.", color=discord.Color.red())
         )
 
-    user_data["inventory"] = []  # Vide l'inventaire
+    # Vide l'inventaire de l'utilisateur
+    user_data["inventory"] = []  # On vide l'inventaire
     save_user_data(user.id, user_data)  # Sauvegarde les modifications
 
+    # Création du message de confirmation
     embed = create_embed(
         "🗑️ Inventaire vidé", 
         f"L'inventaire de {user.mention} a été **supprimé avec succès**.", 
@@ -1565,7 +1570,9 @@ async def clear_inventory(interaction: discord.Interaction, user: discord.User):
     embed.set_thumbnail(url="https://i.imgur.com/2XuxSIU.jpeg")  # Icône poubelle
     embed.set_footer(text=f"Action effectuée par {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
 
+    # Envoi du message de confirmation
     await interaction.followup.send(embed=embed)
+
 
 @bot.tree.command(name="item-info", description="Voir les informations d'un item en stock")
 @app_commands.describe(item="Nom de l'item à rechercher")
@@ -1621,7 +1628,10 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
     economy_data = db["economy"].find_one({"user_id": user_id, "server_id": server_id})
 
     if not economy_data:
-        return await interaction.response.send_message("Tu n'as pas de compte économique. Veuillez contacter un administrateur pour résoudre ce problème.", ephemeral=True)
+        return await interaction.response.send_message(
+            "Tu n'as pas de compte économique. Veuillez contacter un administrateur pour résoudre ce problème.",
+            ephemeral=True
+        )
 
     # Vérification du solde de l'utilisateur
     balance = economy_data.get("balance", 0)
@@ -1630,35 +1640,48 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
     item = db["store"].find_one({"name": item_name})
 
     if not item:
-        return await interaction.response.send_message("❌ Cet item n'existe pas dans le store.", ephemeral=True)
+        return await interaction.response.send_message(
+            "❌ Cet item n'existe pas dans le store.",
+            ephemeral=True
+        )
 
-    # Vérifier si l'utilisateur a assez d'argent
+    # Vérifier si l'utilisateur a assez d'argent pour acheter l'item
     if balance < item["price"]:
-        return await interaction.response.send_message("❌ Tu n'as pas assez d'argent pour acheter cet item.", ephemeral=True)
+        return await interaction.response.send_message(
+            "❌ Tu n'as pas assez d'argent pour acheter cet item.",
+            ephemeral=True
+        )
 
     # Effectuer l'achat : retirer de l'argent et ajouter l'item à l'inventaire
-    db["economy"].update_one({"user_id": user_id, "server_id": server_id}, {"$inc": {"balance": -item["price"]}})
+    # Mise à jour du solde utilisateur
+    db["economy"].update_one(
+        {"user_id": user_id, "server_id": server_id},
+        {"$inc": {"balance": -item["price"]}}
+    )
 
-    # Ajouter l'item à l'inventaire
+    # Ajout de l'item à l'inventaire de l'utilisateur
     inventory = db["inventory"].find_one({"user_id": user_id, "server_id": server_id})
 
     if inventory:
-        # Si l'inventaire existe déjà, on l'update
+        # Si l'inventaire existe déjà, on met à jour la quantité de l'item
         db["inventory"].update_one(
-            {"user_id": user_id, "server_id": server_id, "name": item["name"]},
-            {"$inc": {"quantity": 1}},
-            upsert=True
+            {"user_id": user_id, "server_id": server_id, "items.name": item["name"]},
+            {"$inc": {"items.$.quantity": 1}},
+            upsert=True  # Ajoute l'item s'il n'est pas déjà présent
         )
     else:
-        # Si l'inventaire n'existe pas encore, on le crée
+        # Si l'inventaire n'existe pas, on le crée avec l'item
         db["inventory"].insert_one({
             "user_id": user_id,
             "server_id": server_id,
             "items": [{"name": item["name"], "description": item["description"], "quantity": 1}]
         })
 
-    # Confirmer l'achat
-    return await interaction.response.send_message(f"✅ Achat de {item['name']} réussi !", ephemeral=True)
+    # Confirmer l'achat à l'utilisateur
+    return await interaction.response.send_message(
+        f"✅ Achat de {item['name']} réussi pour {item['price']} !",
+        ephemeral=True
+    )
 
 #-------------------------------------------------------------------------------------------------------------INVENTORY---------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------LEADERBOARD--------------------------------------------------------------------------------------------------------------------------------------
