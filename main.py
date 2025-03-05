@@ -1153,6 +1153,8 @@ async def transaction(ctx, amount: str, transaction_type="deposit", action="dép
 
     # Gestion du montant
     if amount.lower() == "all":
+        # Si le type de transaction est un dépôt, on utilise la trésorerie (cash)
+        # Si c'est un retrait, on utilise la banque (bank)
         amount = user_data["cash"] if transaction_type == "deposit" else user_data["bank"]
     
     try:
@@ -1160,23 +1162,35 @@ async def transaction(ctx, amount: str, transaction_type="deposit", action="dép
     except ValueError:
         return await ctx.send(embed=create_embed("⚠️ Erreur", "Montant invalide.", color=discord.Color.red()))
 
-    if amount <= 0 or (transaction_type == "deposit" and amount > user_data["cash"]) or (transaction_type == "withdraw" and amount > user_data["bank"]):
+    if amount <= 0:
         return await ctx.send(embed=create_embed("⚠️ Erreur", "Montant incorrect.", color=discord.Color.red()))
 
-    # Mise à jour des données
+    # Vérifications supplémentaires pour les transactions
+    if transaction_type == "deposit" and amount > user_data["cash"]:
+        return await ctx.send(embed=create_embed("⚠️ Erreur", f"Vous n'avez pas assez d'argent dans votre trésorerie pour déposer `{amount}` 💵.", color=discord.Color.red()))
+    
+    if transaction_type == "withdraw" and amount > user_data["bank"]:
+        return await ctx.send(embed=create_embed("⚠️ Erreur", f"Vous n'avez pas assez d'argent dans votre banque pour retirer `{amount}` 💵.", color=discord.Color.red()))
+
+    # Mise à jour des données en fonction du type de transaction
     if transaction_type == "deposit":
         user_data["cash"] -= amount
         user_data["bank"] += amount
-    else:
+        action = "déposé"
+    elif transaction_type == "withdraw":
         user_data["cash"] += amount
         user_data["bank"] -= amount
-    
+        action = "retiré"
+
+    # Mise à jour du total
     user_data["total"] = user_data["cash"] + user_data["bank"]
+
+    # Sauvegarde des nouvelles données
     save_user_data(ctx.author.id, user_data)
 
     # Confirmation de la transaction
     await ctx.send(embed=create_embed("🏦 Transaction réussie", f"Vous avez {action} `{amount}` 💵.", color=discord.Color.green()))
-
+    
 def check_role(ctx, role_name):
     """Vérifie si l'utilisateur a un rôle spécifique."""
     # Récupérer les rôles de l'utilisateur
