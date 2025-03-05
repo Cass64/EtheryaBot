@@ -1336,8 +1336,8 @@ async def inventory(interaction: discord.Interaction, member: discord.Member = N
     target_user = member if member else interaction.user
     await interaction.response.defer()  # Permet de différer l'interaction pour éviter l'expiration
 
-    user_data = get_user_data(target_user.id)
-    inventory = user_data.get("inventory", [])
+    inventory = list(db["inventory"].find({"server_id": str(interaction.guild.id), "user_id": str(target_user.id)}))
+
 
     if not inventory:
         return await interaction.followup.send(
@@ -1588,6 +1588,68 @@ async def item_info(interaction: discord.Interaction, item: str = None):
         view.add_item(ItemDropdown())
 
         await interaction.response.send_message("📜 Sélectionnez un item pour voir ses informations :", view=view)
+
+@bot.tree.command(name="item-buy", description="Achète un item du store avec ton argent en cash")
+async def item_buy(interaction: discord.Interaction, item_name: str, quantity: int = 1):
+    if quantity <= 0:
+        return await interaction.response.send_message("❌ La quantité doit être supérieure à zéro.", ephemeral=True)
+
+    user_id = str(interaction.user.id)
+    server_id = str(interaction.guild.id)
+
+    # Accéder aux collections MongoDB
+    users = db["users"]
+    store = db["store"]
+    inventory = db["inventory"]
+
+    # Récupérer l'item dans le store
+    item = store.find_one({"server_id": server_id, "name": item_name})
+    if not item:
+        return await interaction.response.send_message("❌ Cet item n'existe pas dans le store.", ephemeral=True)
+
+    price = item["price"]
+    stock = item["stock"]
+    description = item["description"]
+
+    if stock < quantity:
+        return await interaction.response.send_message("❌ Stock insuffisant pour cet achat.", ephemeral=True)
+
+    # Vérifier l'argent liquide de l'utilisateur
+    user_data = users.find_one({"server_id": server_id, "user_id": user_id})
+    cash = user_data.get("cash", 0)  # On récupère uniquement l'argent liquide
+
+    if cash < (price * quantity):
+        return await interaction.response.send_message("❌ Fonds insuffisants en cash.", ephemeral=True)
+
+    # Déduire le prix en cash de l'utilisateur
+    new_cash = cash - (price * quantity)
+    users.update_one({"server_id": server_id, "user_id": user_id}, {"$set": {"cash": new_cash}})
+
+    # Mettre à jour le stock du store
+    new_stock = stock - quantity
+    store.update_one({"server_id": server_id, "name": item_name}, {"$set": {"stock": new_stock}})
+
+    # Ajouter l'item à l'inventaire
+    existing_item = inventory.find_one({"server_id": server_id, "user_id": user_id, "name": item_name})
+
+    if existing_item:
+        new_quantity = existing_item["quantity"] + quantity
+        inventory.update_one(
+            {"server_id": server_id, "user_id": user_id, "name": item_name},
+            {"$set": {"quantity": new_quantity}}
+        )
+    else:
+        inventory.insert_one({
+            "server_id": server_id,
+            "user_id": user_id,
+            "name": item_name,
+            "description": description,
+            "quantity": quantity
+        })
+
+    await interaction.response.send_message(
+        embed=create_embed("✅ Achat réussi", f"{interaction.user.mention} a acheté {quantity}x **{item_name}** avec son cash !", color=discord.Color.green())
+    )
 
 #-------------------------------------------------------------------------------------------------------------INVENTORY---------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------LEADERBOARD--------------------------------------------------------------------------------------------------------------------------------------
