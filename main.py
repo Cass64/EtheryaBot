@@ -1603,7 +1603,7 @@ async def item_buy(interaction: discord.Interaction, item_name: str, quantity: i
     inventory = db["inventory"]
 
     # Récupérer l'item dans le store
-    item = store.find_one({"server_id": server_id, "name": item_name})
+    item = store_collection.find_one({"server_id": server_id, "name": item_name})
     if not item:
         return await interaction.response.send_message("❌ Cet item n'existe pas dans le store.", ephemeral=True)
 
