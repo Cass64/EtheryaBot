@@ -1171,6 +1171,15 @@ async def transaction(ctx, amount: str, transaction_type="deposit", action="dép
     # Confirmation de la transaction
     await ctx.send(embed=create_embed("🏦 Transaction réussie", f"Vous avez {action} `{amount}` 💵.", color=discord.Color.green()))
 
+def check_role(ctx, role_name):
+    """Vérifie si l'utilisateur a un rôle spécifique."""
+    # Récupérer les rôles de l'utilisateur
+    user_roles = [role.name for role in ctx.author.roles]
+    
+    # Vérifier si l'utilisateur possède le rôle
+    return role_name in user_roles
+
+
 @bot.command(name="balance")
 async def balance(ctx, user: discord.Member = None):
     if not check_role(ctx, ROLE_NEEDED):
