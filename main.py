@@ -1306,35 +1306,43 @@ async def add_inventory(interaction: discord.Interaction, name: str, quantity: i
 
 @bot.tree.command(name="inventory", description="Affiche l'inventaire de l'utilisateur")
 async def inventory(interaction: discord.Interaction):
-    # Si tu veux différer l'interaction (prendre plus de temps)
-    await interaction.response.defer()  # Évite l'expiration de l'interaction
+    try:
+        # Si tu veux différer l'interaction (prendre plus de temps)
+        await interaction.response.defer()  # Évite l'expiration de l'interaction
 
-    # Récupérer les données de l'utilisateur
-    user_data = get_user_data(interaction.user.id)
-    inventory = user_data.get("inventory", [])
+        # Récupérer les données de l'utilisateur
+        user_data = get_user_data(interaction.user.id)
+        inventory = user_data.get("inventory", [])
 
-    # Vérifier si l'inventaire est vide
-    if not inventory:
-        return await interaction.followup.send(
-            embed=create_embed("🎒 Inventaire", "Votre inventaire est vide.", color=discord.Color.red())
+        # Vérifier si l'inventaire est vide
+        if not inventory:
+            return await interaction.followup.send(
+                embed=create_embed("🎒 Inventaire", "Votre inventaire est vide.", color=discord.Color.red())
+            )
+
+        # Construire la description des items dans l'inventaire
+        items_desc = "\n\n".join([
+            f"**📦 {item.get('name', 'Objet Inconnu')}**\n"
+            f"╰ *{item.get('description', 'Aucune description disponible')}*\n"
+            f"➡ **Quantité :** `{item.get('quantity', 'N/A')}`"
+            if isinstance(item, dict) else "❌ **Objet invalide**"
+            for item in inventory
+        ])
+
+        # Création de l'embed
+        embed = create_embed("🎒 Inventaire", items_desc, color=discord.Color.blue())
+        embed.set_thumbnail(url="https://imgur.com/6jMGQys")  # Icône d'inventaire
+        embed.set_footer(text=f"Inventaire de {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
+
+        # Envoyer la réponse
+        await interaction.followup.send(embed=embed)
+
+    except Exception as e:
+        print(f"Erreur lors de l'exécution de la commande 'inventory': {e}")
+        await interaction.followup.send(
+            embed=create_embed("Erreur", "Une erreur est survenue lors de l'affichage de votre inventaire.", color=discord.Color.red())
         )
 
-    # Construire la description des items dans l'inventaire
-    items_desc = "\n\n".join([
-        f"**📦 {item.get('name', 'Objet Inconnu')}**\n"
-        f"╰ *{item.get('description', 'Aucune description disponible')}*\n"
-        f"➡ **Quantité :** `{item.get('quantity', 'N/A')}`"
-        if isinstance(item, dict) else "❌ **Objet invalide**"
-        for item in inventory
-    ])
-
-    # Création de l'embed
-    embed = create_embed("🎒 Inventaire", items_desc, color=discord.Color.blue())
-    embed.set_thumbnail(url="https://imgur.com/6jMGQys")  # Icône d'inventaire
-    embed.set_footer(text=f"Inventaire de {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
-
-    # Envoyer la réponse
-    await interaction.followup.send(embed=embed)
 
 # Commande pour réduire le stock d'un item sans le supprimer
 @bot.tree.command(name="decrease-store", description="Réduit le stock d'un item dans le store sans le supprimer.")
