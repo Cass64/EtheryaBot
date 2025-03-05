@@ -1305,19 +1305,22 @@ async def add_inventory(interaction: discord.Interaction, name: str, quantity: i
     )
 
 @bot.tree.command(name="inventory", description="Affiche l'inventaire de l'utilisateur")
-async def inventory(interaction: discord.Interaction):
+async def inventory(interaction: discord.Interaction, member: discord.Member = None):
     try:
+        # Si un membre est spécifié, utiliser ce membre pour récupérer l'inventaire
+        target_user = member if member else interaction.user
+
         # Si tu veux différer l'interaction (prendre plus de temps)
         await interaction.response.defer()  # Évite l'expiration de l'interaction
 
-        # Récupérer les données de l'utilisateur
-        user_data = get_user_data(interaction.user.id)
+        # Récupérer les données de l'utilisateur cible
+        user_data = get_user_data(target_user.id)
         inventory = user_data.get("inventory", [])
 
         # Vérifier si l'inventaire est vide
         if not inventory:
             return await interaction.followup.send(
-                embed=create_embed("🎒 Inventaire", "Votre inventaire est vide.", color=discord.Color.red())
+                embed=create_embed("🎒 Inventaire", f"L'inventaire de {target_user.display_name} est vide.", color=discord.Color.red())
             )
 
         # Construire la description des items dans l'inventaire
@@ -1330,9 +1333,9 @@ async def inventory(interaction: discord.Interaction):
         ])
 
         # Création de l'embed
-        embed = create_embed("🎒 Inventaire", items_desc, color=discord.Color.blue())
+        embed = create_embed(f"🎒 Inventaire de {target_user.display_name}", items_desc, color=discord.Color.blue())
         embed.set_thumbnail(url="https://i.imgur.com/2XuxSIU.jpeg")  # Icône d'inventaire
-        embed.set_footer(text=f"Inventaire de {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
+        embed.set_footer(text=f"Inventaire de {target_user.display_name}", icon_url=target_user.avatar.url)
 
         # Envoyer la réponse
         await interaction.followup.send(embed=embed)
@@ -1340,7 +1343,7 @@ async def inventory(interaction: discord.Interaction):
     except Exception as e:
         print(f"Erreur lors de l'exécution de la commande 'inventory': {e}")
         await interaction.followup.send(
-            embed=create_embed("Erreur", "Une erreur est survenue lors de l'affichage de votre inventaire.", color=discord.Color.red())
+            embed=create_embed("Erreur", "Une erreur est survenue lors de l'affichage de l'inventaire.", color=discord.Color.red())
         )
 
 
