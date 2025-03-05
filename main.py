@@ -1594,76 +1594,60 @@ async def item_info(interaction: discord.Interaction, item: str = None):
 
         await interaction.response.send_message("📜 Sélectionnez un item pour voir ses informations :", view=view)
 
-@bot.tree.command(name="item-buy", description="Achète un item du store avec ton argent en cash")
-async def item_buy(interaction: discord.Interaction, item_name: str, quantity: int = 1):
-    await interaction.response.defer()  # Évite l'expiration de l'interaction
-
-    if quantity <= 0:
-        return await interaction.followup.send("❌ La quantité doit être supérieure à zéro.", ephemeral=True)
-
+@bot.tree.command(name="item-buy", description="Acheter un item du store")
+async def item_buy(interaction: discord.Interaction, item_name: str):
     user_id = str(interaction.user.id)
     server_id = str(interaction.guild.id)
 
-    # Récupérer les infos de l'utilisateur dans la collection economy
-    user_data = economy_collection.find_one({"server_id": server_id, "user_id": user_id})
-    
-    if not user_data:
-        return await interaction.followup.send("❌ Tu n'as pas encore de compte économique.", ephemeral=True)
+    # Vérification si l'utilisateur a un compte économique
+    economy_data = db["economy"].find_one({"user_id": user_id, "server_id": server_id})
 
-    cash = user_data.get("cash", 0)  # Récupérer l'argent en cash de l'utilisateur
+    if not economy_data:
+        # Si l'utilisateur n'a pas de compte économique, en créer un
+        db["economy"].insert_one({
+            "user_id": user_id,
+            "server_id": server_id,
+            "balance": 0  # Par exemple, le solde de départ peut être 0
+        })
+        return await interaction.response.send_message("Tu n'as pas encore de compte économique. Un compte a été créé pour toi.", ephemeral=True)
 
-    # Vérifier si l'item existe dans le store
-    item = store_collection.find_one({"server_id": server_id, "name": item_name})
+    # Vérification du solde de l'utilisateur
+    balance = economy_data.get("balance", 0)
+
+    # Recherche de l'item dans la boutique
+    item = db["store"].find_one({"name": item_name})
 
     if not item:
-        return await interaction.followup.send("❌ Cet item n'existe pas dans le store.", ephemeral=True)
+        return await interaction.response.send_message("❌ Cet item n'existe pas dans le store.", ephemeral=True)
 
-    price = item["price"]
-    stock = item["stock"]
-    description = item["description"]
+    # Vérifier si l'utilisateur a assez d'argent
+    if balance < item["price"]:
+        return await interaction.response.send_message("❌ Tu n'as pas assez d'argent pour acheter cet item.", ephemeral=True)
 
-    if stock < quantity:
-        return await interaction.followup.send("❌ Stock insuffisant pour cet achat.", ephemeral=True)
+    # Effectuer l'achat : retirer de l'argent et ajouter l'item à l'inventaire
+    db["economy"].update_one({"user_id": user_id, "server_id": server_id}, {"$inc": {"balance": -item["price"]}})
 
-    # Vérifier si l'utilisateur a assez d'argent en cash
-    total_cost = price * quantity
+    # Ajouter l'item à l'inventaire
+    inventory = db["inventory"].find_one({"user_id": user_id, "server_id": server_id})
 
-    if cash < total_cost:
-        return await interaction.followup.send("❌ Fonds insuffisants en cash.", ephemeral=True)
-
-    # Déduire le prix de l'argent en cash de l'utilisateur
-    new_cash = cash - total_cost
-    economy_collection.update_one({"server_id": server_id, "user_id": user_id}, {"$set": {"cash": new_cash}})
-
-    # Mettre à jour le stock du store
-    new_stock = stock - quantity
-    store_collection.update_one({"server_id": server_id, "name": item_name}, {"$set": {"stock": new_stock}})
-
-    # Ajouter l'item à l'inventaire de l'utilisateur
-    existing_item = inventory_collection.find_one({"server_id": server_id, "user_id": user_id, "name": item_name})
-
-    if existing_item:
-        new_quantity = existing_item["quantity"] + quantity
-        inventory_collection.update_one(
-            {"server_id": server_id, "user_id": user_id, "name": item_name},
-            {"$set": {"quantity": new_quantity}}
+    if inventory:
+        # Si l'inventaire existe déjà, on l'update
+        db["inventory"].update_one(
+            {"user_id": user_id, "server_id": server_id, "name": item["name"]},
+            {"$inc": {"quantity": 1}},
+            upsert=True
         )
     else:
-        inventory_collection.insert_one({
-            "server_id": server_id,
+        # Si l'inventaire n'existe pas encore, on le crée
+        db["inventory"].insert_one({
             "user_id": user_id,
-            "name": item_name,
-            "description": description,
-            "quantity": quantity
+            "server_id": server_id,
+            "items": [{"name": item["name"], "description": item["description"], "quantity": 1}]
         })
 
-    # Confirmation de l'achat
-    embed = discord.Embed(
-        title="✅ Achat réussi",
-        description=f"{interaction.user.mention} a acheté {quantity}x **{item_name}** avec son cash !",
-        color=discord.Color.green()
-    )
-    await interaction.followup.send(embed=embed)
+    # Confirmer l'achat
+    return await interaction.response.send_message(f"✅ Achat de {item['name']} réussi !", ephemeral=True)
+
 
 #-------------------------------------------------------------------------------------------------------------INVENTORY---------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------LEADERBOARD--------------------------------------------------------------------------------------------------------------------------------------
