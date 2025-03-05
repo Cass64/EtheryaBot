@@ -1237,10 +1237,11 @@ async def add_store(interaction: discord.Interaction, name: str, price: int, sto
 @app_commands.checks.has_role(ROLE_SECOND)
 @app_commands.describe(name="Nom de l'objet à supprimer")
 async def remove_store(interaction: discord.Interaction, name: str):
-      if not (any(role.name == ROLE_NEEDED for role in interaction.user.roles) and any(role.name == ROLE_SECOND for role in interaction.user.roles)):
+    if not (any(role.name == ROLE_NEEDED for role in interaction.user.roles) and any(role.name == ROLE_SECOND for role in interaction.user.roles)):
         return await interaction.response.send_message(
             embed=create_embed("⚠️ Accès refusé", "Vous devez avoir les rôles 'Développeur' et '*' pour retirer un objet dans le store.", color=discord.Color.red())
         )
+          
     item = store_collection.find_one({"name": name})
     
     if not item:
@@ -1264,10 +1265,11 @@ async def remove_store(interaction: discord.Interaction, name: str):
 @app_commands.checks.has_role(ROLE_NEEDED)
 @app_commands.checks.has_role(ROLE_SECOND)
 async def add_inventory(interaction: discord.Interaction, name: str, quantity: int):
-      if not (any(role.name == ROLE_NEEDED for role in interaction.user.roles) and any(role.name == ROLE_SECOND for role in interaction.user.roles)):
+    if not (any(role.name == ROLE_NEEDED for role in interaction.user.roles) and any(role.name == ROLE_SECOND for role in interaction.user.roles)):
         return await interaction.response.send_message(
             embed=create_embed("⚠️ Accès refusé", "Vous devez avoir les rôles 'Développeur' et '*' pour ajouter un objet dans l'inventaire.", color=discord.Color.red())
         )
+        
     if quantity <= 0:
         return await interaction.response.send_message(
             embed=create_embed("⚠️ Erreur", "La quantité doit être supérieure à 0.", color=discord.Color.red())
@@ -1333,10 +1335,11 @@ async def inventory(interaction: discord.Interaction):
 @app_commands.checks.has_role(ROLE_NEEDED)
 @app_commands.checks.has_role(ROLE_SECOND)
 async def decrease_store(interaction: discord.Interaction, name: str, quantity: int):
-      if not (any(role.name == ROLE_NEEDED for role in interaction.user.roles) and any(role.name == ROLE_SECOND for role in interaction.user.roles)):
+    if not (any(role.name == ROLE_NEEDED for role in interaction.user.roles) and any(role.name == ROLE_SECOND for role in interaction.user.roles)):
         return await interaction.response.send_message(
             embed=create_embed("⚠️ Accès refusé", "Vous devez avoir les rôles 'Développeur' et '*' pour retirer un nombre de stock d'un item.", color=discord.Color.red())
         )
+        
     if quantity <= 0:
         return await interaction.response.send_message(
             embed=create_embed("⚠️ Erreur", "La quantité doit être supérieure à 0.", color=discord.Color.red()),
@@ -1368,10 +1371,11 @@ async def decrease_store(interaction: discord.Interaction, name: str, quantity: 
 @app_commands.checks.has_role(ROLE_NEEDED)
 @app_commands.checks.has_role(ROLE_SECOND)
 async def add_money(interaction: discord.Interaction, user: discord.Member, amount: int):
-      if not (any(role.name == ROLE_NEEDED for role in interaction.user.roles) and any(role.name == ROLE_SECOND for role in interaction.user.roles)):
+    if not (any(role.name == ROLE_NEEDED for role in interaction.user.roles) and any(role.name == ROLE_SECOND for role in interaction.user.roles)):
         return await interaction.response.send_message(
             embed=create_embed("⚠️ Accès refusé", "Vous devez avoir les rôles 'Développeur' et '*' pour ajouter de l'argent.", color=discord.Color.red())
         )
+        
     if amount <= 0:
         return await interaction.response.send_message(
             embed=create_embed("⚠️ Erreur", "Le montant doit être supérieur à 0.", color=discord.Color.red()),
@@ -1398,10 +1402,11 @@ async def add_money(interaction: discord.Interaction, user: discord.Member, amou
 @app_commands.checks.has_role(ROLE_NEEDED)
 @app_commands.checks.has_role(ROLE_SECOND)
 async def remove_money(interaction: discord.Interaction, user: discord.Member, amount: int):
-      if not (any(role.name == ROLE_NEEDED for role in interaction.user.roles) and any(role.name == ROLE_SECOND for role in interaction.user.roles)):
+    if not (any(role.name == ROLE_NEEDED for role in interaction.user.roles) and any(role.name == ROLE_SECOND for role in interaction.user.roles)):
         return await interaction.response.send_message(
             embed=create_embed("⚠️ Accès refusé", "Vous devez avoir les rôles 'Développeur' et '*' pour retirer de l'argent.", color=discord.Color.red())
         )
+        
     if amount <= 0:
         return await interaction.response.send_message(
             embed=create_embed("⚠️ Erreur", "Le montant doit être supérieur à 0.", color=discord.Color.red()),
@@ -1435,7 +1440,7 @@ async def remove_money(interaction: discord.Interaction, user: discord.Member, a
 @app_commands.checks.has_role(ROLE_NEEDED)
 @app_commands.checks.has_role(ROLE_SECOND)
 async def decrease_inventory(interaction: discord.Interaction, name: str, quantity: int):
-      if not (any(role.name == ROLE_NEEDED for role in interaction.user.roles) and any(role.name == ROLE_SECOND for role in interaction.user.roles)):
+    if not (any(role.name == ROLE_NEEDED for role in interaction.user.roles) and any(role.name == ROLE_SECOND for role in interaction.user.roles)):
         return await interaction.response.send_message(
             embed=create_embed("⚠️ Accès refusé", "Vous devez avoir les rôles 'Développeur' et '*' pour retirer un objet dans l'inventaire.", color=discord.Color.red())
         )
@@ -1485,10 +1490,11 @@ async def decrease_inventory(interaction: discord.Interaction, name: str, quanti
 @app_commands.checks.has_role(ROLE_NEEDED)
 @app_commands.checks.has_role(ROLE_SECOND)
 async def clear_inventory(interaction: discord.Interaction, user: discord.User):
-      if not (any(role.name == ROLE_NEEDED for role in interaction.user.roles) and any(role.name == ROLE_SECOND for role in interaction.user.roles)):
+    if not (any(role.name == ROLE_NEEDED for role in interaction.user.roles) and any(role.name == ROLE_SECOND for role in interaction.user.roles)):
         return await interaction.response.send_message(
             embed=create_embed("⚠️ Accès refusé", "Vous devez avoir les rôles 'Développeur' et '*' pour supprimer l'invetaire.", color=discord.Color.red())
         )
+        
     await interaction.response.defer()
 
     user_data = get_user_data(user.id)
