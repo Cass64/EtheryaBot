@@ -1321,9 +1321,9 @@ async def inventory(interaction: discord.Interaction):
 
     # Construire la description des items dans l'inventaire
     items_desc = "\n\n".join([
-        f"**📦 {item['name']}**\n"
-        f"╰ *{item['description']}*\n"
-        f"➡ **Quantité :** `{item['quantity']}`"
+        f"**📦 {item.get('name', 'Objet Inconnu')}**\n"
+        f"╰ *{item.get('description', 'Aucune description disponible')}*\n"
+        f"➡ **Quantité :** `{item.get('quantity', 'N/A')}`"
         if isinstance(item, dict) else "❌ **Objet invalide**"
         for item in inventory
     ])
