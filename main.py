@@ -1115,6 +1115,12 @@ logging.basicConfig(level=logging.INFO)
 ROLE_NEEDED = "″ [𝑺ץ] Développeur"
 ROLE_SECOND = "*"
 
+
+def is_item_in_store(name: str) -> bool:
+    """Vérifie si un item existe dans le store (MongoDB)."""
+    item = store_collection.find_one({"name": name})
+    return item is not None
+
 # Fonction pour vérifier si l'utilisateur a les rôles nécessaires
 def has_required_roles(user):
     return any(role.name == ROLE_NEEDED for role in user.roles) and any(role.name == ROLE_SECOND for role in user.roles)
@@ -1283,7 +1289,6 @@ async def remove_store(interaction: discord.Interaction, name: str):
     
     await interaction.response.send_message(embed=embed)
 
-# Commande pour ajouter un item à l'inventaire d'un autre utilisateur
 @bot.tree.command(name="add-inventory", description="Ajoute un item dans l'inventaire d'un autre utilisateur.")
 async def add_inventory(interaction: discord.Interaction, name: str, quantity: int, member: discord.Member):
     if not has_required_roles(interaction.user):
@@ -1294,6 +1299,12 @@ async def add_inventory(interaction: discord.Interaction, name: str, quantity: i
     if quantity <= 0:
         return await interaction.response.send_message(
             embed=create_embed("⚠️ Erreur", "La quantité doit être supérieure à 0.", color=discord.Color.red())
+        )
+
+    # Vérifier si l'item existe dans le store MongoDB
+    if not is_item_in_store(name):
+        return await interaction.response.send_message(
+            embed=create_embed("⚠️ Item non disponible", f"L'item **{name}** n'existe pas dans le store.", color=discord.Color.red())
         )
 
     # Vérification de l'inventaire de la personne ciblée
@@ -1318,6 +1329,7 @@ async def add_inventory(interaction: discord.Interaction, name: str, quantity: i
     await interaction.response.send_message(
         embed=create_embed("🎉 Inventaire mis à jour", f"L'item **{name}** a été ajouté à l'inventaire de {member.display_name} avec `{quantity}` unité(s).", color=discord.Color.green())
     )
+
 # Commande pour afficher l'inventaire d'un utilisateur
 @bot.tree.command(name="inventory", description="Affiche l'inventaire de l'utilisateur")
 async def inventory(interaction: discord.Interaction, member: discord.Member = None):
