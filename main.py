@@ -1330,20 +1330,24 @@ async def add_inventory(interaction: discord.Interaction, name: str, quantity: i
         embed=create_embed("🎉 Inventaire mis à jour", f"L'item **{name}** a été ajouté à l'inventaire de {member.display_name} avec `{quantity}` unité(s).", color=discord.Color.green())
     )
 
-# Commande pour afficher l'inventaire d'un utilisateur
 @bot.tree.command(name="inventory", description="Affiche l'inventaire de l'utilisateur")
 async def inventory(interaction: discord.Interaction, member: discord.Member = None):
     target_user = member if member else interaction.user
     await interaction.response.defer()  # Permet de différer l'interaction pour éviter l'expiration
 
-    inventory = list(db["inventory"].find({"server_id": str(interaction.guild.id), "user_id": str(target_user.id)}))
+    # Récupérer l'inventaire de l'utilisateur
+    inventory = list(db["inventory"].find({
+        "server_id": str(interaction.guild.id),
+        "user_id": str(target_user.id)
+    }))
 
-
+    # Si l'inventaire est vide
     if not inventory:
         return await interaction.followup.send(
             embed=create_embed("🎒 Inventaire", f"L'inventaire de {target_user.display_name} est vide.", color=discord.Color.red())
         )
 
+    # Construire la description des items
     items_desc = "\n\n".join([
         f"**📦 {item.get('name', 'Objet Inconnu')}**\n"
         f"╰ *{item.get('description', 'Aucune description disponible')}*\n"
@@ -1351,6 +1355,7 @@ async def inventory(interaction: discord.Interaction, member: discord.Member = N
         for item in inventory
     ])
 
+    # Créer l'embed pour afficher l'inventaire
     embed = create_embed(f"🎒 Inventaire de {target_user.display_name}", items_desc, color=discord.Color.blue())
     embed.set_thumbnail(url="https://i.imgur.com/2XuxSIU.jpeg")
     embed.set_footer(text=f"Inventaire de {target_user.display_name}", icon_url=target_user.avatar.url)
