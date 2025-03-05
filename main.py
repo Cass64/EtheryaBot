@@ -1112,7 +1112,7 @@ async def calcul(interaction: discord.Interaction, nombre: float, pourcentage: f
 logging.basicConfig(level=logging.INFO)
 
 # Rôles nécessaires
-ROLE_NEEDED = "[𝑺ץ] Développeur"
+ROLE_NEEDED = "″ [𝑺ץ] Développeur"
 ROLE_SECOND = "*"
 
 # Fonction pour vérifier si l'utilisateur a les rôles nécessaires
