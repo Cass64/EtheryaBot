@@ -1294,7 +1294,7 @@ async def add_inventory(interaction: discord.Interaction, name: str, quantity: i
 
 @bot.tree.command(name="inventory", description="Affiche l'inventaire de l'utilisateur")
 async def inventory(interaction: discord.Interaction):
-    await interaction.response.defer()  # Déférer pour éviter l'expiration de l'interaction
+    await interaction.response.defer()  # Évite l'expiration de l'interaction
 
     user_data = get_user_data(interaction.user.id)
     inventory = user_data.get("inventory", [])
@@ -1304,11 +1304,19 @@ async def inventory(interaction: discord.Interaction):
             embed=create_embed("🎒 Inventaire", "Votre inventaire est vide.", color=discord.Color.red())
         )
 
-    items_desc = "\n".join([f"**{item['name']}** - {item['quantity']} en stock" if isinstance(item, dict) else f"Invalid Item" for item in inventory])
+    items_desc = "\n\n".join([
+        f"**📦 {item['name']}**\n"
+        f"╰ *{item['description']}*\n"
+        f"➡ **Quantité :** `{item['quantity']}`"
+        if isinstance(item, dict) else "❌ **Objet invalide**"
+        for item in inventory
+    ])
 
-    await interaction.followup.send(
-        embed=create_embed("🎒 Inventaire", f"Voici vos objets:\n{items_desc}", color=discord.Color.blue())
-    )
+    embed = create_embed("🎒 Inventaire", items_desc, color=discord.Color.blue())
+    embed.set_thumbnail(url="https://i.imgur.com/NnR4Hs2.png")  # Icône d'inventaire
+    embed.set_footer(text=f"Inventaire de {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
+
+    await interaction.followup.send(embed=embed)
 
 # Commande pour réduire le stock d'un item sans le supprimer
 @bot.tree.command(name="decrease-store", description="Réduit le stock d'un item dans le store sans le supprimer.")
