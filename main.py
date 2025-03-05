@@ -1307,23 +1307,32 @@ async def add_inventory(interaction: discord.Interaction, name: str, quantity: i
             embed=create_embed("⚠️ Item non disponible", f"L'item **{name}** n'existe pas dans le store.", color=discord.Color.red())
         )
 
-    # Vérification de l'inventaire de la personne ciblée
-    user_data = get_user_data(member.id)
-    inventory = user_data.get("inventory", [])
+    # Récupérer l'inventaire de l'utilisateur depuis MongoDB
+    user_data = db["inventory"].find_one({"server_id": str(interaction.guild.id), "user_id": str(member.id)})
 
-    # Recherche de l'item dans l'inventaire de l'utilisateur ciblé
+    if user_data:
+        inventory = user_data.get("items", [])
+    else:
+        inventory = []
+
+    # Recherche de l'item dans l'inventaire de l'utilisateur
     item_in_inventory = next((item for item in inventory if item["name"] == name), None)
 
     if item_in_inventory:
         # Si l'item existe déjà, on augmente simplement la quantité
         item_in_inventory["quantity"] += quantity
+        db["inventory"].update_one(
+            {"server_id": str(interaction.guild.id), "user_id": str(member.id)},
+            {"$set": {"items": inventory}}
+        )
     else:
         # Sinon, on ajoute un nouvel item dans l'inventaire
         inventory.append({"name": name, "quantity": quantity})
-
-    # Mise à jour des données de l'utilisateur
-    user_data["inventory"] = inventory
-    save_user_data(member.id, user_data)
+        db["inventory"].update_one(
+            {"server_id": str(interaction.guild.id), "user_id": str(member.id)},
+            {"$set": {"items": inventory}},
+            upsert=True  # Si l'utilisateur n'a pas encore d'inventaire, crée-le
+        )
 
     # Confirmation de l'ajout d'inventaire
     await interaction.response.send_message(
@@ -1352,7 +1361,7 @@ async def inventory(interaction: discord.Interaction, member: discord.Member = N
         f"**📦 {item.get('name', 'Objet Inconnu')}**\n"
         f"╰ *{item.get('description', 'Aucune description disponible')}*\n"
         f"➡ **Quantité :** `{item.get('quantity', 'N/A')}`"
-        for item in inventory
+        for item in inventory[0].get('items', [])
     ])
 
     # Créer l'embed pour afficher l'inventaire
@@ -1361,6 +1370,7 @@ async def inventory(interaction: discord.Interaction, member: discord.Member = N
     embed.set_footer(text=f"Inventaire de {target_user.display_name}", icon_url=target_user.avatar.url)
 
     await interaction.followup.send(embed=embed)
+
 
 
 # Commande pour réduire le stock d'un item sans le supprimer
@@ -1468,7 +1478,6 @@ async def remove_money(interaction: discord.Interaction, user: discord.Member, a
         embed=create_embed("💸 Argent retiré", f"**{amount} 💵** a été retiré du solde de {user.mention}.", color=discord.Color.green())
     )
 
-# Commande pour retirer un item de l'inventaire d'un autre utilisateur
 @bot.tree.command(name="decrease-inventory", description="Réduit la quantité d'un item dans l'inventaire d'un autre utilisateur.")
 @app_commands.checks.has_role(ROLE_NEEDED)
 @app_commands.checks.has_role(ROLE_SECOND)
@@ -1483,11 +1492,17 @@ async def decrease_inventory(interaction: discord.Interaction, name: str, quanti
             embed=create_embed("⚠️ Erreur", "La quantité doit être supérieure à 0.", color=discord.Color.red())
         )
 
-    # Vérification de l'inventaire de la personne ciblée
-    user_data = get_user_data(member.id)
-    inventory = user_data.get("inventory", [])
+    # Récupérer l'inventaire de l'utilisateur depuis MongoDB
+    user_data = db["inventory"].find_one({"server_id": str(interaction.guild.id), "user_id": str(member.id)})
 
-    # Recherche de l'item dans l'inventaire de l'utilisateur ciblé
+    if not user_data:
+        return await interaction.response.send_message(
+            embed=create_embed("⚠️ Erreur", f"{member.display_name} n'a pas d'inventaire.", color=discord.Color.red())
+        )
+
+    inventory = user_data.get("items", [])
+
+    # Recherche de l'item dans l'inventaire de l'utilisateur
     item_in_inventory = next((item for item in inventory if item["name"] == name), None)
 
     if not item_in_inventory:
@@ -1495,7 +1510,7 @@ async def decrease_inventory(interaction: discord.Interaction, name: str, quanti
             embed=create_embed("⚠️ Erreur", f"L'item **{name}** n'existe pas dans l'inventaire de {member.display_name}.", color=discord.Color.red())
         )
 
-    # Vérification de la quantité
+    # Vérification de la quantité disponible
     if item_in_inventory["quantity"] < quantity:
         return await interaction.response.send_message(
             embed=create_embed("⚠️ Erreur", f"Il n'y a pas assez de **{name}** dans l'inventaire de {member.display_name} pour retirer `{quantity}`.", color=discord.Color.red())
@@ -1508,9 +1523,12 @@ async def decrease_inventory(interaction: discord.Interaction, name: str, quanti
     if item_in_inventory["quantity"] == 0:
         inventory.remove(item_in_inventory)
 
-    # Mise à jour des données de l'utilisateur
-    user_data["inventory"] = inventory
-    save_user_data(member.id, user_data)
+    # Mise à jour des données de l'utilisateur dans MongoDB
+    db["inventory"].update_one(
+        {"server_id": str(interaction.guild.id), "user_id": str(member.id)},
+        {"$set": {"items": inventory}},
+        upsert=True  # Crée l'inventaire si l'utilisateur n'en a pas
+    )
 
     # Confirmation de la réduction d'inventaire
     await interaction.response.send_message(
@@ -1599,17 +1617,11 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
     user_id = str(interaction.user.id)
     server_id = str(interaction.guild.id)
 
-    # Vérification si l'utilisateur a un compte économique
+    # Vérification si l'utilisateur a un compte économique existant
     economy_data = db["economy"].find_one({"user_id": user_id, "server_id": server_id})
 
     if not economy_data:
-        # Si l'utilisateur n'a pas de compte économique, en créer un
-        db["economy"].insert_one({
-            "user_id": user_id,
-            "server_id": server_id,
-            "balance": 0  # Par exemple, le solde de départ peut être 0
-        })
-        return await interaction.response.send_message("Tu n'as pas encore de compte économique. Un compte a été créé pour toi.", ephemeral=True)
+        return await interaction.response.send_message("Tu n'as pas de compte économique. Veuillez contacter un administrateur pour résoudre ce problème.", ephemeral=True)
 
     # Vérification du solde de l'utilisateur
     balance = economy_data.get("balance", 0)
@@ -1647,7 +1659,6 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
 
     # Confirmer l'achat
     return await interaction.response.send_message(f"✅ Achat de {item['name']} réussi !", ephemeral=True)
-
 
 #-------------------------------------------------------------------------------------------------------------INVENTORY---------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------LEADERBOARD--------------------------------------------------------------------------------------------------------------------------------------
