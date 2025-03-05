@@ -1264,45 +1264,65 @@ async def remove_store(interaction: discord.Interaction, name: str):
 @bot.tree.command(name="add-inventory", description="Ajoute un item à l'inventaire")
 @app_commands.checks.has_role(ROLE_NEEDED)
 @app_commands.checks.has_role(ROLE_SECOND)
-async def add_inventory(interaction: discord.Interaction, name: str, quantity: int):
-    if not (any(role.name == ROLE_NEEDED for role in interaction.user.roles) and any(role.name == ROLE_SECOND for role in interaction.user.roles)):
-        return await interaction.response.send_message(
-            embed=create_embed("⚠️ Accès refusé", "Vous devez avoir les rôles 'Développeur' et '*' pour ajouter un objet dans l'inventaire.", color=discord.Color.red())
+async def add_inventory(interaction: discord.Interaction, name: str, quantity: int, member: discord.Member = None):
+    try:
+        # Si l'utilisateur n'a pas les bons rôles, retour
+        if not (any(role.name == ROLE_NEEDED for role in interaction.user.roles) and any(role.name == ROLE_SECOND for role in interaction.user.roles)):
+            return await interaction.response.send_message(
+                embed=create_embed("⚠️ Accès refusé", "Vous devez avoir les rôles 'Développeur' et '*' pour ajouter un objet dans l'inventaire.", color=discord.Color.red())
+            )
+
+        if quantity <= 0:
+            return await interaction.response.send_message(
+                embed=create_embed("⚠️ Erreur", "La quantité doit être supérieure à 0.", color=discord.Color.red())
+            )
+
+        # Vérification que l'item existe dans le store
+        store = get_store_data()  # Supposons que tu as une fonction pour récupérer le store
+        item_in_store = next((item for item in store if item["name"] == name), None)
+
+        if not item_in_store:
+            return await interaction.response.send_message(
+                embed=create_embed("⚠️ Erreur", f"L'item **{name}** n'existe pas dans le store.", color=discord.Color.red())
+            )
+
+        # Déterminer quel utilisateur modifier l'inventaire
+        target_user = member if member else interaction.user
+
+        # Récupère les données de l'utilisateur
+        user_data = get_user_data(target_user.id)
+        inventory = user_data.get("inventory", [])
+
+        # Vérification de la structure de l'inventaire
+        if any(not isinstance(item, dict) or "name" not in item or "quantity" not in item for item in inventory):
+            return await interaction.response.send_message(
+                embed=create_embed("⚠️ Erreur", "L'inventaire contient des éléments mal formatés. Veuillez vérifier.", color=discord.Color.red())
+            )
+
+        # Recherche de l'item dans l'inventaire
+        item_in_inventory = next((item for item in inventory if item["name"] == name), None)
+
+        if item_in_inventory:
+            # Si l'item existe, on augmente sa quantité
+            item_in_inventory["quantity"] += quantity
+        else:
+            # Sinon, on ajoute un nouvel item
+            inventory.append({"name": name, "quantity": quantity})
+
+        # Mise à jour des données de l'utilisateur
+        user_data["inventory"] = inventory
+        save_user_data(target_user.id, user_data)
+
+        # Réponse de succès
+        await interaction.response.send_message(
+            embed=create_embed("🎒 Inventaire mis à jour", f"L'item **{name}** a été ajouté à l'inventaire de {target_user.display_name} avec `{quantity}` unité(s).", color=discord.Color.green())
         )
-        
-    if quantity <= 0:
-        return await interaction.response.send_message(
-            embed=create_embed("⚠️ Erreur", "La quantité doit être supérieure à 0.", color=discord.Color.red())
+
+    except Exception as e:
+        print(f"Erreur lors de l'exécution de la commande 'add-inventory': {e}")
+        await interaction.response.send_message(
+            embed=create_embed("⚠️ Erreur", "Une erreur est survenue lors de l'ajout de l'item.", color=discord.Color.red())
         )
-
-    # Récupère les données de l'utilisateur
-    user_data = get_user_data(interaction.user.id)
-    inventory = user_data.get("inventory", [])
-
-    # Vérification de la structure de l'inventaire
-    if any(not isinstance(item, dict) or "name" not in item or "quantity" not in item for item in inventory):
-        return await interaction.response.send_message(
-            embed=create_embed("⚠️ Erreur", "L'inventaire contient des éléments mal formatés. Veuillez vérifier.", color=discord.Color.red())
-        )
-
-    # Recherche de l'item dans l'inventaire
-    item_in_inventory = next((item for item in inventory if item["name"] == name), None)
-
-    if item_in_inventory:
-        # Si l'item existe, on augmente sa quantité
-        item_in_inventory["quantity"] += quantity
-    else:
-        # Sinon, on ajoute un nouvel item
-        inventory.append({"name": name, "quantity": quantity})
-
-    # Mise à jour des données de l'utilisateur
-    user_data["inventory"] = inventory
-    save_user_data(interaction.user.id, user_data)
-
-    # Réponse de succès
-    await interaction.response.send_message(
-        embed=create_embed("🎒 Inventaire mis à jour", f"L'item **{name}** a été ajouté à votre inventaire avec `{quantity}` unité(s).", color=discord.Color.green())
-    )
 
 @bot.tree.command(name="inventory", description="Affiche l'inventaire de l'utilisateur")
 async def inventory(interaction: discord.Interaction, member: discord.Member = None):
@@ -1456,52 +1476,64 @@ async def remove_money(interaction: discord.Interaction, user: discord.Member, a
 @bot.tree.command(name="decrease-inventory", description="Diminue la quantité d'un item dans l'inventaire et supprime l'item si la quantité devient 0")
 @app_commands.checks.has_role(ROLE_NEEDED)
 @app_commands.checks.has_role(ROLE_SECOND)
-async def decrease_inventory(interaction: discord.Interaction, name: str, quantity: int):
-    if not (any(role.name == ROLE_NEEDED for role in interaction.user.roles) and any(role.name == ROLE_SECOND for role in interaction.user.roles)):
-        return await interaction.response.send_message(
-            embed=create_embed("⚠️ Accès refusé", "Vous devez avoir les rôles 'Développeur' et '*' pour retirer un objet dans l'inventaire.", color=discord.Color.red())
-        )
-    if quantity <= 0:
-        return await interaction.response.send_message(
-            embed=create_embed("⚠️ Erreur", "La quantité à retirer doit être supérieure à 0.", color=discord.Color.red())
-        )
+async def decrease_inventory(interaction: discord.Interaction, name: str, quantity: int, member: discord.Member = None):
+    try:
+        # Si l'utilisateur n'a pas les bons rôles, retour
+        if not (any(role.name == ROLE_NEEDED for role in interaction.user.roles) and any(role.name == ROLE_SECOND for role in interaction.user.roles)):
+            return await interaction.response.send_message(
+                embed=create_embed("⚠️ Accès refusé", "Vous devez avoir les rôles 'Développeur' et '*' pour retirer un objet dans l'inventaire.", color=discord.Color.red())
+            )
 
-    # Récupère les données de l'utilisateur
-    user_data = get_user_data(interaction.user.id)
-    inventory = user_data.get("inventory", [])
+        if quantity <= 0:
+            return await interaction.response.send_message(
+                embed=create_embed("⚠️ Erreur", "La quantité à retirer doit être supérieure à 0.", color=discord.Color.red())
+            )
 
-    # Vérification de la structure de l'inventaire
-    if any(not isinstance(item, dict) or "name" not in item or "quantity" not in item for item in inventory):
-        return await interaction.response.send_message(
-            embed=create_embed("⚠️ Erreur", "L'inventaire contient des éléments mal formatés. Veuillez vérifier.", color=discord.Color.red())
-        )
+        # Déterminer quel utilisateur modifier l'inventaire
+        target_user = member if member else interaction.user
 
-    # Recherche de l'item dans l'inventaire
-    item_in_inventory = next((item for item in inventory if item["name"] == name), None)
+        # Récupère les données de l'utilisateur
+        user_data = get_user_data(target_user.id)
+        inventory = user_data.get("inventory", [])
 
-    if item_in_inventory:
-        # Si l'item existe et que la quantité est suffisante, on diminue la quantité
-        if item_in_inventory["quantity"] >= quantity:
-            item_in_inventory["quantity"] -= quantity
-            # Si la quantité devient 0, on supprime l'item de l'inventaire
-            if item_in_inventory["quantity"] == 0:
-                inventory.remove(item_in_inventory)  # Suppression de l'item
-                await interaction.response.send_message(
-                    embed=create_embed("🎒 Inventaire mis à jour", f"L'item **{name}** a été supprimé de votre inventaire car sa quantité est devenue 0.", color=discord.Color.green())
-                )
+        # Vérification de la structure de l'inventaire
+        if any(not isinstance(item, dict) or "name" not in item or "quantity" not in item for item in inventory):
+            return await interaction.response.send_message(
+                embed=create_embed("⚠️ Erreur", "L'inventaire contient des éléments mal formatés. Veuillez vérifier.", color=discord.Color.red())
+            )
+
+        # Recherche de l'item dans l'inventaire
+        item_in_inventory = next((item for item in inventory if item["name"] == name), None)
+
+        if item_in_inventory:
+            # Si l'item existe et que la quantité est suffisante, on diminue la quantité
+            if item_in_inventory["quantity"] >= quantity:
+                item_in_inventory["quantity"] -= quantity
+                # Si la quantité devient 0, on supprime l'item de l'inventaire
+                if item_in_inventory["quantity"] == 0:
+                    inventory.remove(item_in_inventory)  # Suppression de l'item
+                    await interaction.response.send_message(
+                        embed=create_embed("🎒 Inventaire mis à jour", f"L'item **{name}** a été supprimé de l'inventaire de {target_user.display_name} car sa quantité est devenue 0.", color=discord.Color.green())
+                    )
+                else:
+                    await interaction.response.send_message(
+                        embed=create_embed("🎒 Inventaire mis à jour", f"La quantité de l'item **{name}** a été réduite de `{quantity}` pour {target_user.display_name}.", color=discord.Color.green())
+                    )
             else:
                 await interaction.response.send_message(
-                    embed=create_embed("🎒 Inventaire mis à jour", f"La quantité de l'item **{name}** a été réduite de `{quantity}`.", color=discord.Color.green())
+                    embed=create_embed("⚠️ Erreur", f"{target_user.display_name} n'a pas assez de l'item **{name}** pour diminuer cette quantité.", color=discord.Color.red())
                 )
         else:
             await interaction.response.send_message(
-                embed=create_embed("⚠️ Erreur", f"Vous n'avez pas assez de l'item **{name}** pour diminuer cette quantité.", color=discord.Color.red())
+                embed=create_embed("⚠️ Erreur", f"L'item **{name}** n'est pas dans l'inventaire de {target_user.display_name}.", color=discord.Color.red())
             )
-    else:
-        await interaction.response.send_message(
-            embed=create_embed("⚠️ Erreur", f"L'item **{name}** n'est pas dans votre inventaire.", color=discord.Color.red())
-        )
 
+    except Exception as e:
+        print(f"Erreur lors de l'exécution de la commande 'decrease-inventory': {e}")
+        await interaction.response.send_message(
+            embed=create_embed("⚠️ Erreur", "Une erreur est survenue lors de la diminution de l'item.", color=discord.Color.red())
+        )
+        
 @bot.tree.command(name="clear_inventory", description="Supprime tout l'inventaire d'un utilisateur.")
 @app_commands.describe(user="L'utilisateur dont l'inventaire sera supprimé")
 @app_commands.checks.has_role(ROLE_NEEDED)
