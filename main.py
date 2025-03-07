@@ -1704,7 +1704,7 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
     server_id = str(interaction.guild.id)
 
     # Récupération des données économiques de l'utilisateur
-    economy_data = db["economy"].find_one({"user_id": user_id, "server_id": server_id})
+    economy_data = economy_collection.find_one({"user_id": user_id, "server_id": server_id})
 
     if not economy_data:
         return await interaction.response.send_message(
@@ -1716,7 +1716,7 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
     cash = economy_data.get("cash", 0)
 
     # Recherche de l'item dans le store
-    item = db["store"].find_one({"name": item_name})
+    item = store_collection.find_one({"name": item_name})
 
     if not item:
         return await interaction.response.send_message(
@@ -1732,35 +1732,34 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
         )
 
     # Retirer le montant du cash de l'utilisateur
-    db["economy"].update_one(
+    economy_collection.update_one(
         {"user_id": user_id, "server_id": server_id},
         {"$inc": {"cash": -item["price"]}}
     )
 
     # Ajouter l'item à l'inventaire de l'utilisateur
-    inventory = db["inventory"].find_one({"user_id": user_id, "server_id": server_id})
+    inventory = inventory_collection.find_one({"user_id": user_id, "server_id": server_id})
 
     if inventory:
         # Si l'inventaire existe déjà, on met à jour la quantité de l'item
-        db["inventory"].update_one(
+        inventory_collection.update_one(
             {"user_id": user_id, "server_id": server_id, "items.name": item["name"]},
             {"$inc": {"items.$.quantity": 1}},
             upsert=True  # Ajoute l'item s'il n'est pas déjà présent
         )
     else:
         # Si l'inventaire n'existe pas, on le crée avec l'item
-        db["inventory"].insert_one({
+        inventory_collection.insert_one({
             "user_id": user_id,
             "server_id": server_id,
             "items": [{"name": item["name"], "description": item["description"], "quantity": 1}]
         })
 
     # Confirmer l'achat à l'utilisateur
-    return await interaction.response.send_message(
-        f"✅ Achat de **{item['name']}** réussi pour `{item['price']} 💵` !",
+    await interaction.response.send_message(
+        f"✅ Achat de **{item['name']}** réussi pour `{item['price']} 💵`. Description : {item['description']} !",
         ephemeral=True
     )
-
 
 #-------------------------------------------------------------------------------------------------------------INVENTORY---------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------LEADERBOARD--------------------------------------------------------------------------------------------------------------------------------------
