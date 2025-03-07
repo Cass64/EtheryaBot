@@ -14,6 +14,7 @@ from datetime import timedelta
 import math
 import aiocron
 import logging
+import re
 
 load_dotenv()
 
@@ -359,6 +360,9 @@ async def protect(ctx):
 
 #------------------------------------------------------------------------- Commandes d'économie : /embed
 
+# Configuration du logging
+logging.basicConfig(level=logging.INFO)
+
 THUMBNAIL_URL = "https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/etheryBot_profil.jpg?raw=true"
 
 # Fonction pour vérifier si une URL est valide
@@ -439,11 +443,7 @@ class EmbedDescriptionModal(discord.ui.Modal):
     def __init__(self, view: EmbedBuilderView):
         super().__init__(title="Modifier la description")
         self.view = view
-        self.description = discord.ui.TextInput(
-            label="Nouvelle description",
-            style=discord.TextStyle.paragraph,
-            max_length=4000
-        )
+        self.description = discord.ui.TextInput(label="Nouvelle description", style=discord.TextStyle.paragraph, max_length=4000)
         self.add_item(self.description)
 
     async def on_submit(self, interaction: discord.Interaction):
@@ -457,16 +457,13 @@ class EmbedImageModal(discord.ui.Modal):
     def __init__(self, view: EmbedBuilderView):
         super().__init__(title="Ajouter une image")
         self.view = view
-        self.image_input = discord.ui.TextInput(label="URL de l'image", required=False)
+        self.image_input = discord.ui.TextInput(label="URL de l'image", required=True)
         self.add_item(self.image_input)
 
     async def on_submit(self, interaction: discord.Interaction):
-        if self.image_input.value and is_valid_url(self.image_input.value):
+        if is_valid_url(self.image_input.value):
             self.view.embed.set_image(url=self.image_input.value)
-            if self.view.message:
-                await self.view.message.edit(embed=self.view.embed, view=self.view)
-            else:
-                await interaction.response.send_message("Erreur : impossible de modifier le message.", ephemeral=True)
+            await self.view.message.edit(embed=self.view.embed, view=self.view)
         else:
             await interaction.response.send_message("❌ URL invalide.", ephemeral=True)
 
@@ -474,16 +471,12 @@ class EmbedSecondImageModal(discord.ui.Modal):
     def __init__(self, view: EmbedBuilderView):
         super().__init__(title="Ajouter une 2ème image")
         self.view = view
-        self.second_image_input = discord.ui.TextInput(label="URL de la 2ème image", required=False)
+        self.second_image_input = discord.ui.TextInput(label="URL de la 2ème image", required=True)
         self.add_item(self.second_image_input)
 
     async def on_submit(self, interaction: discord.Interaction):
-        if self.second_image_input.value and is_valid_url(self.second_image_input.value):
+        if is_valid_url(self.second_image_input.value):
             self.view.second_image_url = self.second_image_input.value
-            if self.view.message:
-                await self.view.message.edit(embed=self.view.embed, view=self.view)
-            else:
-                await interaction.response.send_message("Erreur : impossible de modifier le message.", ephemeral=True)
         else:
             await interaction.response.send_message("❌ URL invalide.", ephemeral=True)
 
@@ -496,19 +489,19 @@ async def embed_builder(interaction: discord.Interaction):
 
     view = EmbedBuilderView(interaction.user, interaction.channel)
     response = await interaction.followup.send(embed=view.embed, view=view, ephemeral=True)
-    view.message = response  # Stocke le message contenant la View
+    view.message = response
 
 @bot.event
 async def on_message(message):
     if message.attachments:
-        attachment = message.attachments[0]
-        if attachment.content_type and attachment.content_type.startswith("image/"):
-            embed = discord.Embed(title="Image ajoutée")
-            embed.set_thumbnail(url=THUMBNAIL_URL)
-            embed.set_image(url=attachment.url)
-            await message.channel.send(embed=embed)
-
+        for attachment in message.attachments:
+            if attachment.content_type and attachment.content_type.startswith("image/"):
+                embed = discord.Embed(title="Image ajoutée")
+                embed.set_thumbnail(url=THUMBNAIL_URL)
+                embed.set_image(url=attachment.url)
+                await message.channel.send(embed=embed)
     await bot.process_commands(message)
+
 #------------------------------------------------------------------------- Commandes classiques pour les prêt 
 
 
