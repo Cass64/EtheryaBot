@@ -1124,15 +1124,14 @@ def is_item_in_store(name: str) -> bool:
 def has_required_roles(user):
     return any(role.name == ROLE_NEEDED for role in user.roles) and any(role.name == ROLE_SECOND for role in user.roles)
 
-# Fonction pour récupérer les données de l'utilisateur
-def get_user_data(user_id):
-    user_data = economy_collection.find_one({"user_id": str(user_id)})
+# Fonction pour récupérer les données de l'utilisateur de manière asynchrone
+async def get_user_data(user_id):
+    user_data = await economy_collection.find_one({"user_id": str(user_id)})
     if not user_data:
         # Si les données n'existent pas, on crée un nouveau document
         user_data = {"user_id": str(user_id), "cash": 0, "bank": 0, "total": 0, "last_claim": None, "inventory": []}
-        economy_collection.insert_one(user_data)
+        await economy_collection.insert_one(user_data)
     return user_data
-
 # Fonction pour sauvegarder les données de l'utilisateur
 def save_user_data(user_id, user_data):
     economy_collection.update_one({"user_id": str(user_id)}, {"$set": user_data})
@@ -1698,7 +1697,7 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
     print(f"Prix de l'item : {item_price} 💵")
     if cash < item_price:
         return await interaction.response.send_message(
-            f"❌ Tu n'as pas assez d'argent en **cash** pour acheter **{item['name']}**. Il coûte `{item_price} 💵`.",
+            f"❌ Tu n'as pas assez d'argent en **cash** pour acheter **{item['name']}**. Il coûte `{item_price} 💵`. ",
             ephemeral=True
         )
 
@@ -1710,22 +1709,22 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
         )
 
     # Effectuer l'achat (réduire le cash et le stock)
-    db["economy"].update_one({"user_id": user_id}, {"$inc": {"cash": -item_price}})
-    db["store"].update_one({"name": item_name}, {"$inc": {"stock": -1}})
+    await db["economy"].update_one({"user_id": user_id}, {"$inc": {"cash": -item_price}})
+    await db["store"].update_one({"name": item_name}, {"$inc": {"stock": -1}})
 
     # Ajouter l'item à l'inventaire de l'utilisateur
-    inventory = db["inventory"].find_one({"user_id": user_id, "server_id": server_id})
+    inventory = await db["inventory"].find_one({"user_id": user_id, "server_id": server_id})
 
     if inventory:
         # Si l'inventaire existe déjà, on met à jour la quantité de l'item
-        db["inventory"].update_one(
+        await db["inventory"].update_one(
             {"user_id": user_id, "server_id": server_id, "items.name": item["name"]},
             {"$inc": {"items.$.quantity": 1}},
             upsert=True  # Ajoute l'item s'il n'est pas déjà présent
         )
     else:
         # Si l'inventaire n'existe pas, on le crée avec l'item
-        db["inventory"].insert_one({
+        await db["inventory"].insert_one({
             "user_id": user_id,
             "server_id": server_id,
             "items": [{"name": item["name"], "description": item["description"], "quantity": 1}]
@@ -1736,7 +1735,6 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
         f"✅ Tu as acheté **{item_name}** pour `{item_price} 💵`. Félicitations !",
         ephemeral=True
     )
-
 
 #-------------------------------------------------------------------------------------------------------------INVENTORY---------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------LEADERBOARD--------------------------------------------------------------------------------------------------------------------------------------
