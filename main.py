@@ -1731,8 +1731,8 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
             ephemeral=True
         )
 
-    # Vérification du solde en cash
-    cash = economy_data.get("cash", 0)
+    # Vérification du solde en cash (on s'assure que c'est un entier)
+    cash = int(economy_data.get("cash", 0))
 
     # Recherche de l'item dans le store
     item = db["store"].find_one({"name": item_name})
@@ -1743,10 +1743,12 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
             ephemeral=True
         )
 
-    # Vérifier si l'utilisateur a assez d'argent en cash
-    if cash < item["price"]:
+    # Vérifier si l'utilisateur a assez d'argent en cash (on s'assure que c'est un entier)
+    item_price = int(item["price"])
+
+    if cash < item_price:
         return await interaction.response.send_message(
-            f"❌ Tu n'as pas assez d'argent en **cash** pour acheter **{item['name']}**. Il coûte `{item['price']} 💵`.",
+            f"❌ Tu n'as pas assez d'argent en **cash** pour acheter **{item['name']}**. Il coûte `{item_price} 💵`.",
             ephemeral=True
         )
 
@@ -1760,7 +1762,7 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
     # Retirer le montant du cash de l'utilisateur
     db["economy"].update_one(
         {"user_id": user_id, "server_id": server_id},
-        {"$inc": {"cash": -item["price"]}}
+        {"$inc": {"cash": -item_price}}
     )
 
     # Ajouter l'item à l'inventaire de l'utilisateur
@@ -1789,9 +1791,10 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
 
     # Confirmer l'achat à l'utilisateur
     await interaction.response.send_message(
-        f"✅ Achat de **{item['name']}** réussi pour `{item['price']} 💵` !",
+        f"✅ Achat de **{item['name']}** réussi pour `{item_price} 💵` !",
         ephemeral=True
     )
+
 
 
 #-------------------------------------------------------------------------------------------------------------INVENTORY---------------------------------------------------------------------------------------------------------------------------------------
