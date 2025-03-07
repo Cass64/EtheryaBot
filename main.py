@@ -1666,23 +1666,23 @@ async def item_info(interaction: discord.Interaction, item: str = None):
 
         await interaction.response.send_message("📜 Sélectionnez un item pour voir ses informations :", view=view)
 
-# Commande slash pour acheter un item
 @bot.tree.command(name="item-buy", description="Acheter un item du store")
 async def item_buy(interaction: discord.Interaction, item_name: str):
     user_id = str(interaction.user.id)
     server_id = str(interaction.guild.id)
 
-    # Récupération des données économiques de l'utilisateur
-    economy_data = db["economy"].find_one({"user_id": user_id, "server_id": server_id})
+    # Récupérer les données économiques de l'utilisateur de la même manière que pour 'deposit' et 'withdraw'
+    user_data = get_user_data(user_id)  # Utilisation de get_user_data comme pour 'deposit' et 'withdraw'
 
-    if not economy_data:
+    if not user_data:
         return await interaction.response.send_message(
             "❌ Tu n'as pas de compte économique. Veuillez contacter un administrateur.",
             ephemeral=True
         )
 
     # Vérification du solde en cash (on s'assure que c'est un entier)
-    cash = int(economy_data.get("cash", 0))
+    cash = user_data["cash"]  # Utilisation de 'user_data["cash"]'
+    print(f"Solde de {interaction.user.name}: {cash} 💵")
 
     # Recherche de l'item dans le store
     item = db["store"].find_one({"name": item_name})
@@ -1694,8 +1694,8 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
         )
 
     # Vérifier si l'utilisateur a assez d'argent en cash (on s'assure que c'est un entier)
-    item_price = int(item["price"])
-
+    item_price = item["price"]  # On utilise directement le prix tel quel
+    print(f"Prix de l'item : {item_price} 💵")
     if cash < item_price:
         return await interaction.response.send_message(
             f"❌ Tu n'as pas assez d'argent en **cash** pour acheter **{item['name']}**. Il coûte `{item_price} 💵`.",
@@ -1705,7 +1705,7 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
     # Vérifier le stock de l'item dans la boutique
     if item["stock"] <= 0:
         return await interaction.response.send_message(
-            f"❌ Désolé, **{item['name']}** est en rupture de stock.",
+            f"❌ L'item **{item['name']}** est en rupture de stock.",
             ephemeral=True
         )
 
@@ -1714,13 +1714,29 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
     db["store"].update_one({"name": item_name}, {"$inc": {"stock": -1}})
 
     # Ajouter l'item à l'inventaire de l'utilisateur
-    db["inventory"].update_one({"user_id": user_id}, {"$addToSet": {"items": item_name}}, upsert=True)
+    inventory = db["inventory"].find_one({"user_id": user_id, "server_id": server_id})
+
+    if inventory:
+        # Si l'inventaire existe déjà, on met à jour la quantité de l'item
+        db["inventory"].update_one(
+            {"user_id": user_id, "server_id": server_id, "items.name": item["name"]},
+            {"$inc": {"items.$.quantity": 1}},
+            upsert=True  # Ajoute l'item s'il n'est pas déjà présent
+        )
+    else:
+        # Si l'inventaire n'existe pas, on le crée avec l'item
+        db["inventory"].insert_one({
+            "user_id": user_id,
+            "server_id": server_id,
+            "items": [{"name": item["name"], "description": item["description"], "quantity": 1}]
+        })
 
     # Confirmation de l'achat
     await interaction.response.send_message(
         f"✅ Tu as acheté **{item_name}** pour `{item_price} 💵`. Félicitations !",
         ephemeral=True
     )
+
 
 #-------------------------------------------------------------------------------------------------------------INVENTORY---------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------LEADERBOARD--------------------------------------------------------------------------------------------------------------------------------------
