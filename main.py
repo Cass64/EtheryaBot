@@ -13,13 +13,12 @@ from datetime import datetime
 from datetime import timedelta
 import math
 import aiocron
-import logging
 
 load_dotenv()
 
-# Connexion MongoDB asynchrone avec motor
+# Connexion MongoDB
 mongo_uri = os.getenv("MONGO_URI")
-client = AsyncIOMotorClient(mongo_uri)
+client = MongoClient(mongo_uri)
 db = client['Cass-Eco2']
 collection = db['commandes']
 collection2 = db['etherya-eco']
@@ -58,6 +57,7 @@ async def on_ready():
         print(f"✅ Commandes slash synchronisées : {[cmd.name for cmd in synced]}")
     except Exception as e:
         print(f"❌ Erreur de synchronisation des commandes slash : {e}")
+
 #------------------------------------------------------------------------- Commandes d'économie : !!break
 
 # Liste des rôles autorisés pour exécuter les commandes de modération
