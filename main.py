@@ -1671,8 +1671,8 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
     user_id = str(interaction.user.id)
     server_id = str(interaction.guild.id)
 
-    # Récupérer les données économiques de l'utilisateur de la même manière que pour 'deposit' et 'withdraw'
-    user_data = get_user_data(user_id)  # Utilisation de get_user_data comme pour 'deposit' et 'withdraw'
+    # Utilisation de await pour appeler une fonction asynchrone
+    user_data = await get_user_data(user_id)  # On utilise await ici pour attendre la réponse
 
     if not user_data:
         return await interaction.response.send_message(
