@@ -1927,5 +1927,32 @@ async def on_message(message):
 #------------------------------------------------------------------------- auto clan
 
 #------------------------------------------------------------------------- Lancement du bot
+import asyncio
+
+async def remove_expired_roles():
+    await bot.wait_until_ready()
+    while not bot.is_closed():
+        now = datetime.utcnow()
+        expired_users = collection.find({"expires_at": {"$lt": now}})
+
+        for user_data in expired_users:
+            user_id = user_data["user_id"]
+            guild = bot.get_guild(GUILD_ID)  # Remplace GUILD_ID par l'ID de ton serveur
+            user = guild.get_member(user_id)
+
+            if user:
+                frag_role = discord.utils.get(guild.roles, name="″ [𝑺ץ] Frags Quotidien")
+                if frag_role in user.roles:
+                    await user.remove_roles(frag_role)
+                    print(f"❌ Rôle retiré à {user.display_name}")
+
+            # Supprimer l'entrée expirée de la base de données
+            collection.delete_one({"user_id": user_id})
+
+        await asyncio.sleep(600)  # Vérifie toutes les 10 minutes (600 secondes)
+
+# Lancer la tâche de fond
+bot.loop.create_task(remove_expired_roles())
+
 keep_alive()
 bot.run(token)
