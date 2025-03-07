@@ -9,7 +9,6 @@ import json
 import asyncio
 import pymongo
 from pymongo import MongoClient
-from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime
 from datetime import timedelta
 import math
