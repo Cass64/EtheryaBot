@@ -1143,7 +1143,8 @@ def create_embed(title, description, color=discord.Color.green()):
     return discord.Embed(title=title, description=description, color=color)
 
 # Commande générique pour la gestion des transactions
-async def transaction(ctx, amount: str, transaction_type="deposit", action="déposé"):
+# Commande générique pour la gestion des transactions
+async def transaction(ctx, amount: str, transaction_type="deposit"):
     # Vérification des rôles
     if not has_required_roles(ctx.author):
         return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir les rôles '{ROLE_NEEDED}' et '{ROLE_SECOND}' pour utiliser cette commande.", color=discord.Color.red()))
@@ -1151,18 +1152,18 @@ async def transaction(ctx, amount: str, transaction_type="deposit", action="dép
     # Récupérer les données de l'utilisateur
     user_data = get_user_data(ctx.author.id)
 
-# Gestion du montant
-if isinstance(amount, str) and amount.lower() == "all":
-    # Déterminer la source de l'argent
-    amount = user_data["cash"] if transaction_type == "deposit" else user_data["bank"]
-else:
-    try:
-        amount = int(amount.strip())  # Retirer les espaces et convertir en entier
-    except (ValueError, AttributeError):  # Prendre en compte les erreurs possibles
-        return await ctx.send(embed=create_embed("⚠️ Erreur", "Montant invalide. Veuillez entrer un nombre valide.", color=discord.Color.red()))
+    # Gestion du montant
+    if isinstance(amount, str) and amount.lower() == "all":
+        # Déterminer la source de l'argent
+        amount = user_data["cash"] if transaction_type == "deposit" else user_data["bank"]
+    else:
+        try:
+            amount = int(amount.strip())  # Retirer les espaces et convertir en entier
+        except (ValueError, AttributeError):  # Prendre en compte les erreurs possibles
+            return await ctx.send(embed=create_embed("⚠️ Erreur", "Montant invalide. Veuillez entrer un nombre valide.", color=discord.Color.red()))
 
-if amount <= 0:
-    return await ctx.send(embed=create_embed("⚠️ Erreur", "Le montant doit être supérieur à 0.", color=discord.Color.red()))
+    if amount <= 0:
+        return await ctx.send(embed=create_embed("⚠️ Erreur", "Le montant doit être supérieur à 0.", color=discord.Color.red()))
 
     # Vérifications supplémentaires pour les transactions
     if transaction_type == "deposit" and amount > user_data["cash"]:
