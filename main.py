@@ -1303,15 +1303,34 @@ async def withdraw(ctx, amount: str):
 
 @bot.command(name="store")
 async def store(ctx):
+    # Vérification du rôle requis pour accéder à la commande
     if not check_role(ctx, ROLE_NEEDED):
-        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande.", color=discord.Color.red()))
+        return await ctx.send(embed=create_embed("⚠️ Accès refusé", 
+                                                  f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande.", 
+                                                  color=discord.Color.red()))
 
+    # Récupération des items disponibles dans la collection store
     items = list(store_collection.find())
-    if not items:
-        return await ctx.send(embed=create_embed("🏪 Boutique", "Aucun objet disponible.", color=discord.Color.yellow()))
     
-    desc = "\n".join([f"**{item['name']}** - {item['price']} 💵 ({item['stock']} en stock)\n_{item['description']}_" for item in items])
-    await ctx.send(embed=create_embed("🏪 Boutique", desc, color=discord.Color.purple()))
+    # Si la boutique est vide
+    if not items:
+        return await ctx.send(embed=create_embed("🏪 Boutique", 
+                                                  "Aucun objet disponible.", 
+                                                  color=discord.Color.yellow()))
+    
+    # Construction de la description des items
+    desc = ""
+    for item in items:
+        name = item.get('name', 'Nom indisponible')
+        price = item.get('price', 'Prix indisponible')
+        stock = item.get('stock', 'Stock indisponible')
+        description = item.get('description', 'Aucune description disponible')
+        
+        # Ajout de chaque item à la description
+        desc += f"**{name}** - {price} 💵 ({stock} en stock)\n_{description}_\n\n"
+
+    # Envoi de l'embed avec la liste des items
+    await ctx.send(embed=create_embed("🏪 Boutique", desc.strip(), color=discord.Color.purple()))
 
 # Commandes Slash - Store Management
 
@@ -1704,7 +1723,7 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
     server_id = str(interaction.guild.id)
 
     # Récupération des données économiques de l'utilisateur
-    economy_data = economy_collection.find_one({"user_id": user_id, "server_id": server_id})
+    economy_data = db["economy"].find_one({"user_id": user_id, "server_id": server_id})
 
     if not economy_data:
         return await interaction.response.send_message(
@@ -1716,7 +1735,7 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
     cash = economy_data.get("cash", 0)
 
     # Recherche de l'item dans le store
-    item = store_collection.find_one({"name": item_name})
+    item = db["store"].find_one({"name": item_name})
 
     if not item:
         return await interaction.response.send_message(
@@ -1731,35 +1750,49 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
             ephemeral=True
         )
 
+    # Vérifier le stock de l'item dans la boutique
+    if item["stock"] <= 0:
+        return await interaction.response.send_message(
+            f"❌ L'item **{item['name']}** est en rupture de stock.",
+            ephemeral=True
+        )
+
     # Retirer le montant du cash de l'utilisateur
-    economy_collection.update_one(
+    db["economy"].update_one(
         {"user_id": user_id, "server_id": server_id},
         {"$inc": {"cash": -item["price"]}}
     )
 
     # Ajouter l'item à l'inventaire de l'utilisateur
-    inventory = inventory_collection.find_one({"user_id": user_id, "server_id": server_id})
+    inventory = db["inventory"].find_one({"user_id": user_id, "server_id": server_id})
 
     if inventory:
         # Si l'inventaire existe déjà, on met à jour la quantité de l'item
-        inventory_collection.update_one(
+        db["inventory"].update_one(
             {"user_id": user_id, "server_id": server_id, "items.name": item["name"]},
             {"$inc": {"items.$.quantity": 1}},
             upsert=True  # Ajoute l'item s'il n'est pas déjà présent
         )
     else:
         # Si l'inventaire n'existe pas, on le crée avec l'item
-        inventory_collection.insert_one({
+        db["inventory"].insert_one({
             "user_id": user_id,
             "server_id": server_id,
             "items": [{"name": item["name"], "description": item["description"], "quantity": 1}]
         })
 
+    # Décrémenter le stock de l'item dans la boutique
+    db["store"].update_one(
+        {"name": item_name},
+        {"$inc": {"stock": -1}}
+    )
+
     # Confirmer l'achat à l'utilisateur
     await interaction.response.send_message(
-        f"✅ Achat de **{item['name']}** réussi pour `{item['price']} 💵`. Description : {item['description']} !",
+        f"✅ Achat de **{item['name']}** réussi pour `{item['price']} 💵` !",
         ephemeral=True
     )
+
 
 #-------------------------------------------------------------------------------------------------------------INVENTORY---------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------LEADERBOARD--------------------------------------------------------------------------------------------------------------------------------------
