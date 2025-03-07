@@ -9,6 +9,7 @@ import json
 import asyncio
 import pymongo
 from pymongo import MongoClient
+from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime
 from datetime import timedelta
 import math
@@ -17,9 +18,9 @@ import logging
 
 load_dotenv()
 
-# Connexion MongoDB
+# Connexion MongoDB asynchrone avec motor
 mongo_uri = os.getenv("MONGO_URI")
-client = MongoClient(mongo_uri)
+client = AsyncIOMotorClient(mongo_uri)
 db = client['Cass-Eco2']
 collection = db['commandes']
 collection2 = db['etherya-eco']
@@ -58,8 +59,6 @@ async def on_ready():
         print(f"✅ Commandes slash synchronisées : {[cmd.name for cmd in synced]}")
     except Exception as e:
         print(f"❌ Erreur de synchronisation des commandes slash : {e}")
-
-
 #------------------------------------------------------------------------- Commandes d'économie : !!break
 
 # Liste des rôles autorisés pour exécuter les commandes de modération
@@ -1115,7 +1114,7 @@ logging.basicConfig(level=logging.INFO)
 ROLE_NEEDED = "″ [𝑺ץ] Développeur"
 ROLE_SECOND = "*"
 
-
+# Fonction pour vérifier si un item existe dans le store (MongoDB)
 def is_item_in_store(name: str) -> bool:
     """Vérifie si un item existe dans le store (MongoDB)."""
     item = store_collection.find_one({"name": name})
@@ -1142,64 +1141,18 @@ def save_user_data(user_id, user_data):
 def create_embed(title, description, color=discord.Color.green()):
     return discord.Embed(title=title, description=description, color=color)
 
-# Commande générique pour la gestion des transactions
-# Commande générique pour la gestion des transactions
-async def transaction(ctx, amount: str, transaction_type="deposit"):
-    # Vérification des rôles
+# Fonction pour vérifier les rôles et l'argent de l'utilisateur
+async def check_user_role_and_balance(ctx, amount):
     if not has_required_roles(ctx.author):
         return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir les rôles '{ROLE_NEEDED}' et '{ROLE_SECOND}' pour utiliser cette commande.", color=discord.Color.red()))
-
-    # Récupérer les données de l'utilisateur
+    
     user_data = get_user_data(ctx.author.id)
-
-    # Gestion du montant
-    if isinstance(amount, str) and amount.lower() == "all":
-        # Déterminer la source de l'argent
-        amount = user_data["cash"] if transaction_type == "deposit" else user_data["bank"]
-    else:
-        try:
-            amount = int(amount.strip())  # Retirer les espaces et convertir en entier
-        except (ValueError, AttributeError):  # Prendre en compte les erreurs possibles
-            return await ctx.send(embed=create_embed("⚠️ Erreur", "Montant invalide. Veuillez entrer un nombre valide.", color=discord.Color.red()))
-
-    if amount <= 0:
-        return await ctx.send(embed=create_embed("⚠️ Erreur", "Le montant doit être supérieur à 0.", color=discord.Color.red()))
-
-    # Vérifications supplémentaires pour les transactions
-    if transaction_type == "deposit" and amount > user_data["cash"]:
-        return await ctx.send(embed=create_embed("⚠️ Erreur", f"Vous n'avez pas assez d'argent dans votre trésorerie pour déposer `{amount}` 💵.", color=discord.Color.red()))
+    if amount > user_data["cash"]:
+        return await ctx.send(embed=create_embed("⚠️ Erreur", f"Vous n'avez pas assez d'argent 💵.", color=discord.Color.red()))
     
-    if transaction_type == "withdraw" and amount > user_data["bank"]:
-        return await ctx.send(embed=create_embed("⚠️ Erreur", f"Vous n'avez pas assez d'argent dans votre banque pour retirer `{amount}` 💵.", color=discord.Color.red()))
+    return user_data
 
-    # Mise à jour des données en fonction du type de transaction
-    if transaction_type == "deposit":
-        user_data["cash"] -= amount
-        user_data["bank"] += amount
-        action = "déposé"
-    elif transaction_type == "withdraw":
-        user_data["cash"] += amount
-        user_data["bank"] -= amount
-        action = "retiré"
-
-    # Mise à jour du total
-    user_data["total"] = user_data["cash"] + user_data["bank"]
-
-    # Sauvegarde des nouvelles données
-    save_user_data(ctx.author.id, user_data)
-
-    # Confirmation de la transaction
-    await ctx.send(embed=create_embed("🏦 Transaction réussie", f"Vous avez {action} `{amount}` 💵.", color=discord.Color.green()))
-    
-def check_role(ctx, role_name):
-    """Vérifie si l'utilisateur a un rôle spécifique."""
-    # Récupérer les rôles de l'utilisateur
-    user_roles = [role.name for role in ctx.author.roles]
-    
-    # Vérifier si l'utilisateur possède le rôle
-    return role_name in user_roles
-
-
+# Commande pour afficher la balance
 @bot.command(name="balance")
 async def balance(ctx, user: discord.Member = None):
     if not check_role(ctx, ROLE_NEEDED):
@@ -1236,14 +1189,12 @@ async def work(ctx):
     save_user_data(ctx.author.id, user_data)
     await ctx.send(embed=create_embed("💼 Travail Réussi !", f"Vous avez gagné **{earned_money}** 💵 !", color=discord.Color.green()))
 
+# Commande pour déposer de l'argent
 @bot.command(name="deposit", description="Déposer de l'argent dans la banque")
 async def deposit(ctx, amount: str):
-    # Vérification des rôles
-    if not has_required_roles(ctx.author):
-        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir les rôles '{ROLE_NEEDED}' et '{ROLE_SECOND}' pour utiliser cette commande.", color=discord.Color.red()))
-
-    # Récupérer les données de l'utilisateur
-    user_data = get_user_data(ctx.author.id)
+    user_data = await check_user_role_and_balance(ctx, int(amount))
+    if isinstance(user_data, discord.Message):  # Si une erreur est renvoyée dans la fonction de vérification des rôles et du solde
+        return await ctx.send(user_data)
 
     # Gestion du montant
     if amount.lower() == "all":
@@ -1268,14 +1219,12 @@ async def deposit(ctx, amount: str):
     # Confirmation du dépôt
     await ctx.send(embed=create_embed("🏦 Dépôt réussi", f"Vous avez déposé `{amount}` 💵 dans votre banque.", color=discord.Color.green()))
 
+# Commande pour retirer de l'argent
 @bot.command(name="withdraw", description="Retirer de l'argent de la banque")
 async def withdraw(ctx, amount: str):
-    # Vérification des rôles
-    if not has_required_roles(ctx.author):
-        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir les rôles '{ROLE_NEEDED}' et '{ROLE_SECOND}' pour utiliser cette commande.", color=discord.Color.red()))
-
-    # Récupérer les données de l'utilisateur
-    user_data = get_user_data(ctx.author.id)
+    user_data = await check_user_role_and_balance(ctx, int(amount))
+    if isinstance(user_data, discord.Message):  # Si une erreur est renvoyée dans la fonction de vérification des rôles et du solde
+        return await ctx.send(user_data)
 
     # Gestion du montant
     if amount.lower() == "all":
@@ -1300,7 +1249,7 @@ async def withdraw(ctx, amount: str):
     # Confirmation du retrait
     await ctx.send(embed=create_embed("🏦 Retrait réussi", f"Vous avez retiré `{amount}` 💵 de votre banque.", color=discord.Color.green()))
 
-
+# Commande pour afficher les items du store
 @bot.command(name="store")
 async def store(ctx):
     # Vérification du rôle requis pour accéder à la commande
@@ -1717,6 +1666,7 @@ async def item_info(interaction: discord.Interaction, item: str = None):
 
         await interaction.response.send_message("📜 Sélectionnez un item pour voir ses informations :", view=view)
 
+# Commande slash pour acheter un item
 @bot.tree.command(name="item-buy", description="Acheter un item du store")
 async def item_buy(interaction: discord.Interaction, item_name: str):
     user_id = str(interaction.user.id)
@@ -1755,47 +1705,22 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
     # Vérifier le stock de l'item dans la boutique
     if item["stock"] <= 0:
         return await interaction.response.send_message(
-            f"❌ L'item **{item['name']}** est en rupture de stock.",
+            f"❌ Désolé, **{item['name']}** est en rupture de stock.",
             ephemeral=True
         )
 
-    # Retirer le montant du cash de l'utilisateur
-    db["economy"].update_one(
-        {"user_id": user_id, "server_id": server_id},
-        {"$inc": {"cash": -item_price}}
-    )
+    # Effectuer l'achat (réduire le cash et le stock)
+    db["economy"].update_one({"user_id": user_id}, {"$inc": {"cash": -item_price}})
+    db["store"].update_one({"name": item_name}, {"$inc": {"stock": -1}})
 
     # Ajouter l'item à l'inventaire de l'utilisateur
-    inventory = db["inventory"].find_one({"user_id": user_id, "server_id": server_id})
+    db["inventory"].update_one({"user_id": user_id}, {"$addToSet": {"items": item_name}}, upsert=True)
 
-    if inventory:
-        # Si l'inventaire existe déjà, on met à jour la quantité de l'item
-        db["inventory"].update_one(
-            {"user_id": user_id, "server_id": server_id, "items.name": item["name"]},
-            {"$inc": {"items.$.quantity": 1}},
-            upsert=True  # Ajoute l'item s'il n'est pas déjà présent
-        )
-    else:
-        # Si l'inventaire n'existe pas, on le crée avec l'item
-        db["inventory"].insert_one({
-            "user_id": user_id,
-            "server_id": server_id,
-            "items": [{"name": item["name"], "description": item["description"], "quantity": 1}]
-        })
-
-    # Décrémenter le stock de l'item dans la boutique
-    db["store"].update_one(
-        {"name": item_name},
-        {"$inc": {"stock": -1}}
-    )
-
-    # Confirmer l'achat à l'utilisateur
+    # Confirmation de l'achat
     await interaction.response.send_message(
-        f"✅ Achat de **{item['name']}** réussi pour `{item_price} 💵` !",
+        f"✅ Tu as acheté **{item_name}** pour `{item_price} 💵`. Félicitations !",
         ephemeral=True
     )
-
-
 
 #-------------------------------------------------------------------------------------------------------------INVENTORY---------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------LEADERBOARD--------------------------------------------------------------------------------------------------------------------------------------
