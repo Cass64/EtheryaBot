@@ -1151,19 +1151,18 @@ async def transaction(ctx, amount: str, transaction_type="deposit", action="dép
     # Récupérer les données de l'utilisateur
     user_data = get_user_data(ctx.author.id)
 
-    # Gestion du montant
-    if amount.lower() == "all":
-        # Si le type de transaction est un dépôt, on utilise la trésorerie (cash)
-        # Si c'est un retrait, on utilise la banque (bank)
-        amount = user_data["cash"] if transaction_type == "deposit" else user_data["bank"]
-    
+# Gestion du montant
+if isinstance(amount, str) and amount.lower() == "all":
+    # Déterminer la source de l'argent
+    amount = user_data["cash"] if transaction_type == "deposit" else user_data["bank"]
+else:
     try:
-        amount = int(amount)
-    except ValueError:
-        return await ctx.send(embed=create_embed("⚠️ Erreur", "Montant invalide.", color=discord.Color.red()))
+        amount = int(amount.strip())  # Retirer les espaces et convertir en entier
+    except (ValueError, AttributeError):  # Prendre en compte les erreurs possibles
+        return await ctx.send(embed=create_embed("⚠️ Erreur", "Montant invalide. Veuillez entrer un nombre valide.", color=discord.Color.red()))
 
-    if amount <= 0:
-        return await ctx.send(embed=create_embed("⚠️ Erreur", "Montant incorrect.", color=discord.Color.red()))
+if amount <= 0:
+    return await ctx.send(embed=create_embed("⚠️ Erreur", "Le montant doit être supérieur à 0.", color=discord.Color.red()))
 
     # Vérifications supplémentaires pour les transactions
     if transaction_type == "deposit" and amount > user_data["cash"]:
