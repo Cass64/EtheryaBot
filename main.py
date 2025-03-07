@@ -1703,19 +1703,19 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
     user_id = str(interaction.user.id)
     server_id = str(interaction.guild.id)
 
-    # Vérification si l'utilisateur a un compte économique existant
+    # Récupération des données économiques de l'utilisateur
     economy_data = db["economy"].find_one({"user_id": user_id, "server_id": server_id})
 
     if not economy_data:
         return await interaction.response.send_message(
-            "Tu n'as pas de compte économique. Veuillez contacter un administrateur pour résoudre ce problème.",
+            "❌ Tu n'as pas de compte économique. Veuillez contacter un administrateur.",
             ephemeral=True
         )
 
-    # Vérification du solde de l'utilisateur
-    balance = economy_data.get("balance", 0)
+    # Vérification du solde en cash
+    cash = economy_data.get("cash", 0)
 
-    # Recherche de l'item dans la boutique
+    # Recherche de l'item dans le store
     item = db["store"].find_one({"name": item_name})
 
     if not item:
@@ -1724,21 +1724,20 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
             ephemeral=True
         )
 
-    # Vérifier si l'utilisateur a assez d'argent pour acheter l'item
-    if balance < item["price"]:
+    # Vérifier si l'utilisateur a assez d'argent en cash
+    if cash < item["price"]:
         return await interaction.response.send_message(
-            "❌ Tu n'as pas assez d'argent pour acheter cet item.",
+            f"❌ Tu n'as pas assez d'argent en **cash** pour acheter **{item['name']}**. Il coûte `{item['price']} 💵`.",
             ephemeral=True
         )
 
-    # Effectuer l'achat : retirer de l'argent et ajouter l'item à l'inventaire
-    # Mise à jour du solde utilisateur
+    # Retirer le montant du cash de l'utilisateur
     db["economy"].update_one(
         {"user_id": user_id, "server_id": server_id},
-        {"$inc": {"balance": -item["price"]}}
+        {"$inc": {"cash": -item["price"]}}
     )
 
-    # Ajout de l'item à l'inventaire de l'utilisateur
+    # Ajouter l'item à l'inventaire de l'utilisateur
     inventory = db["inventory"].find_one({"user_id": user_id, "server_id": server_id})
 
     if inventory:
@@ -1758,9 +1757,10 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
 
     # Confirmer l'achat à l'utilisateur
     return await interaction.response.send_message(
-        f"✅ Achat de {item['name']} réussi pour {item['price']} !",
+        f"✅ Achat de **{item['name']}** réussi pour `{item['price']} 💵` !",
         ephemeral=True
     )
+
 
 #-------------------------------------------------------------------------------------------------------------INVENTORY---------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------LEADERBOARD--------------------------------------------------------------------------------------------------------------------------------------
