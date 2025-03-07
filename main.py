@@ -1853,7 +1853,7 @@ async def on_message(message):
         )
         embed.add_field(
             name="⏳ .malus <membre>",
-            value="Ajoute un rôle malus à un membre pour une durée prédéfinie de 24 heures. Exemple : .malus @Utilisateur",
+            value="Ajoute un rôle malus à un membre pour une durée permanante à moins d'être guérie. Exemple : .malus @Utilisateur",
             inline=False
         )
         embed.add_field(
