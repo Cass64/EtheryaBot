@@ -64,6 +64,10 @@ async def on_ready():
     except Exception as e:
         print(f"❌ Erreur de synchronisation des commandes slash : {e}")
 
+            # Démarrer la tâche de suppression automatique des malus
+        check_malus.start()
+        print("🔄 Vérification automatique des malus activée.")
+
 #------------------------------------------------------------------------- Commandes d'économie : !!break
 
 # Liste des rôles autorisés pour exécuter les commandes de modération
@@ -103,13 +107,11 @@ async def breakk(ctx, membre: discord.Member):
         await ctx.send(f"{ctx.author.mention}, vous n'aviez pas le rôle {role_to_remove.mention}. ❌")
 
 #------------------------------------------------------------------------- Commandes d'économie : !!malus
-# Délai avant suppression (7 jours)
-DURATION = timedelta(days=7)
 @bot.command(name="malus")
 async def malus(ctx, membre: discord.Member):
     ROLE_REQUIRED = "″ [𝑺ץ] Perm Ajout Malus"
-    ROLE_TO_ADD_MALUS = "″ [𝑺ץ] Malus Temporelle"
     ROLE_TO_REMOVE_MALUS = "″ [𝑺ץ] Perm Ajout Malus"
+
     guild = ctx.guild
     role_required = discord.utils.get(guild.roles, name=ROLE_REQUIRED)
     role_to_add_malus = discord.utils.get(guild.roles, name=ROLE_TO_ADD_MALUS)
@@ -133,15 +135,13 @@ async def malus(ctx, membre: discord.Member):
     if role_to_remove_malus in ctx.author.roles:
         await ctx.author.remove_roles(role_to_remove_malus)
         await ctx.send(f"🎭 {ctx.author.mention}, votre rôle {role_to_remove_malus.mention} a été retiré.")
-    else:
-        await ctx.send(f"❌ {ctx.author.mention}, vous n'aviez pas le rôle {role_to_remove_malus.mention}.")
 
 @tasks.loop(minutes=60)  # Vérification toutes les heures
 async def check_malus():
     now = datetime.utcnow()
     expired_malus = malus_collection.find({"expiration": {"$lte": now}})
 
-    async for entry in expired_malus:
+    for entry in expired_malus:
         guild = bot.get_guild(entry["guild_id"])
         if guild:
             member = guild.get_member(entry["user_id"])
