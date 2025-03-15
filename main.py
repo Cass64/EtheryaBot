@@ -27,7 +27,7 @@ collection2 = db['etherya-eco']
 economy_collection = db['economy']
 store_collection = db['store']
 inventory_collection = db["inventory"]
-
+malus_collection = db['malus']
 # Vérification MongoDB
 try:
     client.admin.command('ping')
@@ -99,17 +99,17 @@ async def breakk(ctx, membre: discord.Member):
         await ctx.send(f"{ctx.author.mention}, vous n'aviez pas le rôle {role_to_remove.mention}. ❌")
 
 #------------------------------------------------------------------------- Commandes d'économie : !!malus
-
-# Commande classique pour "malus"
+# Délai avant suppression (7 jours)
+DURATION = timedelta(days=7)
 @bot.command(name="malus")
 async def malus(ctx, membre: discord.Member):
     ROLE_REQUIRED = "″ [𝑺ץ] Perm Ajout Malus"
     ROLE_TO_ADD_MALUS = "″ [𝑺ץ] Malus Temporelle"
     ROLE_TO_REMOVE_MALUS = "″ [𝑺ץ] Perm Ajout Malus"
-
-    role_required = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED)
-    role_to_add_malus = discord.utils.get(ctx.guild.roles, name=ROLE_TO_ADD_MALUS)
-    role_to_remove_malus = discord.utils.get(ctx.guild.roles, name=ROLE_TO_REMOVE_MALUS)
+    guild = ctx.guild
+    role_required = discord.utils.get(guild.roles, name=ROLE_REQUIRED)
+    role_to_add_malus = discord.utils.get(guild.roles, name=ROLE_TO_ADD_MALUS)
+    role_to_remove_malus = discord.utils.get(guild.roles, name=ROLE_TO_REMOVE_MALUS)
 
     if not role_required or not role_to_add_malus or not role_to_remove_malus:
         return await ctx.send("❌ L'un des rôles spécifiés n'existe pas.")
@@ -119,14 +119,35 @@ async def malus(ctx, membre: discord.Member):
 
     # Ajouter le rôle temporaire à l'utilisateur
     await membre.add_roles(role_to_add_malus)
-    await ctx.send(f"Le rôle {role_to_add_malus.mention} a été ajouté. 🎉") 
+    await ctx.send(f"🎉 {membre.mention} a reçu le rôle {role_to_add_malus.mention} pour 7 jours.")
+
+    # Sauvegarde dans MongoDB
+    expiration_time = datetime.utcnow() + DURATION
+    malus_collection.insert_one({"user_id": membre.id, "guild_id": guild.id, "expiration": expiration_time})
 
     # Retirer le rôle à l'exécutant
     if role_to_remove_malus in ctx.author.roles:
         await ctx.author.remove_roles(role_to_remove_malus)
-        await ctx.send(f"Le rôle {role_to_remove_malus.mention} a été retiré. 🎭")
+        await ctx.send(f"🎭 {ctx.author.mention}, votre rôle {role_to_remove_malus.mention} a été retiré.")
     else:
-        await ctx.send(f"{ctx.author.mention}, vous n'aviez pas le rôle {role_to_remove_malus.mention}. ❌")
+        await ctx.send(f"❌ {ctx.author.mention}, vous n'aviez pas le rôle {role_to_remove_malus.mention}.")
+
+@tasks.loop(minutes=60)  # Vérification toutes les heures
+async def check_malus():
+    now = datetime.utcnow()
+    expired_malus = malus_collection.find({"expiration": {"$lte": now}})
+
+    async for entry in expired_malus:
+        guild = bot.get_guild(entry["guild_id"])
+        if guild:
+            member = guild.get_member(entry["user_id"])
+            role = discord.utils.get(guild.roles, name=ROLE_TO_ADD_MALUS)
+            if member and role in member.roles:
+                await member.remove_roles(role)
+                print(f"⏳ Rôle supprimé pour {member.name}")
+
+        # Supprimer de la base de données
+        malus_collection.delete_one({"_id": entry["_id"]})
 #------------------------------------------------------------------------- Commandes d'économie : !!annihilation
 
 @bot.command(name="annihilation")
