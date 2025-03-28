@@ -161,7 +161,7 @@ async def annihilation(ctx, membre: discord.Member):
     """
     ROLE_REQUIRED = "″ [𝑺ץ] Perm Crystal D'anéantissement"  # Rôle requis pour exécuter la commande
     ROLE_TO_ADD = "″ [𝑺ץ] Cible D'anéantissement"  # Rôle à ajouter à la cible
-    CHANNEL_ID = 1341844144032714833  # Salon spécial pour l'annonce
+    CHANNEL_ID = 1355158005079081112  # Salon spécial pour l'annonce
     ROLE_PING_ID = 792755123587645461  # ID à ping
 
     # Récupération des rôles et du salon
@@ -508,7 +508,7 @@ class EmbedSecondImageModal(discord.ui.Modal):
 @bot.tree.command(name="embed", description="Créer un embed personnalisé")
 async def embed_builder(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
-    role_id = 1170326040485318686  # ID du rôle requis
+    role_id = 1287445477364727930  # ID du rôle requis
     if not any(role.id == role_id for role in interaction.user.roles):
         return await interaction.response.send_message("❌ Vous n'avez pas la permission d'utiliser cette commande.", ephemeral=True)
 
@@ -559,7 +559,7 @@ async def frags(interaction: discord.Interaction, user: discord.Member):
     await interaction.response.send_message(f"✅ {user.mention} a reçu le rôle `{FRAG_ROLE}` pour 24 heures.", ephemeral=True)
 
     # Envoi de l'embed dans le salon staff
-    CHANNEL_ID = 1341671012109914173
+    CHANNEL_ID = 1355158067360043220
     salon_staff = interaction.guild.get_channel(CHANNEL_ID)
     if salon_staff:
         embed = discord.Embed(title="Vente Frags Quotidien", color=discord.Color.blue())
@@ -630,7 +630,7 @@ async def pret50k(ctx, membre: discord.Member):
 
 async def enregistrer_pret(ctx, membre, montant, montant_rendu, duree):
     """Enregistre un prêt avec détails et envoie un message dans le salon staff."""
-    CHANNEL_ID = 1340674704964583455  # Remplacez par l'ID du salon staff
+    CHANNEL_ID = 1355157892675797123  # Remplacez par l'ID du salon staff
     salon_staff = bot.get_channel(CHANNEL_ID)
 
     if not salon_staff:
@@ -655,7 +655,7 @@ async def enregistrer_pret(ctx, membre, montant, montant_rendu, duree):
 @bot.command(name="terminer")
 async def terminer(ctx, membre: discord.Member):
     """Marque un prêt comme 'Payé' si l'utilisateur avait un prêt en cours."""
-    CHANNEL_ID = 1340674704964583455  # ID du salon staff
+    CHANNEL_ID = 1355158054517346535  # ID du salon staff
     salon_staff = bot.get_channel(CHANNEL_ID)
 
     if not salon_staff:
@@ -717,7 +717,7 @@ async def pret(interaction: discord.Interaction, membre: discord.Member, montant
 
 async def enregistrer_pret(interaction: discord.Interaction, membre: discord.Member, montant: int, montant_à_rendre: int, duree: str, methode: str):
     """Enregistre un prêt avec détails et envoie un message dans le salon staff."""
-    CHANNEL_ID = 1340674704964583455  # ID du salon staff
+    CHANNEL_ID = 1355157892675797123  # ID du salon staff
     salon_staff = interaction.guild.get_channel(CHANNEL_ID)
 
     if not salon_staff:
@@ -752,7 +752,7 @@ async def pretpayer(interaction: discord.Interaction, membre: discord.Member):
         await interaction.response.send_message("❌ Tu n'as pas le rôle requis pour utiliser cette commande.", ephemeral=True)
         return
 
-    CHANNEL_ID = 1340674730683924593  # ID du salon staff
+    CHANNEL_ID = 1355158054517346535 # ID du salon staff
     salon_staff = interaction.guild.get_channel(CHANNEL_ID)
 
     if not salon_staff:
@@ -817,8 +817,8 @@ async def investir_livret(interaction: discord.Interaction, montant: int):
     )
 
     # ID du salon et du rôle à ping
-    CHANNEL_ID = 1343687225790959647  # Remplace par l'ID du salon
-    ROLE_ID = 1341494709184368734  # Remplace par l'ID du rôle 
+    CHANNEL_ID = 1355233979321680013  # Remplace par l'ID du salon
+    ROLE_ID = 1355157647074005154  # Remplace par l'ID du rôle 
     salon = interaction.guild.get_channel(CHANNEL_ID)
     role_ping = f"<@&{ROLE_ID}>"  # Ping du rôle
 
@@ -888,8 +888,8 @@ async def retirer_livret(interaction: discord.Interaction, montant: int = None):
     )
 
     # ID du salon et du rôle 
-    CHANNEL_ID =  1343674317053104349 # Remplace par l'ID du salon
-    ROLE_ID = 1341494709184368734  # Remplace par l'ID du rôle
+    CHANNEL_ID =  1355233955875393554 # Remplace par l'ID du salon
+    ROLE_ID = 1355157647074005154  # Remplace par l'ID du rôle
     salon = interaction.guild.get_channel(CHANNEL_ID)
     role_ping = f"<@&{ROLE_ID}>"  # Ping du rôle
 
