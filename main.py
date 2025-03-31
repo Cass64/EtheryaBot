@@ -935,7 +935,7 @@ from discord.utils import get
 # Définition des rôles et du cooldown
 PERM_CONSTRUCTION_ROLE = "″ [𝑺ץ] Perm Construction"
 ENTREPRENEUR_ROLE = "″ [𝑺ץ] Entrepreneur"
-ANNOUNCE_CHANNEL_ID = 1343698434653159424  # ID du salon d'annonce
+ANNOUNCE_CHANNEL_ID = 1355534306436452545  # ID du salon d'annonce
 STAFF_USER_ID = 821371075048767498
 COOLDOWN_TIME = timedelta(hours=12)
 
