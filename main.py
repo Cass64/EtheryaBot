@@ -9,13 +9,13 @@ import json
 import asyncio
 import pymongo
 from pymongo import MongoClient
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 import math
 import aiocron
 import logging
 import re
 from discord.ext import tasks
+
 load_dotenv()
 
 # Connexion MongoDB
@@ -28,6 +28,7 @@ economy_collection = db['economy']
 store_collection = db['store']
 inventory_collection = db["inventory"]
 malus_collection = db['malus']
+
 # Vérification MongoDB
 try:
     client.admin.command('ping')
@@ -35,8 +36,6 @@ try:
 except Exception as e:
     print(f"❌ Échec de connexion à MongoDB : {e}")
     exit()
-
-cooldowns = {}
 
 token = os.getenv('TOKEN_BOT_DISCORD')
 
@@ -47,7 +46,6 @@ bot = commands.Bot(command_prefix=".", intents=intents)
 @bot.event
 async def on_ready():
     print(f"✅ Le bot est connecté en tant que {bot.user} (ID: {bot.user.id})")
-
     game = discord.Game("Etherya")
     await bot.change_presence(status=discord.Status.online, activity=game)
     print(f'{bot.user} est connecté !')
@@ -64,23 +62,18 @@ async def on_ready():
     except Exception as e:
         print(f"❌ Erreur de synchronisation des commandes slash : {e}")
 
-            # Démarrer la tâche de suppression automatique des malus
-        check_malus.start()
-        print("🔄 Vérification automatique des malus activée.")
+    # Démarrer la tâche de suppression automatique des malus
+    check_malus.start()
+    print("🔄 Vérification automatique des malus activée.")
 
 #------------------------------------------------------------------------- Commandes d'économie : !!break
 
-# Liste des rôles autorisés pour exécuter les commandes de modération
-AUTHORIZED_ROLES = ["″ [𝑺ץ] Perm Protect !!rob"]
-
 @bot.command(name="break")
 async def breakk(ctx, membre: discord.Member):
-    """Ajoute un rôle fixe à un utilisateur et retire un autre rôle fixe à l'exécutant.
-       Seuls ceux ayant '[𝑺ץ] Perm Anti Protect' peuvent utiliser cette commande.
-    """
+    """Ajoute un rôle fixe à un utilisateur et retire un autre rôle fixe à l'exécutant."""
     ROLE_REQUIRED = "″ [𝑺ץ] Perm Protect !!rob"  # Rôle requis pour exécuter la commande
-    ROLE_TO_REMOVE_BREAK = "″ [𝑺ץ] Protect !!rob"       # Rôle à ajouter au membre ciblé
-    ROLE_TO_REMOVE = "″ [𝑺ץ] Perm Protect !!rob"     # Rôle à retirer à l'exécutant
+    ROLE_TO_REMOVE_BREAK = "″ [𝑺ץ] Protect !!rob"  # Rôle à ajouter au membre ciblé
+    ROLE_TO_REMOVE = "″ [𝑺ץ] Perm Protect !!rob"  # Rôle à retirer à l'exécutant
 
     role_required = discord.utils.get(ctx.guild.roles, name=ROLE_REQUIRED)
     role_to_remove_break = discord.utils.get(ctx.guild.roles, name=ROLE_TO_REMOVE_BREAK)
@@ -94,23 +87,24 @@ async def breakk(ctx, membre: discord.Member):
 
     # Vérifie si le membre a le rôle avant de le retirer
     if role_to_remove_break not in membre.roles:
-        await ctx.send(f"{membre.mention} n'a pas le rôle {role_to_remove_break.mention}. <:haram:1176229029796380702>")
+        await ctx.send(f"{membre.mention} n'a pas le rôle {role_to_remove_break.mention}.")
     else:
         await membre.remove_roles(role_to_remove_break)
-        await ctx.send(f"Le rôle {role_to_remove_break.mention} a été enlevé. <a:fete:1172810362261880873>")
+        await ctx.send(f"Le rôle {role_to_remove_break.mention} a été enlevé.")
 
     # Retirer le rôle à l'exécutant
     if role_to_remove in ctx.author.roles:
         await ctx.author.remove_roles(role_to_remove)
-        await ctx.send(f"Le rôle {role_to_remove.mention} vous a été retiré. <a:emoji:1341500461475168369>")
+        await ctx.send(f"Le rôle {role_to_remove.mention} vous a été retiré.")
     else:
-        await ctx.send(f"{ctx.author.mention}, vous n'aviez pas le rôle {role_to_remove.mention}. ❌")
+        await ctx.send(f"{ctx.author.mention}, vous n'aviez pas le rôle {role_to_remove.mention}.")
 
 #------------------------------------------------------------------------- Commandes d'économie : !!malus
 @bot.command(name="malus")
 async def malus(ctx, membre: discord.Member):
     ROLE_REQUIRED = "″ [𝑺ץ] Perm Ajout Malus"
-    ROLE_TO_REMOVE_MALUS = "″ [𝑺ץ] Perm Ajout Malus"
+    ROLE_TO_ADD_MALUS = "″ [𝑺ץ] Malus"  # Rôle à ajouter
+    ROLE_TO_REMOVE_MALUS = "″ [𝑺ץ] Perm Ajout Malus"  # Rôle à retirer
 
     guild = ctx.guild
     role_required = discord.utils.get(guild.roles, name=ROLE_REQUIRED)
@@ -128,7 +122,7 @@ async def malus(ctx, membre: discord.Member):
     await ctx.send(f"🎉 {membre.mention} a reçu le rôle {role_to_add_malus.mention} pour 7 jours.")
 
     # Sauvegarde dans MongoDB
-    expiration_time = datetime.utcnow() + DURATION
+    expiration_time = datetime.utcnow() + timedelta(days=7)  # Exemple de durée de 7 jours
     malus_collection.insert_one({"user_id": membre.id, "guild_id": guild.id, "expiration": expiration_time})
 
     # Retirer le rôle à l'exécutant
@@ -145,20 +139,19 @@ async def check_malus():
         guild = bot.get_guild(entry["guild_id"])
         if guild:
             member = guild.get_member(entry["user_id"])
-            role = discord.utils.get(guild.roles, name=ROLE_TO_ADD_MALUS)
+            role = discord.utils.get(guild.roles, name="″ [𝑺ץ] Malus")  # Rôle à retirer
             if member and role in member.roles:
                 await member.remove_roles(role)
                 print(f"⏳ Rôle supprimé pour {member.name}")
 
         # Supprimer de la base de données
         malus_collection.delete_one({"_id": entry["_id"]})
+
 #------------------------------------------------------------------------- Commandes d'économie : !!annihilation
 
 @bot.command(name="annihilation")
 async def annihilation(ctx, membre: discord.Member):
-    """Ajoute le rôle 'Cible D'anéantissement' à un utilisateur si l'exécutant a le rôle 'Perm Crystal D'anéantissement'.
-       Un embed est envoyé dans un salon spécifique (avec un ping) et l'exécutant perd son rôle 'Perm Crystal D'anéantissement'.
-    """
+    """Ajoute le rôle 'Cible D'anéantissement' à un utilisateur si l'exécutant a le rôle 'Perm Crystal D'anéantissement'."""
     ROLE_REQUIRED = "″ [𝑺ץ] Perm Crystal D'anéantissement"  # Rôle requis pour exécuter la commande
     ROLE_TO_ADD = "″ [𝑺ץ] Cible D'anéantissement"  # Rôle à ajouter à la cible
     CHANNEL_ID = 1355158005079081112  # Salon spécial pour l'annonce
@@ -197,14 +190,12 @@ async def annihilation(ctx, membre: discord.Member):
 
     # Confirmation dans le canal d'exécution de la commande
     await ctx.send(f"✅ {membre.mention} a été ciblé par un anéantissement. Le rôle {role_to_add.mention} a été attribué.")
+
 #------------------------------------------------------------------------- Commandes d'économie : !!gravity
 
 @bot.command(name="gravity")
 async def gravity(ctx, membre: discord.Member):
-    """Ajoute le rôle '″ [𝑺ץ] Gravité Forte' à un utilisateur, retire le rôle '″ [𝑺ץ] Perm Gravité Forte' de l'exécutant,
-       et envoie un message confirmant l'opération.
-       Seuls ceux ayant le rôle '″ [𝑺ץ] Perm Gravité Forte' peuvent utiliser cette commande.
-    """
+    """Ajoute le rôle '″ [𝑺ץ] Gravité Forte' à un utilisateur, retire le rôle '″ [𝑺ץ] Perm Gravité Forte' de l'exécutant."""
     ROLE_REQUIRED = "″ [𝑺ץ] Perm Gravité Forte"  # Rôle requis pour exécuter la commande
     ROLE_TO_ADD = "″ [𝑺ץ] Gravité Forte"  # Rôle à ajouter
     ROLE_TO_REMOVE = "″ [𝑺ץ] Perm Gravité Forte"  # Rôle à retirer à l'exécutant
@@ -221,22 +212,20 @@ async def gravity(ctx, membre: discord.Member):
 
     # Ajouter le rôle à la cible
     await membre.add_roles(role_to_add)
-    await ctx.send(f"Le rôle {role_to_add.mention} a été ajouté à {membre.mention}. 🌌")
+    await ctx.send(f"Le rôle {role_to_add.mention} a été ajouté à {membre.mention}.")
 
     # Retirer le rôle à l'exécutant
     if role_to_remove in ctx.author.roles:
         await ctx.author.remove_roles(role_to_remove)
-        await ctx.send(f"Le rôle {role_to_remove.mention} vous a été retiré. ❌")
+        await ctx.send(f"Le rôle {role_to_remove.mention} vous a été retiré.")
     else:
-        await ctx.send(f"{ctx.author.mention}, vous n'aviez pas le rôle {role_to_remove.mention}. ❌")
+        await ctx.send(f"{ctx.author.mention}, vous n'aviez pas le rôle {role_to_remove.mention}.")
 
 #------------------------------------------------------------------------- Commandes d'économie : !!spatial
 
 @bot.command(name="spatial")
 async def spatial(ctx):
-    """Ajoute temporairement le rôle '[𝑺ץ] Spatial' si l'utilisateur a '[𝑺ץ] Perm Spatial',
-       et applique un cooldown de 24 heures. L'heure de la dernière utilisation est enregistrée dans la base de données MongoDB.
-    """
+    """Ajoute temporairement le rôle '[𝑺ץ] Spatial' si l'utilisateur a '[𝑺ץ] Perm Spatial'."""
     ROLE_REQUIRED = "″ [𝑺ץ] Perm Spatial"  # Rôle requis pour exécuter la commande
     ROLE_TO_ADD = "″ [𝑺ץ] Spatial"  # Rôle à ajouter temporairement
     COOLDOWN_DURATION = 86400  # 24 heures en secondes
@@ -259,7 +248,7 @@ async def spatial(ctx):
     else:
         last_used = 0
 
-    now = datetime.datetime.utcnow().timestamp()
+    now = datetime.utcnow().timestamp()
 
     # Vérifier si l'utilisateur est en cooldown
     if now - last_used < COOLDOWN_DURATION:
@@ -268,7 +257,7 @@ async def spatial(ctx):
 
     # Ajouter le rôle temporaire
     await ctx.author.add_roles(role_to_add)
-    await ctx.send(f"Le rôle {role_to_add.mention} vous a été attribué pour 1 heure. 🚀")
+    await ctx.send(f"Le rôle {role_to_add.mention} vous a été attribué pour 1 heure.")
 
     # Mettre à jour l'heure de la dernière utilisation dans la base de données
     collection.update_one({"user_id": ctx.author.id}, {"$set": {"last_used": now}}, upsert=True)
@@ -276,7 +265,7 @@ async def spatial(ctx):
     # Supprimer le rôle après 1 heure
     await asyncio.sleep(TEMP_ROLE_DURATION)
     await ctx.author.remove_roles(role_to_add)
-    await ctx.send(f"Le rôle {role_to_add.mention} vous a été retiré après 1 heure. ⏳")
+    await ctx.send(f"Le rôle {role_to_add.mention} vous a été retiré après 1 heure.")
 
 #------------------------------------------------------------------------- Commandes d'économie : !!heal
 
@@ -313,16 +302,16 @@ async def heal(ctx):
 
     if len(roles_removed) == 2:
         embed.title = "✨ Guérison Complète"
-        embed.description = f"{ctx.author.mention}, vous avez été totalement purgé de vos blessures et malédictions ! Plus rien ne vous entrave. 🏥"
+        embed.description = f"{ctx.author.mention}, vous avez été totalement purgé de vos blessures et malédictions ! Plus rien ne vous entrave."
         embed.add_field(name="Rôles retirés", value=", ".join(roles_removed), inline=False)
 
     elif len(roles_removed) == 1:
         embed.title = "🌿 Guérison Partielle"
-        embed.description = f"{ctx.author.mention}, vous avez été guéri de **{roles_removed[0]}** ! Encore un petit effort pour être totalement rétabli. 💊"
+        embed.description = f"{ctx.author.mention}, vous avez été guéri de **{roles_removed[0]}** ! Encore un petit effort pour être totalement rétabli."
 
     else:
         embed.title = "😂 Tentative de guérison échouée"
-        embed.description = f"{ctx.author.mention}, tu essaies de te soigner alors que tu n'as rien ? T'es un clown !? 🤡"
+        embed.description = f"{ctx.author.mention}, tu essaies de te soigner alors que tu n'as rien ? T'es un clown !?"
 
     await ctx.send(embed=embed)
 
@@ -335,13 +324,12 @@ async def heal(ctx):
         color=discord.Color.red()
     )
     await ctx.send(embed=embed_removal)
+
 #------------------------------------------------------------------------- Commandes d'économie : !!protect
 
 @bot.command(name="protect")
 async def protect(ctx):
-    """Ajoute temporairement le rôle '[𝑺ץ] Protect !!rob' si l'utilisateur a '[𝑺ץ] Perm Protect !!rob',
-       et applique un cooldown de 48 heures.
-    """
+    """Ajoute temporairement le rôle '[𝑺ץ] Protect !!rob' si l'utilisateur a '[𝑺ץ] Perm Protect !!rob'."""
     ROLE_REQUIRED = "″ [𝑺ץ] Perm Protect !!rob"  # Rôle requis pour exécuter la commande
     ROLE_TO_ADD = "″ [𝑺ץ] Protect !!rob"  # Rôle à ajouter temporairement
     COOLDOWN_DURATION = 172800  # 48 heures en secondes
@@ -356,7 +344,7 @@ async def protect(ctx):
     if role_required not in ctx.author.roles:
         return await ctx.send("❌ Vous n'avez pas la permission d'utiliser cette commande.")
 
-    now = datetime.datetime.utcnow().timestamp()
+    now = datetime.utcnow().timestamp()
 
     # Vérifier si l'utilisateur est en cooldown dans la base de données
     user_data = collection.find_one({"user_id": ctx.author.id})
@@ -373,7 +361,7 @@ async def protect(ctx):
 
     # Ajouter le rôle temporaire
     await ctx.author.add_roles(role_to_add)
-    await ctx.send(f"Le rôle {role_to_add.mention} vous a été attribué pour 2 jours. 🚀")
+    await ctx.send(f"Le rôle {role_to_add.mention} vous a été attribué pour 2 jours.")
 
     # Mettre à jour l'heure d'utilisation dans la base de données
     collection.update_one({"user_id": ctx.author.id}, {"$set": {"last_used": now}}, upsert=True)
@@ -381,7 +369,7 @@ async def protect(ctx):
     # Supprimer le rôle après 48 heures
     await asyncio.sleep(TEMP_ROLE_DURATION)
     await ctx.author.remove_roles(role_to_add)
-    await ctx.send(f"Le rôle {role_to_add.mention} vous a été retiré après 2 jours. ⏳")
+    await ctx.send(f"Le rôle {role_to_add.mention} vous a été retiré après 2 jours.")
 
 #------------------------------------------------------------------------- Commandes d'économie : /embed
 
@@ -527,84 +515,10 @@ async def on_message(message):
                 await message.channel.send(embed=embed)
     await bot.process_commands(message)
 
-#------------------------------------------------------------------------- Commandes classiques pour les prêt 
-
-
-#------------------------------------------------------------------------- Commandes /frags
-
-@bot.tree.command(name="frags")
-async def frags(interaction: discord.Interaction, user: discord.Member):
-    """Ajoute le rôle Frags Quotidien à un utilisateur pour 24 heures et enregistre l'expiration en base de données."""
-    if not any(role.name == GF_REQUIRED_ROLE for role in interaction.user.roles):
-        await interaction.response.send_message("❌ Tu n'as pas le rôle requis pour utiliser cette commande.", ephemeral=True)
-        return
-
-    FRAG_ROLE = "″ [𝑺ץ] Frags Quotidien"
-    frag_role = discord.utils.get(interaction.guild.roles, name=FRAG_ROLE)
-
-    if not frag_role:
-        await interaction.response.send_message(f"❌ Le rôle `{FRAG_ROLE}` n'existe pas sur ce serveur.", ephemeral=True)
-        return
-
-    await user.add_roles(frag_role)
-    expiration_time = datetime.utcnow() + timedelta(hours=24)
-
-    # Enregistrer l'expiration en base de données
-    collection.update_one(
-        {"user_id": user.id},
-        {"$set": {"expires_at": expiration_time}},
-        upsert=True
-    )
-
-    await interaction.response.send_message(f"✅ {user.mention} a reçu le rôle `{FRAG_ROLE}` pour 24 heures.", ephemeral=True)
-
-    # Envoi de l'embed dans le salon staff
-    CHANNEL_ID = 1355158067360043220
-    salon_staff = interaction.guild.get_channel(CHANNEL_ID)
-    if salon_staff:
-        embed = discord.Embed(title="Vente Frags Quotidien", color=discord.Color.blue())
-        embed.add_field(name="Acheteur", value=interaction.user.mention, inline=True)
-        embed.add_field(name="Vendeur", value=user.mention, inline=True)
-        embed.set_footer(text="Frags vendus via la commande /frags")
-        await salon_staff.send(embed=embed)
-
-#------------------------------------------------------------------------- Commandes frags-time
-
-@bot.tree.command(name="frags_time")
-async def frags_timeleft(interaction: discord.Interaction, user: discord.Member):
-    """Affiche le temps restant avant que le rôle Frags Quotidien soit retiré."""
-    record = collection.find_one({"user_id": user.id})
-    
-    if not record or "expires_at" not in record:
-        await interaction.response.send_message(f"❌ {user.mention} n'a pas de rôle Frags Quotidien actif.", ephemeral=True)
-        return
-
-    expiration = record["expires_at"]
-    time_left = expiration - datetime.utcnow()
-
-    if time_left.total_seconds() <= 0:
-        await interaction.response.send_message(f"❌ {user.mention} n'a plus le rôle Frags Quotidien.", ephemeral=True)
-        return
-
-    hours, remainder = divmod(int(time_left.total_seconds()), 3600)
-    minutes, _ = divmod(remainder, 60)
-
-    embed = discord.Embed(
-        title="⏳ Temps restant pour Frags Quotidien",
-        description=f"{user.mention} perdra son rôle dans **{hours}h {minutes}m**.",
-        color=discord.Color.green()
-    )
-    embed.set_footer(text="Ce rôle est temporaire, il sera retiré après 24 heures.")
-    await interaction.response.send_message(embed=embed)
-
-#------------------------------------------------------------------------- Commandes /pret
-
+#------------------------------------------------------------------------- Commandes classiques pour les prêts 
 
 # Rôle requis pour certaines commandes
 GF_REQUIRED_ROLE = "″ [𝑺ץ] Gestion & Finance Team"
-
-# Dictionnaire pour stocker les prêts en cours (persistant dans MongoDB)
-prets_en_cours = {}
 
 # Commandes classiques avec préfixe qui nécessitent le rôle
 @bot.command(name="pret10k")
@@ -646,8 +560,7 @@ async def enregistrer_pret(ctx, membre, montant, montant_rendu, duree):
     embed.set_footer(text=f"Prêt enregistré par {ctx.author.display_name}")
 
     # Sauvegarde du prêt dans MongoDB
-    prets_en_cours[membre.id] = {"montant": montant, "montant_rendu": montant_rendu, "statut": "En Cours"}
-    collection.update_one({"user_id": membre.id}, {"$set": {"pret": prets_en_cours[membre.id]}}, upsert=True)
+    collection.update_one({"user_id": membre.id}, {"$set": {"pret": {"montant": montant, "montant_rendu": montant_rendu, "statut": "En Cours"}}}, upsert=True)
 
     await salon_staff.send(embed=embed)
     await ctx.send(f"✅ Prêt de {montant:,} crédits accordé à {membre.mention}. Détails envoyés aux staff.")
@@ -809,8 +722,7 @@ async def investir_livret(interaction: discord.Interaction, montant: int):
 
     ancien_montant = user_data["livretA"] if user_data and "livretA" in user_data else 0
     nouveau_montant = ancien_montant + montant
-
-    collection.update_one(
+        collection.update_one(
         {"user_id": user_id},
         {"$set": {"livretA": nouveau_montant}},
         upsert=True
@@ -831,7 +743,6 @@ async def investir_livret(interaction: discord.Interaction, montant: int):
     if salon:
         await salon.send(content=role_ping, embed=embed)
     
-    # Utiliser `followup.send()` car `response.send_message()` ne peut plus être utilisé
     await interaction.followup.send(
         f"✅ Tu as investi **{montant}** 💰 dans ton Livret A ! (Total: {nouveau_montant} 💰) "
         f"💡 Cela peut prendre quelques heures avant que l'argent soit ajouté à ton livret.",
@@ -903,7 +814,7 @@ async def retirer_livret(interaction: discord.Interaction, montant: int = None):
     if salon:
         await salon.send(content=role_ping, embed=embed)
     
-    await interaction.response.send_message(f"✅ Tu as demandé à retirer **{montant}** 💰 de ton Livret A ! Cela peut prendre quelques heure avant que ton argent te soit ajouter à ton compte.", ephemeral=True)
+    await interaction.response.send_message(f"✅ Tu as demandé à retirer **{montant}** 💰 de ton Livret A ! Cela peut prendre quelques heures avant que ton argent te soit ajouté à ton compte.", ephemeral=True)
 
 #---------------------------------------------------------------
 
@@ -925,13 +836,6 @@ async def ajouter_interets():
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-from datetime import datetime, timedelta
-import discord
-import random
-from discord import app_commands
-from discord.ext import commands
-from discord.utils import get
-
 # Définition des rôles et du cooldown
 PERM_CONSTRUCTION_ROLE = "″ [𝑺ץ] Perm Construction"
 ENTREPRENEUR_ROLE = "″ [𝑺ץ] Entrepreneur"
@@ -939,7 +843,6 @@ ANNOUNCE_CHANNEL_ID = 1355534306436452545  # ID du salon d'annonce
 STAFF_USER_ID = 821371075048767498
 COOLDOWN_TIME = timedelta(hours=12)
 
-#------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Commande pour construire une entreprise
 @bot.tree.command(name="constructionentreprise", description="Construire une entreprise")
 @app_commands.describe(nom="Choisissez le nom de votre entreprise")
@@ -947,7 +850,7 @@ async def construction_entreprise(interaction: discord.Interaction, nom: str):
     user = interaction.user
     guild = interaction.guild
 
-    role = get(guild.roles, name=PERM_CONSTRUCTION_ROLE)
+    role = discord.utils.get(guild.roles, name=PERM_CONSTRUCTION_ROLE)
 
     if not role or role not in user.roles:
         return await interaction.response.send_message(
@@ -962,7 +865,7 @@ async def construction_entreprise(interaction: discord.Interaction, nom: str):
         )
 
     # Donne le rôle "Entrepreneur" à l'utilisateur
-    entrepreneur_role = get(guild.roles, name=ENTREPRENEUR_ROLE)
+    entrepreneur_role = discord.utils.get(guild.roles, name=ENTREPRENEUR_ROLE)
     if entrepreneur_role:
         await user.add_roles(entrepreneur_role)
 
@@ -991,14 +894,13 @@ async def construction_entreprise(interaction: discord.Interaction, nom: str):
 
     await interaction.response.send_message(embed=embed_user, ephemeral=True)
 
-#------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Commande pour collecter les revenus de l'entreprise
 @bot.tree.command(name="collectentreprise", description="Collecter les revenus de votre entreprise")
 async def collect_entreprise(interaction: discord.Interaction):
     user = interaction.user
     guild = interaction.guild
 
-    role = get(guild.roles, name=ENTREPRENEUR_ROLE)
+    role = discord.utils.get(guild.roles, name=ENTREPRENEUR_ROLE)
 
     if not role or role not in user.roles:
         return await interaction.response.send_message(
@@ -1057,14 +959,13 @@ async def collect_entreprise(interaction: discord.Interaction):
         embed_announce.set_footer(text="Surveillez les paiements.")
         await announce_channel.send(embed=embed_announce)
 
-#------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Commande pour quitter l'entreprise
 @bot.tree.command(name="quitterentreprise", description="Quitter ou supprimer votre entreprise")
 async def quitter_entreprise(interaction: discord.Interaction):
     user = interaction.user
     guild = interaction.guild
 
-    role = get(guild.roles, name=ENTREPRENEUR_ROLE)
+    role = discord.utils.get(guild.roles, name=ENTREPRENEUR_ROLE)
 
     if not role or role not in user.roles:
         return await interaction.response.send_message(
@@ -1114,11 +1015,8 @@ async def calcul(interaction: discord.Interaction, nombre: float, pourcentage: f
     )
 
     await interaction.followup.send(embed=embed)
-    
-#------------------------------------------------------------------------- ECONOMIEW ------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE-------
-#------------------------------------------------------------------------- ECONOMIEW ------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE-------
-#------------------------------------------------------------------------- ECONOMIEW ------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE-------
-#------------------------------------------------------------------------- ECONOMIEW ------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE------------------------------------------------------------------------- ECONOMIE-------
+
+#------------------------------------------------------------------------- ECONOMIE ------------------------------------------------------------------------- 
 
 # Logger pour les erreurs
 logging.basicConfig(level=logging.INFO)
@@ -1145,6 +1043,7 @@ async def get_user_data(user_id):
         user_data = {"user_id": str(user_id), "cash": 0, "bank": 0, "total": 0, "last_claim": None, "inventory": []}
         await economy_collection.insert_one(user_data)
     return user_data
+
 # Fonction pour sauvegarder les données de l'utilisateur
 def save_user_data(user_id, user_data):
     economy_collection.update_one({"user_id": str(user_id)}, {"$set": user_data})
@@ -1158,7 +1057,7 @@ async def check_user_role_and_balance(ctx, amount):
     if not has_required_roles(ctx.author):
         return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir les rôles '{ROLE_NEEDED}' et '{ROLE_SECOND}' pour utiliser cette commande.", color=discord.Color.red()))
     
-    user_data = get_user_data(ctx.author.id)
+    user_data = await get_user_data(ctx.author.id)
     if amount > user_data["cash"]:
         return await ctx.send(embed=create_embed("⚠️ Erreur", f"Vous n'avez pas assez d'argent 💵.", color=discord.Color.red()))
     
@@ -1167,20 +1066,20 @@ async def check_user_role_and_balance(ctx, amount):
 # Commande pour afficher la balance
 @bot.command(name="balance")
 async def balance(ctx, user: discord.Member = None):
-    if not check_role(ctx, ROLE_NEEDED):
-        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande.", color=discord.Color.red()))
+    if not has_required_roles(ctx.author):
+        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir les rôles '{ROLE_NEEDED}' pour utiliser cette commande.", color=discord.Color.red()))
 
     user = user or ctx.author  # Si aucun utilisateur spécifié, utiliser l'auteur de la commande
-    user_data = get_user_data(user.id)
+    user_data = await get_user_data(user.id)
     embed = create_embed("💰 Balance", f"**{user.mention}**\n💵 **Cash**: `{user_data['cash']}`\n🏦 **Banque**: `{user_data['bank']}`\n💰 **Total**: `{user_data['total']}`", color=discord.Color.blue())
     await ctx.send(embed=embed)
 
 @bot.command(name="work")
 async def work(ctx):
-    if not check_role(ctx, ROLE_NEEDED):
-        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande.", color=discord.Color.red()))
+    if not has_required_roles(ctx.author):
+        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir les rôles '{ROLE_NEEDED}' pour utiliser cette commande.", color=discord.Color.red()))
 
-    user_data = get_user_data(ctx.author.id)
+    user_data = await get_user_data(ctx.author.id)
     cooldown_duration = 1800  # 30 minutes en secondes
     now = int(datetime.utcnow().timestamp())
 
@@ -1265,7 +1164,7 @@ async def withdraw(ctx, amount: str):
 @bot.command(name="store")
 async def store(ctx):
     # Vérification du rôle requis pour accéder à la commande
-    if not check_role(ctx, ROLE_NEEDED):
+    if not has_required_roles(ctx.author):
         return await ctx.send(embed=create_embed("⚠️ Accès refusé", 
                                                   f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande.", 
                                                   color=discord.Color.red()))
@@ -1430,8 +1329,6 @@ async def inventory(interaction: discord.Interaction, member: discord.Member = N
 
     await interaction.followup.send(embed=embed)
 
-
-
 # Commande pour réduire le stock d'un item sans le supprimer
 @bot.tree.command(name="decrease-store", description="Réduit le stock d'un item dans le store sans le supprimer.")
 @app_commands.checks.has_role(ROLE_NEEDED)
@@ -1485,7 +1382,7 @@ async def add_money(interaction: discord.Interaction, user: discord.Member, amou
         )
 
     # Récupère les données de l'utilisateur
-    user_data = get_user_data(user.id)
+    user_data = await get_user_data(user.id)
 
     # Ajoute de l'argent à l'utilisateur
     user_data["cash"] += amount
@@ -1516,7 +1413,7 @@ async def remove_money(interaction: discord.Interaction, user: discord.Member, a
         )
 
     # Récupère les données de l'utilisateur
-    user_data = get_user_data(user.id)
+    user_data = await get_user_data(user.id)
 
     # Vérifie si l'utilisateur a assez d'argent
     if user_data["cash"] < amount:
@@ -1608,7 +1505,7 @@ async def clear_inventory(interaction: discord.Interaction, user: discord.User):
     await interaction.response.defer()
 
     # Récupération des données de l'utilisateur
-    user_data = get_user_data(user.id)
+    user_data = await get_user_data(user.id)
 
     # Vérification si l'utilisateur a un inventaire
     if not user_data or not user_data.get("inventory"):
@@ -1631,7 +1528,6 @@ async def clear_inventory(interaction: discord.Interaction, user: discord.User):
 
     # Envoi du message de confirmation
     await interaction.followup.send(embed=embed)
-
 
 @bot.tree.command(name="item-info", description="Voir les informations d'un item en stock")
 @app_commands.describe(item="Nom de l'item à rechercher")
@@ -1665,7 +1561,7 @@ async def item_info(interaction: discord.Interaction, item: str = None):
                 super().__init__(placeholder="Sélectionnez un item...", options=options)
 
             async def callback(self, interaction: discord.Interaction):
-                selected_item = store.find_one({"name": self.values[0]})
+                selected_item = store_collection.find_one({"name": self.values[0]})
                 embed = discord.Embed(title=f"📦 {selected_item['name']}", color=discord.Color.green())
                 embed.add_field(name="Description", value=selected_item["description"], inline=False)
                 embed.add_field(name="Prix", value=f"{selected_item['price']} 💰", inline=True)
@@ -1697,7 +1593,7 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
     print(f"Solde de {interaction.user.name}: {cash} 💵")
 
     # Recherche de l'item dans le store
-    item = db["store"].find_one({"name": item_name})
+    item = store_collection.find_one({"name": item_name})
 
     if not item:
         return await interaction.response.send_message(
@@ -1722,8 +1618,8 @@ async def item_buy(interaction: discord.Interaction, item_name: str):
         )
 
     # Effectuer l'achat (réduire le cash et le stock)
-    await db["economy"].update_one({"user_id": user_id}, {"$inc": {"cash": -item_price}})
-    await db["store"].update_one({"name": item_name}, {"$inc": {"stock": -1}})
+    await economy_collection.update_one({"user_id": user_id}, {"$inc": {"cash": -item_price}})
+    await store_collection.update_one({"name": item_name}, {"$inc": {"stock": -1}})
 
     # Ajouter l'item à l'inventaire de l'utilisateur
     inventory = await db["inventory"].find_one({"user_id": user_id, "server_id": server_id})
@@ -1767,7 +1663,7 @@ class LeaderboardView(discord.ui.View):
         desc = "\n".join([
             f"**#{i}** {self.ctx.bot.get_user(int(u['user_id']))} - 💰 `{u['total']}`"
             for i, u in enumerate(self.all_users[start_idx:end_idx], start=(self.page - 1) * 10 + 1)
-])
+        ])
 
         embed = discord.Embed(title="🏆 Classement Économique", description=desc, color=discord.Color.gold())
         embed.set_footer(text=f"Page {self.page}/{self.pages}")
@@ -1793,11 +1689,10 @@ class LeaderboardView(discord.ui.View):
 
             await interaction.response.edit_message(embed=self.get_embed(), view=self)
 
-
 @bot.command(name="leaderboard")
 async def leaderboard(ctx, page: int = 1):
-    if not check_role(ctx, ROLE_NEEDED):
-        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande."))
+    if not has_required_roles(ctx.author):
+        return await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir les rôles '{ROLE_NEEDED}' pour utiliser cette commande."))
 
     all_users = list(economy_collection.find().sort("total", -1))
     if not all_users:
@@ -1816,7 +1711,7 @@ async def leaderboard(ctx, page: int = 1):
 # Commande .helpE pour afficher un embed d'aide sur les commandes économiques
 @bot.command(name="helpE")
 async def helpE(ctx):
-    if not check_role(ctx, ROLE_NEEDED):  # Vérification correcte du rôle
+    if not has_required_roles(ctx.author):  # Vérification correcte du rôle
         await ctx.send(embed=create_embed("⚠️ Accès refusé", f"Vous devez avoir le rôle '{ROLE_NEEDED}' pour utiliser cette commande."))
         return
 
@@ -1878,7 +1773,7 @@ async def on_message(message):
         )
         embed.add_field(
             name="⏳ .malus <membre>",
-            value="Ajoute un rôle malus à un membre pour une durée permanante à moins d'être guérie. Exemple : .malus @Utilisateur",
+            value="Ajoute un rôle malus à un membre pour une durée permanente à moins d'être guérie. Exemple : .malus @Utilisateur",
             inline=False
         )
         embed.add_field(
@@ -1949,6 +1844,7 @@ async def on_message(message):
 
     # Assurez-vous que le bot continue de traiter les commandes
     await bot.process_commands(message)
+
 #------------------------------------------------------------------------- auto clan
 
 #------------------------------------------------------------------------- Lancement du bot
