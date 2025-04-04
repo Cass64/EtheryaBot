@@ -1,8 +1,8 @@
 import os  
 from dotenv import load_dotenv
-from discord import app_commands
 import discord
-from discord.ext import commands
+from discord import app_commands
+from discord.ext import commands, tasks
 from keep_alive import keep_alive
 import random
 import json
@@ -15,7 +15,13 @@ import aiocron
 import logging
 import re
 import traceback
-from discord.ext import tasks
+import time
+import subprocess
+import sys
+from discord.ui import Button, View, Select
+from collections import defaultdict, deque
+import psutil
+import platform
 
 load_dotenv()
 
