@@ -104,6 +104,9 @@ async def on_ready():
     check_malus.start()
     print("🔄 Vérification automatique des malus activée.")
 
+    # Démarrer la tâche de suppression automatique des rôles expirés
+    await remove_expired_roles()  # Ajoutez cette ligne
+
 #------------------------------------------------------------------------- Commandes d'économie : !!break
 
 @bot.command(name="break")
@@ -1828,9 +1831,6 @@ async def remove_expired_roles():
             collection.delete_one({"user_id": user_id})
 
         await asyncio.sleep(600)  # Vérifie toutes les 10 minutes (600 secondes)
-
-# Lancer la tâche de fond
-bot.loop.create_task(remove_expired_roles())
 
 keep_alive()
 bot.run(token)
