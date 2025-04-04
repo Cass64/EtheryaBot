@@ -70,3 +70,6 @@ gunicorn==21.2.0
 pymongo==4.6.1
 aiocron
 motor
+dnspython
+PyNaCl
+psutil
