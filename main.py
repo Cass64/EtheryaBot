@@ -668,7 +668,6 @@ async def pretpayer(interaction: discord.Interaction, membre: discord.Member):
 async def investir_livret(interaction: discord.Interaction, montant: int):
     """Investit une somme dans le Livret A (max 100k)"""
 
-    # Déférer la réponse pour éviter l'erreur "Interaction has already been acknowledged"
     await interaction.response.defer(thinking=True)  
 
     if montant <= 0 or montant > 100_000:
@@ -680,17 +679,17 @@ async def investir_livret(interaction: discord.Interaction, montant: int):
 
     ancien_montant = user_data["livretA"] if user_data and "livretA" in user_data else 0
     nouveau_montant = ancien_montant + montant
-        collection.update_one(
+
+    collection.update_one(
         {"user_id": user_id},
         {"$set": {"livretA": nouveau_montant}},
         upsert=True
     )
 
-    # ID du salon et du rôle à ping
-    CHANNEL_ID = 1355233979321680013  # Remplace par l'ID du salon
-    ROLE_ID = 1355157647074005154  # Remplace par l'ID du rôle 
+    CHANNEL_ID = 1355233979321680013
+    ROLE_ID = 1355157647074005154
     salon = interaction.guild.get_channel(CHANNEL_ID)
-    role_ping = f"<@&{ROLE_ID}>"  # Ping du rôle
+    role_ping = f"<@&{ROLE_ID}>"
 
     embed = discord.Embed(
         title="📥 Investissement - Livret A",
