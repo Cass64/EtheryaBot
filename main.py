@@ -150,7 +150,7 @@ async def breakk(ctx, membre: discord.Member):
 @bot.command(name="malus")
 async def malus(ctx, membre: discord.Member):
     ROLE_REQUIRED = "″ [𝑺ץ] Perm Ajout Malus"
-    ROLE_TO_ADD_MALUS = "″ [𝑺ץ] Malus"  # Rôle à ajouter
+    ROLE_TO_ADD_MALUS = "″ [𝑺ץ] Malus Temporelle"  # Rôle à ajouter
     ROLE_TO_REMOVE_MALUS = "″ [𝑺ץ] Perm Ajout Malus"  # Rôle à retirer
 
     guild = ctx.guild
