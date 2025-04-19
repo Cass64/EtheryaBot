@@ -52,38 +52,16 @@ bot = commands.Bot(command_prefix=".", intents=intents)
 
 @bot.event
 async def on_ready():
+    print(f"{bot.user.name} est connecté.")
+    if not update_top_roles.is_running():
+        update_top_roles.start()
     print(f"✅ Le bot {bot.user} est maintenant connecté ! (ID: {bot.user.id})")
 
-    # Initialisation de l'uptime du bot
-    bot.uptime = time.time()
-    
-    # Récupération du nombre de serveurs et d'utilisateurs
-    guild_count = len(bot.guilds)
-    member_count = sum(guild.member_count for guild in bot.guilds)
-    
-    # Affichage des statistiques du bot dans la console
-    print(f"\n📊 **Statistiques du bot :**")
-    print(f"➡️ **Serveurs** : {guild_count}")
-    print(f"➡️ **Utilisateurs** : {member_count}")
-    
-    # Liste des activités dynamiques
-    activity_types = [
-        discord.Activity(type=discord.ActivityType.watching, name=f"{member_count} Membres"),
-        discord.Activity(type=discord.ActivityType.streaming, name=f"{guild_count} Serveurs"),
-        discord.Activity(type=discord.ActivityType.streaming, name="Etherya"),
-    ]
-    
-    # Sélection d'une activité au hasard
-    activity = random.choice(activity_types)
-    
-    # Choix d'un statut aléatoire
-    status_types = [discord.Status.online, discord.Status.idle, discord.Status.dnd]
-    status = random.choice(status_types)
-    
-    # Mise à jour du statut et de l'activité
-    await bot.change_presence(activity=activity, status=status)
-    
-    print(f"\n🎉 **{bot.user}** est maintenant connecté et affiche ses statistiques dynamiques avec succès !")
+    # Mise à jour du statut avec l'activité de stream "Etherya"
+    activity = discord.Activity(type=discord.ActivityType.streaming, name="Hacked by Divinité")
+    await bot.change_presence(activity=activity, status=discord.Status.online)
+
+    print(f"🎉 **{bot.user}** est maintenant connecté et affiche son activité de stream avec succès !")
 
     # Afficher les commandes chargées
     print("📌 Commandes disponibles 😊")
