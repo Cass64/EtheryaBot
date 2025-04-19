@@ -125,6 +125,23 @@ async def breakk(ctx, membre: discord.Member):
     else:
         await ctx.send(f"{ctx.author.mention}, vous n'aviez pas le rôle {role_to_remove.mention}.")
 
+@bot.command()
+async def say(ctx, *, text: str = None):
+    # Vérifie si l'utilisateur a les permissions d'admin
+    if not ctx.author.guild_permissions.administrator:
+        await ctx.send("Tu n'as pas les permissions nécessaires pour utiliser cette commande.")
+        return
+    
+    if text is None:
+        await ctx.send("Tu n'as pas écrit de texte à dire !")
+        return
+
+    # Supprime le message originel
+    await ctx.message.delete()
+
+    # Envoie le texte spécifié
+    await ctx.send(text)
+
 #------------------------------------------------------------------------- Commandes d'économie : !!malus
 @bot.command(name="malus")
 async def malus(ctx, membre: discord.Member):
