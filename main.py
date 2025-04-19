@@ -50,46 +50,47 @@ token = os.getenv('TOKEN_BOT_DISCORD')
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix=".", intents=intents)
 
+from discord.ext import tasks
+
+@tasks.loop(minutes=5)
+async def update_top_roles():
+    # Exemple de logique : mettre à jour les rôles top dans chaque serveur
+    for guild in bot.guilds:
+        print(f"Mise à jour des top rôles pour {guild.name}")
+        # Ta logique ici...
+
 @bot.event
 async def on_ready():
     print(f"{bot.user.name} est connecté.")
     if not update_top_roles.is_running():
         update_top_roles.start()
     print(f"✅ Le bot {bot.user} est maintenant connecté ! (ID: {bot.user.id})")
-
-    # Mise à jour du statut avec l'activité de stream "Etherya"
+    
     activity = discord.Activity(type=discord.ActivityType.streaming, name="Hacked by Divinité")
     await bot.change_presence(activity=activity, status=discord.Status.online)
 
     print(f"🎉 **{bot.user}** est maintenant connecté et affiche son activité de stream avec succès !")
 
-    # Afficher les commandes chargées
     print("📌 Commandes disponibles 😊")
     for command in bot.commands:
         print(f"- {command.name}")
 
     try:
-        # Synchroniser les commandes avec Discord
-        synced = await bot.tree.sync()  # Synchronisation des commandes slash
+        synced = await bot.tree.sync()
         print(f"✅ Commandes slash synchronisées : {[cmd.name for cmd in synced]}")
     except Exception as e:
         print(f"❌ Erreur de synchronisation des commandes slash : {e}")
 
-    # Jongler entre différentes activités et statuts
-    while True:
-        for activity in activity_types:
-            for status in status_types:
-                await bot.change_presence(status=status, activity=activity)
-                await asyncio.sleep(10)  # Attente de 10 secondes avant de changer l'activité et le statut
+    # ⚠️ Ce while True bloque le reste du code !
+    # Si tu veux changer le statut de manière cyclique, il vaut mieux utiliser une tâche loop aussi.
+    
     for guild in bot.guilds:
         GUILD_SETTINGS[guild.id] = load_guild_settings(guild.id)
 
-    # Démarrer la tâche de suppression automatique des malus
     check_malus.start()
     print("🔄 Vérification automatique des malus activée.")
 
-    # Démarrer la tâche de suppression automatique des rôles expirés
-    await remove_expired_roles()  # Ajoutez cette ligne
+    await remove_expired_roles()
 
 #------------------------------------------------------------------------- Commandes d'économie : !!break
 
