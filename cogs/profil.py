@@ -49,92 +49,101 @@ class Profil(commands.Cog):
                        situation: str = None,
                        theme: app_commands.Choice[str] = None):
 
-        user_id = str(interaction.user.id)
+        try:
+            user_id = str(interaction.user.id)
 
-        selected_theme = theme.value if theme else None
-        color_code = THEMES.get(selected_theme, None)
+            selected_theme = theme.value if theme else None
+            color_code = THEMES.get(selected_theme, None)
 
-        profil_data = {
-            "user_id": user_id,
-            "pseudo": interaction.user.name,
-            "surnom": surnom,
-            "photo": photo,
-            "hobby": hobby,
-            "aime": aime,
-            "aime_pas": aime_pas,
-            "lieu": lieu,
-            "metier": metier,
-            "sexe": sexe,
-            "situation": situation,
-            "theme": selected_theme,
-            "couleur_code": color_code
-        }
+            profil_data = {
+                "user_id": user_id,
+                "pseudo": interaction.user.name,
+                "surnom": surnom,
+                "photo": photo,
+                "hobby": hobby,
+                "aime": aime,
+                "aime_pas": aime_pas,
+                "lieu": lieu,
+                "metier": metier,
+                "sexe": sexe,
+                "situation": situation,
+                "theme": selected_theme,
+                "couleur_code": color_code
+            }
 
-        # Utilisation de la fonction centralisée pour accéder à la collection user_profiles
-        await get_profiles_collection().update_one(
-            {"user_id": user_id},
-            {"$set": profil_data},
-            upsert=True
-        )
+            # Utilisation de la fonction centralisée pour accéder à la collection user_profiles
+            await get_profiles_collection().update_one(
+                {"user_id": user_id},
+                {"$set": profil_data},
+                upsert=True
+            )
 
-        await interaction.response.send_message("✅ Ton profil a été enregistré/modifié avec succès !", ephemeral=True)
+            await interaction.response.send_message("✅ Ton profil a été enregistré/modifié avec succès !", ephemeral=True)
+        except Exception as e:
+            print(f"Erreur dans la commande /myprofil pour {interaction.user.id}: {e}")
+            await interaction.response.send_message("❌ Une erreur s'est produite lors de l'enregistrement de ton profil.", ephemeral=True)
 
     @app_commands.command(name="profil", description="Voir le profil d'un membre")
     @app_commands.describe(user="Choisis un membre")
     async def profil(self, interaction: discord.Interaction, user: discord.User):
 
-        user_id = str(user.id)
+        try:
+            user_id = str(user.id)
 
-        # Utilisation de la fonction centralisée pour accéder à la collection user_profiles
-        profil = await get_profiles_collection().find_one({"user_id": user_id})
+            # Utilisation de la fonction centralisée pour accéder à la collection user_profiles
+            profil = await get_profiles_collection().find_one({"user_id": user_id})
 
-        if not profil:
-            await interaction.response.send_message("❌ Ce membre n'a pas encore créé son profil avec /myprofil.", ephemeral=True)
-            return
+            if not profil:
+                await interaction.response.send_message("❌ Ce membre n'a pas encore créé son profil avec /myprofil.", ephemeral=True)
+                return
 
-        color = discord.Color.blue()
-        if profil.get("couleur_code"):
-            try:
-                color = discord.Color(int(profil["couleur_code"].replace("#", ""), 16))
-            except Exception:
-                pass
+            color = discord.Color.blue()
+            if profil.get("couleur_code"):
+                try:
+                    color = discord.Color(int(profil["couleur_code"].replace("#", ""), 16))
+                except Exception:
+                    pass
 
-        embed = discord.Embed(
-            title=f"📋 Profil de {profil['pseudo']}",
-            description="Voici toutes ses informations personnelles 👇",
-            color=color
-        )
+            embed = discord.Embed(
+                title=f"📋 Profil de {profil['pseudo']}",
+                description="Voici toutes ses informations personnelles 👇",
+                color=color
+            )
 
-        if profil.get("surnom"):
-            embed.add_field(name="📝 Surnom", value=profil["surnom"], inline=False)
-        if profil.get("hobby"):
-            embed.add_field(name="🎯 Hobby", value=profil["hobby"], inline=False)
-        if profil.get("aime"):
-            embed.add_field(name="💖 Aime", value=profil["aime"], inline=False)
-        if profil.get("aime_pas"):
-            embed.add_field(name="💔 Aime pas", value=profil["aime_pas"], inline=False)
-        if profil.get("lieu"):
-            embed.add_field(name="📍 Lieu", value=profil["lieu"], inline=False)
-        if profil.get("metier"):
-            embed.add_field(name="💼 Métier", value=profil["metier"], inline=False)
-        if profil.get("sexe"):
-            embed.add_field(name="⚧️ Sexe", value=profil["sexe"], inline=True)
-        if profil.get("situation"):
-            embed.add_field(name="💞 Situation Amoureuse", value=profil["situation"], inline=True)
+            if profil.get("surnom"):
+                embed.add_field(name="📝 Surnom", value=profil["surnom"], inline=False)
+            if profil.get("hobby"):
+                embed.add_field(name="🎯 Hobby", value=profil["hobby"], inline=False)
+            if profil.get("aime"):
+                embed.add_field(name="💖 Aime", value=profil["aime"], inline=False)
+            if profil.get("aime_pas"):
+                embed.add_field(name="💔 Aime pas", value=profil["aime_pas"], inline=False)
+            if profil.get("lieu"):
+                embed.add_field(name="📍 Lieu", value=profil["lieu"], inline=False)
+            if profil.get("metier"):
+                embed.add_field(name="💼 Métier", value=profil["metier"], inline=False)
+            if profil.get("sexe"):
+                embed.add_field(name="⚧️ Sexe", value=profil["sexe"], inline=True)
+            if profil.get("situation"):
+                embed.add_field(name="💞 Situation Amoureuse", value=profil["situation"], inline=True)
 
-        if profil.get("photo"):
-            embed.set_thumbnail(url=profil["photo"])
+            if profil.get("photo"):
+                embed.set_thumbnail(url=profil["photo"])
 
-        view = View()
+            view = View()
 
-        if profil.get("hobby"):
-            view.add_item(Button(label="📋 Copier Hobby", style=discord.ButtonStyle.primary, custom_id=f"copy_hobby:{profil['hobby']}"))
-        if profil.get("aime"):
-            view.add_item(Button(label="📋 Copier Aime", style=discord.ButtonStyle.success, custom_id=f"copy_aime:{profil['aime']}"))
-        if profil.get("aime_pas"):
-            view.add_item(Button(label="📋 Copier Aime Pas", style=discord.ButtonStyle.danger, custom_id=f"copy_aime_pas:{profil['aime_pas']}"))
+            if profil.get("hobby"):
+                view.add_item(Button(label="📋 Copier Hobby", style=discord.ButtonStyle.primary, custom_id=f"copy_hobby:{profil['hobby']}"))
+            if profil.get("aime"):
+                view.add_item(Button(label="📋 Copier Aime", style=discord.ButtonStyle.success, custom_id=f"copy_aime:{profil['aime']}"))
+            if profil.get("aime_pas"):
+                view.add_item(Button(label="📋 Copier Aime Pas", style=discord.ButtonStyle.danger, custom_id=f"copy_aime_pas:{profil['aime_pas']}"))
 
-        await interaction.response.send_message(embed=embed, view=view)
+            await interaction.response.send_message(embed=embed, view=view)
+
+        except Exception as e:
+            print(f"Erreur dans la commande /profil pour {user.id}: {e}")
+            await interaction.response.send_message("❌ Une erreur s'est produite lors de l'affichage du profil.", ephemeral=True)
 
     @commands.Cog.listener()
     async def on_interaction(self, interaction: discord.Interaction):
@@ -144,4 +153,4 @@ class Profil(commands.Cog):
                 await interaction.response.send_message(content=f"📝 Voici le texte copié :\n```{text}```", ephemeral=True)
 
 async def setup(bot):
-    await bot.add_cog(Profil(bot)) 
+    await bot.add_cog(Profil(bot))
