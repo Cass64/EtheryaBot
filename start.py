@@ -3,7 +3,6 @@ import discord
 from discord.ext import commands
 from utils.database import connect_to_mongo
 from keep_alive import keep_alive
-import asyncio
 
 # Charger les variables d'environnement (Render)
 token = os.getenv('TOKEN_BOT_DISCORD')
@@ -45,16 +44,9 @@ async def on_ready():
     print(f"🚀 Connecté en tant que {bot.user} (ID: {bot.user.id})")
     print("------")
 
-# Fonction principale
-async def main():
-    # Connexion MongoDB
-    connect_to_mongo(MONGO_URI)
-    # Charger les cogs
-    await load_cogs()
-    # Lancer le bot
-    await bot.start(token)
-
 # Démarrer tout
 if __name__ == "__main__":
-    keep_alive()
-    asyncio.run(main())
+    keep_alive()  # Assure que ton bot reste en ligne
+    connect_to_mongo(MONGO_URI)  # Connexion à MongoDB
+    bot.loop.create_task(load_cogs())  # Charger les cogs de manière asynchrone
+    bot.run(token)  # Lancer le bot normalement
