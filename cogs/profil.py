@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from utils.database import db
+from utils.database import get_profiles_collection
 from discord.ui import View, Button
 
 # Thèmes disponibles
@@ -70,7 +70,8 @@ class Profil(commands.Cog):
             "couleur_code": color_code
         }
 
-        await db["user_profiles"].update_one(
+        # Utilisation de la fonction centralisée pour accéder à la collection user_profiles
+        await get_profiles_collection().update_one(
             {"user_id": user_id},
             {"$set": profil_data},
             upsert=True
@@ -84,7 +85,8 @@ class Profil(commands.Cog):
 
         user_id = str(user.id)
 
-        profil = await db["profils"].find_one({"user_id": user_id})
+        # Utilisation de la fonction centralisée pour accéder à la collection user_profiles
+        profil = await get_profiles_collection().find_one({"user_id": user_id})
 
         if not profil:
             await interaction.response.send_message("❌ Ce membre n'a pas encore créé son profil avec /myprofil.", ephemeral=True)
@@ -142,4 +144,4 @@ class Profil(commands.Cog):
                 await interaction.response.send_message(content=f"📝 Voici le texte copié :\n```{text}```", ephemeral=True)
 
 async def setup(bot):
-    await bot.add_cog(Profil(bot))
+    await bot.add_cog(Profil(bot)) 
