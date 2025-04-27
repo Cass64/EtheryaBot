@@ -4,6 +4,15 @@ from discord import app_commands
 from utils.database import db
 from discord.ui import View, Button
 
+# Thèmes disponibles
+THEMES = {
+    "Bleu Ciel": "#3498db",
+    "Vert Forêt": "#2ecc71",
+    "Rouge Passion": "#e74c3c",
+    "Violet Mystère": "#9b59b6",
+    "Noir Élégant": "#2c3e50"
+}
+
 class Profil(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -19,8 +28,15 @@ class Profil(commands.Cog):
         metier="Ton métier ou activité",
         sexe="Ton sexe",
         situation="Ta situation amoureuse",
-        couleur_embed="Couleur de ton profil (ex: #00FF00)"
+        theme="Choisir un thème de couleur"
     )
+    @app_commands.choices(theme=[
+        app_commands.Choice(name="Bleu Ciel", value="Bleu Ciel"),
+        app_commands.Choice(name="Vert Forêt", value="Vert Forêt"),
+        app_commands.Choice(name="Rouge Passion", value="Rouge Passion"),
+        app_commands.Choice(name="Violet Mystère", value="Violet Mystère"),
+        app_commands.Choice(name="Noir Élégant", value="Noir Élégant"),
+    ])
     async def myprofil(self, interaction: discord.Interaction,
                        surnom: str = None,
                        photo: str = None,
@@ -31,9 +47,12 @@ class Profil(commands.Cog):
                        metier: str = None,
                        sexe: str = None,
                        situation: str = None,
-                       couleur_embed: str = None):
+                       theme: app_commands.Choice[str] = None):
 
         user_id = str(interaction.user.id)
+
+        selected_theme = theme.value if theme else None
+        color_code = THEMES.get(selected_theme, None)
 
         profil_data = {
             "user_id": user_id,
@@ -47,7 +66,8 @@ class Profil(commands.Cog):
             "metier": metier,
             "sexe": sexe,
             "situation": situation,
-            "couleur_embed": couleur_embed
+            "theme": selected_theme,
+            "couleur_code": color_code
         }
 
         await db["profils"].update_one(
@@ -71,9 +91,9 @@ class Profil(commands.Cog):
             return
 
         color = discord.Color.blue()
-        if profil.get("couleur_embed"):
+        if profil.get("couleur_code"):
             try:
-                color = discord.Color(int(profil["couleur_embed"].replace("#", ""), 16))
+                color = discord.Color(int(profil["couleur_code"].replace("#", ""), 16))
             except Exception:
                 pass
 
