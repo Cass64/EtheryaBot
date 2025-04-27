@@ -27,7 +27,8 @@ initial_extensions = [
     "cogs.moderation",
     "cogs.gestion",
     "cogs.jeux",
-    "cogs.compte_a_rebours"
+    "cogs.compte_a_rebours",
+    "cogs.profil"
 ]
 
 # Charger les cogs
