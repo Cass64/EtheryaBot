@@ -45,4 +45,5 @@ async def on_ready():
     print("------")
 
 # Démarrer le bot
+keep_alive()
 bot.run(token)
