@@ -36,7 +36,7 @@ token = os.getenv('TOKEN_BOT_DISCORD')
 
 # Intents et configuration du bot
 intents = discord.Intents.all()
-bot = commands.Bot(command_prefix=".", intents=intents)
+bot = commands.Bot(command_prefix="!", intents=intents)
 
 # Charger les Cogs
 initial_extensions = ['cogs.moderation', 'cogs.jeux', 'cogs.gestion']
