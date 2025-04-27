@@ -2,6 +2,8 @@ import os
 import discord
 from discord.ext import commands
 from utils.database import connect_to_mongo
+from keep_alive import keep_alive
+
 
 # Charger les variables d'environnement (Render)
 token = os.getenv('TOKEN_BOT_DISCORD')
