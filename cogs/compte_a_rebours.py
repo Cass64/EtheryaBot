@@ -6,7 +6,7 @@ class CompteARebours(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.current_number = 1  # Le jeu commence à 1
-        self.game_active = False  # Vérifier si le jeu est actif
+        self.game_active = True  # Vérifier si le jeu est actif
         self.channel_id = 1355230266163204200  # ID du salon spécifique
         self.last_player = None  # Dernier joueur ayant joué
 
