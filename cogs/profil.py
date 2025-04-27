@@ -70,7 +70,7 @@ class Profil(commands.Cog):
             "couleur_code": color_code
         }
 
-        await db["profils"].update_one(
+        await db["user_profiles"].update_one(
             {"user_id": user_id},
             {"$set": profil_data},
             upsert=True
