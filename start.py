@@ -1,53 +1,48 @@
-import os  
-from dotenv import load_dotenv
+import os
 import discord
-from discord import app_commands
-from discord.ext import commands, tasks
-from keep_alive import keep_alive
-import random
-import json
-import asyncio
-import pymongo
-from pymongo import MongoClient
-from datetime import datetime, timedelta
-import math
-import aiocron
-import logging
-import re
-import traceback
-import time
-import subprocess
-import sys
-from discord.ui import Button, View, Select
-from collections import defaultdict, deque
-import psutil
-import platform
+from discord.ext import commands
 from utils.database import connect_to_mongo
 
-load_dotenv()
-
-
+# Charger les variables d'environnement (Render)
+token = os.getenv('TOKEN_BOT_DISCORD')
 MONGO_URI = os.getenv('MONGO_URI')
 
-#CONNEXTION A MONGODB
+# Vérifications basiques
+if not TOKEN:
+    raise ValueError("❌ Le token Discord (DISCORD_TOKEN) n'est pas défini !")
+if not MONGO_URI:
+    raise ValueError("❌ L'URI MongoDB (MONGO_URI) n'est pas défini !")
+
+# Connexion à MongoDB
 connect_to_mongo(MONGO_URI)
 
-token = os.getenv('TOKEN_BOT_DISCORD')
+# Initialiser le bot
+intents = discord.Intents.default()
+intents.message_content = True
+intents.members = True
 
-# Intents et configuration du bot
-intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# 4. Charger les cogs
-bot.load_extension('cogs.jeux')
-bot.load_extension('cogs.gestion')
-bot.load_extension('cogs.moderation')
+# Liste des cogs à charger
+initial_extensions = [
+    "cogs.moderation",
+    "cogs.gestion",
+    "cogs.jeux"
+]
 
+# Charger les cogs
+for extension in initial_extensions:
+    try:
+        bot.load_extension(extension)
+        print(f"✅ Cog {extension} chargé avec succès !")
+    except Exception as e:
+        print(f"❌ Erreur lors du chargement du cog {extension} : {e}")
 
+# Événement quand le bot est prêt
 @bot.event
 async def on_ready():
-    print(f'Connecté en tant que {bot.user}!')
+    print(f"🚀 Connecté en tant que {bot.user} (ID: {bot.user.id})")
+    print("------")
 
-
-keep_alive()
+# Démarrer le bot
 bot.run(token)
