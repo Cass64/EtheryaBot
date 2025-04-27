@@ -13,19 +13,38 @@ class Moderation(commands.Cog):
     @commands.command()
     @commands.check(is_mod)  # Vérification de rôle
     async def ban(self, ctx, member: discord.Member, *, reason="Aucune raison"):
-        await member.ban(reason=reason)
-        await ctx.send(f"🔨 {member} a été banni. Raison : {reason}")
+        embed = discord.Embed(
+            title="Bannissement",
+            description=f"{member.mention} a été banni.",
+            color=discord.Color.red()  # Rouge pour bannissement
+        )
+        embed.add_field(name="Raison", value=reason, inline=False)
+        embed.set_footer(text=f"Commande exécutée par {ctx.author.name}", icon_url=ctx.author.avatar.url)
+        await ctx.send(embed=embed)
 
     @commands.command()
     @commands.check(is_mod)  # Vérification de rôle
     async def kick(self, ctx, member: discord.Member, *, reason="Aucune raison"):
-        await member.kick(reason=reason)
-        await ctx.send(f"👢 {member} a été kick. Raison : {reason}")
+        embed = discord.Embed(
+            title="Expulsion",
+            description=f"{member.mention} a été expulsé.",
+            color=discord.Color.orange()  # Orange pour expulsion
+        )
+        embed.add_field(name="Raison", value=reason, inline=False)
+        embed.set_footer(text=f"Commande exécutée par {ctx.author.name}", icon_url=ctx.author.avatar.url)
+        await ctx.send(embed=embed)
 
     @commands.command()
     @commands.check(is_mod)  # Vérification de rôle
     async def warn(self, ctx, member: discord.Member, *, reason="Aucune raison"):
-        await ctx.send(f"⚠️ {member.mention} a été warn. Raison : {reason}")
+        embed = discord.Embed(
+            title="Avertissement",
+            description=f"{member.mention} a reçu un avertissement.",
+            color=discord.Color.gold()  # Or pour un avertissement
+        )
+        embed.add_field(name="Raison", value=reason, inline=False)
+        embed.set_footer(text=f"Commande exécutée par {ctx.author.name}", icon_url=ctx.author.avatar.url)
+        await ctx.send(embed=embed)
 
 # Ajout du cog
 async def setup(bot):
