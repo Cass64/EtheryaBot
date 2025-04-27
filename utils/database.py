@@ -2,9 +2,9 @@ from pymongo import MongoClient
 
 client = None
 
-def connect_to_mongo(MONGO_URI):
+def connect_to_mongo(uri):
     global client
-    client = MongoClient(MONGO_URI)
+    client = MongoClient(uri)
     print("✅ Connecté à MongoDB")
 
 def get_database(name):
