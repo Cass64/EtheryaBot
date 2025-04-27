@@ -43,9 +43,9 @@ async def load_cogs():
 # Événement quand le bot est prêt
 @bot.event
 async def on_ready():
-    print(f"🚀 Connecté en tant que {bot.user} (ID: {bot.user.id})")
-    print("------")
-
+    await bot.tree.sync()  # Commandes globales
+    print(f'{bot.user} has connected to Discord!')
+    
 # Fonction principale asynchrone
 async def main():
     # Connexion MongoDB
