@@ -38,11 +38,10 @@ token = os.getenv('TOKEN_BOT_DISCORD')
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Charger les Cogs
-initial_extensions = ['cogs.moderation', 'cogs.jeux', 'cogs.gestion']
-
-for extension in initial_extensions:
-    bot.load_extension(extension)
+# 4. Charger les cogs
+bot.load_extension('cogs.jeux')
+bot.load_extension('cogs.gestion')
+bot.load_extension('cogs.moderation')
 
 
 @bot.event
