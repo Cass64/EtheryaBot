@@ -3,7 +3,7 @@ import discord
 from discord.ext import commands
 from utils.database import connect_to_mongo
 from keep_alive import keep_alive
-
+import asyncio
 
 # Charger les variables d'environnement (Render)
 token = os.getenv('TOKEN_BOT_DISCORD')
@@ -14,9 +14,6 @@ if not token:
     raise ValueError("❌ Le token Discord (TOKEN_BOT_DISCORD) n'est pas défini !")
 if not MONGO_URI:
     raise ValueError("❌ L'URI MongoDB (MONGO_URI) n'est pas défini !")
-
-# Connexion à MongoDB
-connect_to_mongo(MONGO_URI)
 
 # Initialiser le bot
 intents = discord.Intents.default()
@@ -33,12 +30,13 @@ initial_extensions = [
 ]
 
 # Charger les cogs
-for extension in initial_extensions:
-    try:
-        bot.load_extension(extension)
-        print(f"✅ Cog {extension} chargé avec succès !")
-    except Exception as e:
-        print(f"❌ Erreur lors du chargement du cog {extension} : {e}")
+async def load_cogs():
+    for extension in initial_extensions:
+        try:
+            await bot.load_extension(extension)
+            print(f"✅ Cog {extension} chargé avec succès !")
+        except Exception as e:
+            print(f"❌ Erreur lors du chargement du cog {extension} : {e}")
 
 # Événement quand le bot est prêt
 @bot.event
@@ -46,6 +44,16 @@ async def on_ready():
     print(f"🚀 Connecté en tant que {bot.user} (ID: {bot.user.id})")
     print("------")
 
-# Démarrer le bot
-keep_alive()
-bot.run(token)
+# Fonction principale
+async def main():
+    # Connexion MongoDB
+    connect_to_mongo(MONGO_URI)
+    # Charger les cogs
+    await load_cogs()
+    # Lancer le bot
+    await bot.start(token)
+
+# Démarrer tout
+if __name__ == "__main__":
+    keep_alive()
+    asyncio.run(main())
