@@ -12,7 +12,7 @@ def connect_to_mongo(uri):
     try:
         global mongo_client, db, profiles_collection
         mongo_client = MongoClient(uri)
-        db = mongo_client["DeltaDB"]
+        db = mongo_client["CassBot"]
         profiles_collection = db["user_profiles"]
         print("✅ Connecté à MongoDB")
     except Exception as e:
