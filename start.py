@@ -8,7 +8,7 @@ token = os.getenv('TOKEN_BOT_DISCORD')
 MONGO_URI = os.getenv('MONGO_URI')
 
 # Vérifications basiques
-if not TOKEN:
+if not token:
     raise ValueError("❌ Le token Discord (DISCORD_TOKEN) n'est pas défini !")
 if not MONGO_URI:
     raise ValueError("❌ L'URI MongoDB (MONGO_URI) n'est pas défini !")
