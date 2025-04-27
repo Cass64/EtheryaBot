@@ -26,12 +26,13 @@ class CompteARebours(commands.Cog):
         # Vérifier si le message contient un nombre
         if message.content.isdigit():
             num = int(message.content)
-            # Si le numéro est correct, réagir avec un "vu"
+            # Si le numéro est correct
             if num == self.current_number:
                 await message.add_reaction("✅")  # Ajout de la coche verte
                 self.current_number += 1
                 self.last_player = message.author
-                # Pas d'action si c'est correct (le jeu continue)
+                # Pas de message supplémentaire, juste le numéro suivant
+
             else:
                 # Si le numéro est incorrect, réagir avec une croix et recommencer
                 await message.add_reaction("❌")  # Ajout de la croix rouge
@@ -67,7 +68,7 @@ class CompteARebours(commands.Cog):
         # Vérifier si le message contient un nombre
         if after.content.isdigit():
             num = int(after.content)
-            # Si le numéro est correct, réagir avec un "vu"
+            # Si le numéro est correct
             if num == self.current_number:
                 await after.add_reaction("✅")  # Ajout de la coche verte
                 self.current_number += 1
@@ -90,8 +91,10 @@ class CompteARebours(commands.Cog):
         """ Démarrer automatiquement le jeu à partir du numéro 1. """
         if message.channel.id == self.channel_id and not self.game_active:
             self.game_active = True
-            await message.channel.send("🎮 Le jeu de compte à rebours commence ! Le premier numéro est **1**. Chaque joueur doit entrer le numéro suivant dans l'ordre.")
-            await message.channel.send("Si quelqu'un entre un mauvais numéro ou écrit deux numéros d'affilée, le jeu recommencera à 1.")
+            self.current_number = 1
+            # Aucune notification envoyée, commence tout de suite avec le numéro 1
+            # Pas besoin d'envoyer de message de démarrage
+            return
 
 # Ajout du cog
 async def setup(bot):
