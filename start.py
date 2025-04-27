@@ -22,6 +22,7 @@ from discord.ui import Button, View, Select
 from collections import defaultdict, deque
 import psutil
 import platform
+from utils.database import connect_to_mongo
 
 load_dotenv()
 
