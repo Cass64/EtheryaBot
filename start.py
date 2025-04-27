@@ -26,7 +26,8 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 initial_extensions = [
     "cogs.moderation",
     "cogs.gestion",
-    "cogs.jeux"
+    "cogs.jeux",
+    "cogs.compte_a_rebours"
 ]
 
 # Charger les cogs
