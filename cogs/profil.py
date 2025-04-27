@@ -1,83 +1,125 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from utils.database import get_user_profile, save_user_profile
+from utils.database import db
+from discord.ui import View, Button
 
 class Profil(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @app_commands.command(name="myprofil", description="Crée ou modifie ton profil personnel.")
-    async def myprofil(self, interaction: discord.Interaction):
-        await interaction.response.send_modal(MyProfilModal())
+    @app_commands.command(name="myprofil", description="Créer ou modifier ton profil personnel")
+    @app_commands.describe(
+        surnom="Ton surnom",
+        photo="Lien URL de ta photo",
+        hobby="Tes hobbies",
+        aime="Ce que tu aimes",
+        aime_pas="Ce que tu n'aimes pas",
+        lieu="Où tu habites",
+        metier="Ton métier ou activité",
+        sexe="Ton sexe",
+        situation="Ta situation amoureuse",
+        couleur_embed="Couleur de ton profil (ex: #00FF00)"
+    )
+    async def myprofil(self, interaction: discord.Interaction,
+                       surnom: str = None,
+                       photo: str = None,
+                       hobby: str = None,
+                       aime: str = None,
+                       aime_pas: str = None,
+                       lieu: str = None,
+                       metier: str = None,
+                       sexe: str = None,
+                       situation: str = None,
+                       couleur_embed: str = None):
 
-    @app_commands.command(name="profil", description="Voir le profil d'un utilisateur.")
-    @app_commands.describe(user="L'utilisateur dont tu veux voir le profil")
-    async def profil(self, interaction: discord.Interaction, user: discord.User = None):
-        user = user or interaction.user  # Si personne n'est précisé, montrer son propre profil
+        user_id = str(interaction.user.id)
 
-        profil_data = get_user_profile(user.id)
-        if not profil_data:
-            await interaction.response.send_message(f"❌ {user.mention} n'a pas encore créé son profil avec `/myprofil`.", ephemeral=True)
+        profil_data = {
+            "user_id": user_id,
+            "pseudo": interaction.user.name,
+            "surnom": surnom,
+            "photo": photo,
+            "hobby": hobby,
+            "aime": aime,
+            "aime_pas": aime_pas,
+            "lieu": lieu,
+            "metier": metier,
+            "sexe": sexe,
+            "situation": situation,
+            "couleur_embed": couleur_embed
+        }
+
+        await db["profils"].update_one(
+            {"user_id": user_id},
+            {"$set": profil_data},
+            upsert=True
+        )
+
+        await interaction.response.send_message("✅ Ton profil a été enregistré/modifié avec succès !", ephemeral=True)
+
+    @app_commands.command(name="profil", description="Voir le profil d'un membre")
+    @app_commands.describe(user="Choisis un membre")
+    async def profil(self, interaction: discord.Interaction, user: discord.User):
+
+        user_id = str(user.id)
+
+        profil = await db["profils"].find_one({"user_id": user_id})
+
+        if not profil:
+            await interaction.response.send_message("❌ Ce membre n'a pas encore créé son profil avec /myprofil.", ephemeral=True)
             return
 
+        color = discord.Color.blue()
+        if profil.get("couleur_embed"):
+            try:
+                color = discord.Color(int(profil["couleur_embed"].replace("#", ""), 16))
+            except Exception:
+                pass
+
         embed = discord.Embed(
-            title=f"🎨 Profil de {user.name}",
-            description=f"Voici les informations de **{user.mention}**",
-            color=int(profil_data.get("color", "0x00BFFF"), 16)  # Couleur personnalisée ou bleu par défaut
+            title=f"📋 Profil de {profil['pseudo']}",
+            description="Voici toutes ses informations personnelles 👇",
+            color=color
         )
-        embed.set_thumbnail(url=profil_data.get("photo") or user.display_avatar.url)
 
-        # Ajout des champs si présents
-        if profil_data.get("surnom"):
-            embed.add_field(name="🎭 Surnom", value=profil_data["surnom"], inline=False)
-        if profil_data.get("hobby"):
-            embed.add_field(name="🎯 Hobby", value=profil_data["hobby"], inline=False)
-        if profil_data.get("aime"):
-            embed.add_field(name="💖 Aime", value=profil_data["aime"], inline=False)
-        if profil_data.get("aime_pas"):
-            embed.add_field(name="💔 N'aime pas", value=profil_data["aime_pas"], inline=False)
-        if profil_data.get("lieu"):
-            embed.add_field(name="🏠 Lieu", value=profil_data["lieu"], inline=False)
-        if profil_data.get("job"):
-            embed.add_field(name="🛠️ Fait quoi ?", value=profil_data["job"], inline=False)
-        if profil_data.get("sexe"):
-            embed.add_field(name="⚧️ Sexe", value=profil_data["sexe"], inline=False)
-        if profil_data.get("situation"):
-            embed.add_field(name="💌 Situation amoureuse", value=profil_data["situation"], inline=False)
+        if profil.get("surnom"):
+            embed.add_field(name="📝 Surnom", value=profil["surnom"], inline=False)
+        if profil.get("hobby"):
+            embed.add_field(name="🎯 Hobby", value=profil["hobby"], inline=False)
+        if profil.get("aime"):
+            embed.add_field(name="💖 Aime", value=profil["aime"], inline=False)
+        if profil.get("aime_pas"):
+            embed.add_field(name="💔 Aime pas", value=profil["aime_pas"], inline=False)
+        if profil.get("lieu"):
+            embed.add_field(name="📍 Lieu", value=profil["lieu"], inline=False)
+        if profil.get("metier"):
+            embed.add_field(name="💼 Métier", value=profil["metier"], inline=False)
+        if profil.get("sexe"):
+            embed.add_field(name="⚧️ Sexe", value=profil["sexe"], inline=True)
+        if profil.get("situation"):
+            embed.add_field(name="💞 Situation Amoureuse", value=profil["situation"], inline=True)
 
-        await interaction.response.send_message(embed=embed)
+        if profil.get("photo"):
+            embed.set_thumbnail(url=profil["photo"])
 
-# Le Modal (formulaire) pour remplir son profil
-class MyProfilModal(discord.ui.Modal, title="📝 Mon Profil"):
+        view = View()
 
-    surnom = discord.ui.TextInput(label="🎭 Ton surnom", required=False, max_length=100)
-    photo = discord.ui.TextInput(label="🖼️ Lien d'une image de profil", required=False)
-    hobby = discord.ui.TextInput(label="🎯 Tes hobbies", required=False, max_length=200)
-    aime = discord.ui.TextInput(label="💖 Ce que tu aimes", required=False, max_length=200)
-    aime_pas = discord.ui.TextInput(label="💔 Ce que tu n'aimes pas", required=False, max_length=200)
-    lieu = discord.ui.TextInput(label="🏠 Où tu habites", required=False, max_length=100)
-    job = discord.ui.TextInput(label="🛠️ Ton métier/activité", required=False, max_length=100)
-    sexe = discord.ui.TextInput(label="⚧️ Ton sexe", required=False, max_length=20)
-    situation = discord.ui.TextInput(label="💌 Situation amoureuse", required=False, max_length=100)
-    color = discord.ui.TextInput(label="🎨 Couleur d'embed (ex: 0x3498DB)", required=False, default="0x00BFFF")
+        if profil.get("hobby"):
+            view.add_item(Button(label="📋 Copier Hobby", style=discord.ButtonStyle.primary, custom_id=f"copy_hobby:{profil['hobby']}"))
+        if profil.get("aime"):
+            view.add_item(Button(label="📋 Copier Aime", style=discord.ButtonStyle.success, custom_id=f"copy_aime:{profil['aime']}"))
+        if profil.get("aime_pas"):
+            view.add_item(Button(label="📋 Copier Aime Pas", style=discord.ButtonStyle.danger, custom_id=f"copy_aime_pas:{profil['aime_pas']}"))
 
-    async def on_submit(self, interaction: discord.Interaction):
-        data = {
-            "surnom": self.surnom.value,
-            "photo": self.photo.value,
-            "hobby": self.hobby.value,
-            "aime": self.aime.value,
-            "aime_pas": self.aime_pas.value,
-            "lieu": self.lieu.value,
-            "job": self.job.value,
-            "sexe": self.sexe.value,
-            "situation": self.situation.value,
-            "color": self.color.value
-        }
-        save_user_profile(interaction.user.id, data)
-        await interaction.response.send_message("✅ Ton profil a bien été enregistré/édité !", ephemeral=True)
+        await interaction.response.send_message(embed=embed, view=view)
 
-# Ajout du Cog
+    @commands.Cog.listener()
+    async def on_interaction(self, interaction: discord.Interaction):
+        if interaction.type == discord.InteractionType.component:
+            if interaction.data["custom_id"].startswith("copy_"):
+                type_info, text = interaction.data["custom_id"].split(":", 1)
+                await interaction.response.send_message(content=f"📝 Voici le texte copié :\n```{text}```", ephemeral=True)
+
 async def setup(bot):
     await bot.add_cog(Profil(bot))
