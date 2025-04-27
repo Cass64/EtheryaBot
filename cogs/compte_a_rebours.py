@@ -6,9 +6,8 @@ class CompteARebours(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.current_number = 1  # Le jeu commence à 1
-        self.game_active = True  # Vérifier si le jeu est actif
+        self.game_active = True  # Le jeu est toujours actif
         self.channel_id = 1355230266163204200  # ID du salon spécifique
-        self.last_player = None  # Dernier joueur ayant joué
 
     @commands.Cog.listener()
     async def on_message(self, message):
@@ -23,18 +22,16 @@ class CompteARebours(commands.Cog):
         if not self.game_active:
             return
 
-        # Vérifier si le message contient un nombre
+        # Vérifier si le message contient un nombre entier et seulement un nombre
         if message.content.isdigit():
             num = int(message.content)
+
             # Si le numéro est correct
             if num == self.current_number:
                 await message.add_reaction("✅")  # Ajout de la coche verte
-                self.current_number += 1
-                self.last_player = message.author
-                # Pas de message supplémentaire, juste le numéro suivant
-
+                self.current_number += 1  # Passer au numéro suivant
             else:
-                # Si le numéro est incorrect, réagir avec une croix et recommencer
+                # Si le numéro est incorrect, réagir avec une croix et recommencer à 1
                 await message.add_reaction("❌")  # Ajout de la croix rouge
                 embed = discord.Embed(
                     title="❌ Jeu terminé",
@@ -42,14 +39,11 @@ class CompteARebours(commands.Cog):
                     color=discord.Color.red()
                 )
                 await message.channel.send(embed=embed)
-                self.current_number = 1  # Réinitialiser le jeu
-                self.last_player = None
-                self.game_active = False  # Terminer le jeu et recommencer à 1
+                self.current_number = 1  # Réinitialiser le jeu à 1
 
-        # Vérifier si le message contient quelque chose d'autre que des chiffres
+        # Vérifier si le message contient un autre type de texte (pas un numéro seul)
         elif re.search(r'\D', message.content):
-            # Si un autre type de message est envoyé, cela n'est pas comptabilisé comme une victoire ou défaite.
-            return
+            return  # Si ce n'est pas un nombre, ne rien faire et continuer
 
     @commands.Cog.listener()
     async def on_message_edit(self, before, after):
@@ -65,16 +59,16 @@ class CompteARebours(commands.Cog):
         if not self.game_active:
             return
 
-        # Vérifier si le message contient un nombre
+        # Vérifier si le message contient un nombre entier
         if after.content.isdigit():
             num = int(after.content)
+
             # Si le numéro est correct
             if num == self.current_number:
                 await after.add_reaction("✅")  # Ajout de la coche verte
-                self.current_number += 1
-                self.last_player = after.author
+                self.current_number += 1  # Passer au numéro suivant
             else:
-                # Si le numéro est incorrect, réagir avec une croix et recommencer
+                # Si le numéro est incorrect, réagir avec une croix et recommencer à 1
                 await after.add_reaction("❌")  # Ajout de la croix rouge
                 embed = discord.Embed(
                     title="❌ Jeu terminé",
@@ -82,19 +76,13 @@ class CompteARebours(commands.Cog):
                     color=discord.Color.red()
                 )
                 await after.channel.send(embed=embed)
-                self.current_number = 1  # Réinitialiser le jeu
-                self.last_player = None
-                self.game_active = False  # Terminer le jeu et recommencer à 1
+                self.current_number = 1  # Réinitialiser le jeu à 1
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        """ Démarrer automatiquement le jeu à partir du numéro 1. """
-        if message.channel.id == self.channel_id and not self.game_active:
-            self.game_active = True
-            self.current_number = 1
-            # Aucune notification envoyée, commence tout de suite avec le numéro 1
-            # Pas besoin d'envoyer de message de démarrage
-            return
+        """ Fonction pour démarrer le jeu sans message. Le jeu est continu, pas besoin de redémarrage manuel. """
+        if message.channel.id == self.channel_id:
+            return  # Le jeu commence automatiquement, pas besoin de message de démarrage
 
 # Ajout du cog
 async def setup(bot):
