@@ -26,6 +26,9 @@ from utils.database import connect_to_mongo
 
 load_dotenv()
 
+
+MONGO_URI = os.getenv('MONGO_URI')
+
 #CONNEXTION A MONGODB
 connect_to_mongo(MONGO_URI)
 
