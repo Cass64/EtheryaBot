@@ -108,9 +108,14 @@ class Profil(commands.Cog):
 
             await save_user_profile(interaction.user.id, profil_data)
 
+            # Créer un menu déroulant pour choisir la couleur
+            theme_select = self.ThemeSelect(interaction.user.id)
+            view = View()
+            view.add_item(theme_select)
+
             await interaction.response.send_message(
-                "✅ Tes informations de profil ont été enregistrées ou mises à jour !",
-                ephemeral=True
+                "✅ Tes informations de profil ont été enregistrées ou mises à jour ! Choisis un thème de couleur pour ton profil.",
+                view=view, ephemeral=True
             )
 
         except Exception as e:
@@ -146,7 +151,7 @@ class Profil(commands.Cog):
             # Avatar circulaire avec bordure
             embed.set_author(name=f"📋 Profil de {profil.get('pseudo', 'Inconnu')}", icon_url=user.display_avatar.url)
 
-            # Fields avec descriptions et plus d'informations, mais répartis dans l'embed
+            # Disposition améliorée des informations avec colonnes
             fields = [
                 ("📝 **Surnom**", profil.get("surnom")),
                 ("🎯 **Hobby**", profil.get("hobby")),
@@ -161,10 +166,12 @@ class Profil(commands.Cog):
                 ("🐶 **Animal Préféré**", profil.get("animal_prefere"))
             ]
 
-            # Ajouter les champs dans l'embed
+            # Ajouter les champs dans l'embed, répartis en deux colonnes
+            inline = True
             for name, value in fields:
                 if value:
-                    embed.add_field(name=name, value=f"**{value}**", inline=True)
+                    embed.add_field(name=name, value=f"**{value}**", inline=inline)
+                    inline = not inline  # Alterne entre True et False pour la disposition en colonnes
 
             # Footer et Image d'avatar
             embed.set_footer(text=f"Profil généré par {interaction.client.user.name}", icon_url=interaction.client.user.display_avatar.url)
