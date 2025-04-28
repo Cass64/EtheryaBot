@@ -46,17 +46,20 @@ async def on_ready():
     await bot.tree.sync()
     print(f"Connecté en tant que {bot.user}")
 
-# Fonction principale asynchrone
-async def main():
-    # Connexion MongoDB
+# Fonction principale
+def main():
+    # Connexion MongoDB (SYNCHRONE => donc PAS DANS UNE FONCTION ASYNC)
     connect_to_mongo(MONGO_URI)
-    # Charger les cogs
+
+    # Démarrer tout l'asynchrone proprement
+    asyncio.run(start_bot())
+
+# Fonction asynchrone pour démarrer le bot
+async def start_bot():
     await load_cogs()
-    # Lancer le bot
     await bot.start(token)
 
-# Démarrer tout
+# Démarrer l'application
 if __name__ == "__main__":
     keep_alive()
-    # Utilisation de asyncio.run() pour démarrer le bot
-    asyncio.run(main())
+    main()
