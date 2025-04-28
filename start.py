@@ -5,7 +5,7 @@ from utils.database import connect_to_mongo
 from keep_alive import keep_alive
 import asyncio
 
-# Charger les variables d'environnement (Render)
+# Charger les variables d'environnement
 token = os.getenv('TOKEN_BOT_DISCORD')
 MONGO_URI = os.getenv('MONGO_URI')
 
@@ -31,7 +31,6 @@ initial_extensions = [
     "cogs.profil"
 ]
 
-# Charger les cogs
 async def load_cogs():
     for extension in initial_extensions:
         try:
@@ -40,26 +39,20 @@ async def load_cogs():
         except Exception as e:
             print(f"❌ Erreur lors du chargement du cog {extension} : {e}")
 
-# Événement quand le bot est prêt
 @bot.event
 async def on_ready():
     await bot.tree.sync()
     print(f"Connecté en tant que {bot.user}")
 
-# Fonction principale
 def main():
-    # Connexion MongoDB (SYNCHRONE => donc PAS DANS UNE FONCTION ASYNC)
-    connect_to_mongo(MONGO_URI)
-
-    # Démarrer tout l'asynchrone proprement
+    # Démarrer tout l'asynchrone
     asyncio.run(start_bot())
 
-# Fonction asynchrone pour démarrer le bot
 async def start_bot():
+    await connect_to_mongo(MONGO_URI)  # CONNECT async ICI
     await load_cogs()
     await bot.start(token)
 
-# Démarrer l'application
 if __name__ == "__main__":
     keep_alive()
     main()
