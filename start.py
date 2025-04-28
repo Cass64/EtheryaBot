@@ -49,7 +49,7 @@ def main():
     asyncio.run(start_bot())
 
 async def start_bot():
-    await connect_to_mongo(MONGO_URI)  # CONNECT async ICI
+    connect_to_mongo(MONGO_URI)
     await load_cogs()
     await bot.start(token)
 
