@@ -17,14 +17,6 @@ class Profil(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-
-    #test
-    @bot.tree.command(name="ping", description="Ping Pong!")
-    async def ping(interaction: discord.Interaction):
-        await interaction.response.send_message("Pong!")
-
-
-
     @app_commands.command(name="myprofil", description="Créer ou modifier ton profil personnel")
     @app_commands.describe(
         surnom="Ton surnom",
@@ -161,4 +153,5 @@ class Profil(commands.Cog):
                 await interaction.response.send_message(content=f"📝 Voici le texte copié :\n```{text}```", ephemeral=True)
 
 async def setup(bot):
+    bot.tree.copy_global_to(guild=discord.Object(id=YOUR_GUILD_ID))  # Remplacez YOUR_GUILD_ID par l'ID de votre serveur
     await bot.add_cog(Profil(bot))
