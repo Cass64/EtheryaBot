@@ -32,6 +32,7 @@ initial_extensions = [
 ]
 
 async def load_cogs():
+    print("🔄 Chargement des cogs...")
     for extension in initial_extensions:
         try:
             await bot.load_extension(extension)
@@ -41,16 +42,20 @@ async def load_cogs():
 
 @bot.event
 async def on_ready():
+    print(f"🔗 Synchronisation des commandes...")
     await bot.tree.sync()
-    print(f"Connecté en tant que {bot.user}")
+    print(f"✅ Connecté en tant que {bot.user}")
 
 def main():
-    # Démarrer tout l'asynchrone
+    # Démarrer l'asynchrone proprement
     asyncio.run(start_bot())
 
 async def start_bot():
-    connect_to_mongo(MONGO_URI)
-    await load_cogs()
+    print("🔗 Connexion à MongoDB...")
+    await connect_to_mongo(MONGO_URI)  # Utilisation de await ici
+    print("✅ Connexion à MongoDB réussie.")
+    
+    await load_cogs()  # Chargement des cogs
     await bot.start(token)
 
 if __name__ == "__main__":
