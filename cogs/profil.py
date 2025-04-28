@@ -4,7 +4,6 @@ from discord import app_commands
 from discord.ui import View, Button, Select
 from utils.database import get_profiles_collection, get_user_profile, save_user_profile
 
-
 THEMES = {
     "Bleu Ciel": "#3498db",
     "Vert Forêt": "#2ecc71",
@@ -13,36 +12,33 @@ THEMES = {
     "Noir Élégant": "#2c3e50"
 }
 
-
 class Profil(commands.Cog):
     def __init__(self, bot):
-         self.bot = bot
-        
+        self.bot = bot
 
-class ThemeSelect(Select):
-    def __init__(self, user_id):
-        options = [
-            discord.SelectOption(label=theme, description=f"Choisir le thème {theme}", value=theme)
-            for theme in THEMES.keys()
-        ]
-        super().__init__(placeholder="🎨 Choisis ton thème de profil", min_values=1, max_values=1, options=options)
-        self.user_id = user_id
+    class ThemeSelect(Select):
+        def __init__(self, user_id):
+            options = [
+                discord.SelectOption(label=theme, description=f"Choisir le thème {theme}", value=theme)
+                for theme in THEMES.keys()
+            ]
+            super().__init__(placeholder="🎨 Choisis ton thème de profil", min_values=1, max_values=1, options=options)
+            self.user_id = user_id
 
-    async def callback(self, interaction: discord.Interaction):
-        if str(interaction.user.id) != str(self.user_id):
-            await interaction.response.send_message("❌ Tu ne peux pas modifier le profil d'un autre utilisateur.", ephemeral=True)
-            return
+        async def callback(self, interaction: discord.Interaction):
+            if str(interaction.user.id) != str(self.user_id):
+                await interaction.response.send_message("❌ Tu ne peux pas modifier le profil d'un autre utilisateur.", ephemeral=True)
+                return
 
-        selected_theme = self.values[0]
-        color_code = THEMES[selected_theme]
+            selected_theme = self.values[0]
+            color_code = THEMES[selected_theme]
 
-        await save_user_profile(interaction.user.id, {
-            "theme": selected_theme,
-            "couleur_code": color_code
-        })
+            await save_user_profile(interaction.user.id, {
+                "theme": selected_theme,
+                "couleur_code": color_code
+            })
 
-        await interaction.response.edit_message(content=f"✅ Thème mis à jour : **{selected_theme}**", view=None)
-
+            await interaction.response.edit_message(content=f"✅ Thème mis à jour : **{selected_theme}**", view=None)
 
     @app_commands.command(name="myprofil", description="Créer ou modifier ton profil personnel")
     async def myprofil(self, interaction: discord.Interaction,
@@ -125,7 +121,6 @@ class ThemeSelect(Select):
             if interaction.data.get("custom_id", "").startswith("copy_"):
                 type_info, text = interaction.data["custom_id"].split(":", 1)
                 await interaction.response.send_message(content=f"📝 Voici le texte copié :\n```{text}```", ephemeral=True)
-
 
 async def setup(bot):
     await bot.add_cog(Profil(bot))
