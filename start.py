@@ -40,20 +40,16 @@ async def load_cogs():
         except Exception as e:
             print(f"❌ Erreur lors du chargement du cog {extension} : {e}")
 
-    # Synchroniser les commandes après avoir chargé les cogs
-    await bot.tree.sync()
-    print("✅ Commandes slash synchronisées.")
-
 # Événement quand le bot est prêt
 @bot.event
 async def on_ready():
     try:
         print(f"Synchronisation des commandes slash en cours...")
-        await bot.tree.sync()  # Synchroniser les commandes slash
+        await bot.tree.sync()  # Synchroniser les commandes globalement
         print(f'{bot.user} a bien été connecté à Discord !')
     except Exception as e:
         print(f"❌ Erreur lors de la synchronisation des commandes : {e}")
-    
+
 # Fonction principale asynchrone
 async def main():
     # Connexion MongoDB
