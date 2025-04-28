@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from discord.ui import View, Button
+from discord.ui import View, Button, Select  # ICI on rajoute Select !
 from utils.database import get_profiles_collection
 
 THEMES = {
@@ -101,11 +101,9 @@ class Profil(commands.Cog):
             print(f"Erreur dans la commande /myprofil pour {interaction.user.id}: {e}")
             await interaction.response.send_message("❌ Une erreur est survenue.", ephemeral=True)
 
-
     @app_commands.command(name="profil", description="Voir le profil d'un membre")
     @app_commands.describe(user="Choisis un membre")
     async def profil(self, interaction: discord.Interaction, user: discord.User):
-
         try:
             user_id = str(user.id)
             profil = await get_profiles_collection().find_one({"user_id": user_id})
