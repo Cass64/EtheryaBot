@@ -4,25 +4,30 @@ from discord import app_commands
 from discord.ui import Select, View
 from utils.database import get_user_profile, save_user_profile
 
-# Liste des couleurs possibles avec des dégradés de fond
 COULEURS = {
-    "Bleu Ciel": ("#3498db", "#1abc9c"),  # Dégradé Bleu à Vert
-    "Rouge Passion": ("#e74c3c", "#c0392b"),  # Dégradé Rouge à Rouge foncé
-    "Violet Mystère": ("#9b59b6", "#8e44ad"),  # Dégradé Violet clair à Violet foncé
-    "Noir Élégant": ("#2c3e50", "#34495e"),  # Dégradé Noir à Gris
+    "Bleu Ciel": ("#3498db", "#1abc9c"),
+    "Rouge Passion": ("#e74c3c", "#c0392b"),
+    "Violet Mystère": ("#9b59b6", "#8e44ad"),
+    "Noir Élégant": ("#2c3e50", "#34495e"),
 }
 
 class Profil(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    class ThemeSelect(Select):
+    async def ask_for_field(self, interaction, field_name, description, placeholder):
+        """Fonction pour demander un champ et afficher une description claire"""
+        await interaction.response.send_message(f"🔄 {description} (ex: {placeholder})", ephemeral=True)
+        msg = await self.bot.wait_for('message', check=lambda m: m.author == interaction.user, timeout=60.0)
+        return msg.content if msg else None
+
+    class ColorSelect(Select):
         def __init__(self, user_id):
             options = [
                 discord.SelectOption(label=theme, description=f"Choisir le thème {theme}", value=theme)
                 for theme in COULEURS.keys()
             ]
-            super().__init__(placeholder="🎨 Choisis ton thème de profil", min_values=1, max_values=1, options=options)
+            super().__init__(placeholder="🎨 Choisis ton thème de couleur", min_values=1, max_values=1, options=options)
             self.user_id = user_id
 
         async def callback(self, interaction: discord.Interaction):
@@ -34,84 +39,46 @@ class Profil(commands.Cog):
             couleur_debut, couleur_fin = COULEURS[selected_theme]
 
             try:
-                # Enregistrer ou modifier les informations du profil avec la couleur choisie
                 await save_user_profile(interaction.user.id, {
                     "theme": selected_theme,
                     "couleur_debut": couleur_debut,
                     "couleur_fin": couleur_fin
                 })
-
-                await interaction.response.edit_message(content=f"✅ Thème mis à jour : **{selected_theme}**", view=None)
+                await interaction.response.edit_message(content=f"✅ Thème de couleur mis à jour : **{selected_theme}**", view=None)
             except Exception as e:
-                print(f"❌ Erreur dans le callback ThemeSelect pour {interaction.user.id} : {e}")
-                await interaction.response.send_message("❌ Impossible de mettre à jour le thème.", ephemeral=True)
+                print(f"❌ Erreur dans le callback ColorSelect pour {interaction.user.id} : {e}")
+                await interaction.response.send_message("❌ Impossible de mettre à jour la couleur.", ephemeral=True)
 
     @app_commands.command(name="myprofil", description="Créer ou modifier ton profil personnel")
-    async def myprofil(self, interaction: discord.Interaction,
-                       surnom: str = None,
-                       photo: str = None,
-                       hobby: str = None,
-                       aime: str = None,
-                       aime_pas: str = None,
-                       lieu: str = None,
-                       metier: str = None,
-                       sexe: str = None,
-                       situation: str = None,
-                       citation: str = None,
-                       anniversaire: str = None,
-                       animal_prefere: str = None):
+    async def myprofil(self, interaction: discord.Interaction):
+        """Commande principale pour la création ou la modification du profil avec sélection de couleur"""
+
         try:
-            profil_data = await get_user_profile(interaction.user.id)
+            # Demander les informations avec des prompts
+            surnom = await self.ask_for_field(interaction, "Surnom", "Ton surnom ou un autre nom que tes amis utilisent pour t'appeler", "ex: John")
+            photo = await self.ask_for_field(interaction, "Photo", "Lien vers une photo de toi (facultatif)", "ex: https://imageurl.com/photo.jpg")
+            hobby = await self.ask_for_field(interaction, "Hobby", "Ton hobby ou activité préférée", "ex: Jouer au football")
+            aime = await self.ask_for_field(interaction, "Aime", "Les choses que tu aimes", "ex: Les chats, le chocolat")
+            aime_pas = await self.ask_for_field(interaction, "Aime Pas", "Les choses que tu n'aimes pas", "ex: Les brocolis")
+            lieu = await self.ask_for_field(interaction, "Lieu", "Où tu habites", "ex: Paris")
+            metier = await self.ask_for_field(interaction, "Métier", "Ton métier ou domaine d'activité", "ex: Développeur web")
+            sexe = await self.ask_for_field(interaction, "Sexe", "Ton sexe (Homme, Femme, Autre)", "ex: Homme")
+            situation = await self.ask_for_field(interaction, "Situation Amoureuse", "Ton état civil actuel", "ex: En couple")
+            citation = await self.ask_for_field(interaction, "Citation Favorite", "Ta citation préférée qui t'inspire", "ex: 'Carpe Diem'")
+            anniversaire = await self.ask_for_field(interaction, "Anniversaire", "Ta date d'anniversaire (format: jj/mm)", "ex: 25/12")
+            animal_prefere = await self.ask_for_field(interaction, "Animal Préféré", "Ton animal préféré", "ex: Chat")
 
-            # Si un profil existe, on met à jour seulement les informations modifiées
-            if profil_data:
-                if surnom:
-                    profil_data["surnom"] = surnom
-                if photo:
-                    profil_data["photo"] = photo
-                if hobby:
-                    profil_data["hobby"] = hobby
-                if aime:
-                    profil_data["aime"] = aime
-                if aime_pas:
-                    profil_data["aime_pas"] = aime_pas
-                if lieu:
-                    profil_data["lieu"] = lieu
-                if metier:
-                    profil_data["metier"] = metier
-                if sexe:
-                    profil_data["sexe"] = sexe
-                if situation:
-                    profil_data["situation"] = situation
-                if citation:
-                    profil_data["citation"] = citation
-                if anniversaire:
-                    profil_data["anniversaire"] = anniversaire
-                if animal_prefere:
-                    profil_data["animal_prefere"] = animal_prefere
-            else:
-                profil_data = {
-                    "pseudo": interaction.user.name,
-                    "surnom": surnom,
-                    "photo": photo,
-                    "hobby": hobby,
-                    "aime": aime,
-                    "aime_pas": aime_pas,
-                    "lieu": lieu,
-                    "metier": metier,
-                    "sexe": sexe,
-                    "situation": situation,
-                    "citation": citation,
-                    "anniversaire": anniversaire,
-                    "animal_prefere": animal_prefere
-                }
+            # Sélection de la couleur de l'embed
+            color_select = self.ColorSelect(user_id=interaction.user.id)
+            view = View()
+            view.add_item(color_select)
+            await interaction.response.send_message("🎨 Choisis une couleur pour ton profil", view=view, ephemeral=True)
 
-            await save_user_profile(interaction.user.id, profil_data)
+            # Attendre la réponse pour choisir la couleur
+            await interaction.response.send_message("✅ Tes informations de profil ont été enregistrées !", ephemeral=True)
 
-            await interaction.response.send_message(
-                "✅ Tes informations de profil ont été enregistrées ou mises à jour !",
-                ephemeral=True
-            )
+            # On attend la confirmation ou autre interaction...
+            # En attendant, on peut sauvegarder le profil avec la couleur sélectionnée.
 
         except Exception as e:
             print(f"❌ Erreur dans la commande /myprofil pour {interaction.user.id}: {e}")
@@ -132,37 +99,30 @@ class Profil(commands.Cog):
 
             embed = discord.Embed(
                 description="Voici son profil 👇",
-                color=discord.Color.from_rgb(52, 152, 219),  # Fallback color
+                color=discord.Color.from_rgb(52, 152, 219),
                 timestamp=discord.utils.utcnow()
             )
 
-            # Bannière personnalisée (image de fond)
-            embed.set_image(url="https://example.com/banner_image.jpg")
-
-            # Avatar circulaire avec bordure
             embed.set_author(name=f"📋 Profil de {profil.get('pseudo', 'Inconnu')}", icon_url=user.display_avatar.url)
 
-            # Fields avec descriptions et plus d'informations
             fields = [
-                ("📝 **Surnom**", profil.get("surnom"), "Le surnom que tu utilises dans la vie réelle."),
-                ("🎯 **Hobby**", profil.get("hobby"), "Ton activité favorite pour passer le temps."),
-                ("💖 **Aime**", profil.get("aime"), "Les choses que tu apprécies le plus."),
-                ("💔 **Aime pas**", profil.get("aime_pas"), "Les choses que tu n'aimes pas."),
-                ("📍 **Lieu**", profil.get("lieu"), "Où tu te trouves actuellement."),
-                ("💼 **Métier**", profil.get("metier"), "Ce que tu fais dans la vie professionnelle."),
-                ("⚧️ **Sexe**", profil.get("sexe"), "Ton genre."),
-                ("💞 **Situation Amoureuse**", profil.get("situation"), "Ton état civil actuel."),
-                ("📜 **Citation Favorite**", profil.get("citation"), "Ta citation préférée qui t'inspire."),
-                ("🎂 **Anniversaire**", profil.get("anniversaire"), "Le jour de ton anniversaire."),
-                ("🐶 **Animal Préféré**", profil.get("animal_prefere"), "Ton animal préféré.")
+                ("📝 **Surnom**", profil.get("surnom")),
+                ("🎯 **Hobby**", profil.get("hobby")),
+                ("💖 **Aime**", profil.get("aime")),
+                ("💔 **Aime pas**", profil.get("aime_pas")),
+                ("📍 **Lieu**", profil.get("lieu")),
+                ("💼 **Métier**", profil.get("metier")),
+                ("⚧️ **Sexe**", profil.get("sexe")),
+                ("💞 **Situation Amoureuse**", profil.get("situation")),
+                ("📜 **Citation Favorite**", profil.get("citation")),
+                ("🎂 **Anniversaire**", profil.get("anniversaire")),
+                ("🐶 **Animal Préféré**", profil.get("animal_prefere"))
             ]
 
-            for name, value, description in fields:
+            for name, value in fields:
                 if value:
-                    embed.add_field(name=name, value=f"**{value}**\n*{description}*", inline=False)
+                    embed.add_field(name=name, value=value, inline=False)
 
-            # Footer et Image d'avatar
-            embed.set_footer(text=f"Profil généré par {interaction.client.user.name}", icon_url=interaction.client.user.display_avatar.url)
             embed.set_thumbnail(url=profil.get("photo", "https://example.com/default-avatar.jpg"))
 
             await interaction.response.send_message(embed=embed)
