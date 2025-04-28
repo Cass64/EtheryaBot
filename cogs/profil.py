@@ -1,8 +1,8 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from discord.ui import View, Button, Select
-from utils.database import get_profiles_collection, get_user_profile, save_user_profile
+from discord.ui import View, Select
+from utils.database import get_user_profile, save_user_profile
 
 THEMES = {
     "Bleu Ciel": "#3498db",
@@ -33,12 +33,15 @@ class Profil(commands.Cog):
             selected_theme = self.values[0]
             color_code = THEMES[selected_theme]
 
-            await save_user_profile(interaction.user.id, {
-                "theme": selected_theme,
-                "couleur_code": color_code
-            })
-
-            await interaction.response.edit_message(content=f"✅ Thème mis à jour : **{selected_theme}**", view=None)
+            try:
+                await save_user_profile(interaction.user.id, {
+                    "theme": selected_theme,
+                    "couleur_code": color_code
+                })
+                await interaction.response.edit_message(content=f"✅ Thème mis à jour : **{selected_theme}**", view=None)
+            except Exception as e:
+                print(f"❌ Erreur dans le callback ThemeSelect pour {interaction.user.id} : {e}")
+                await interaction.response.send_message("❌ Impossible de mettre à jour le thème.", ephemeral=True)
 
     @app_commands.command(name="myprofil", description="Créer ou modifier ton profil personnel")
     async def myprofil(self, interaction: discord.Interaction,
@@ -71,9 +74,8 @@ class Profil(commands.Cog):
                 "✅ Tes informations de profil ont été enregistrées !",
                 ephemeral=True
             )
-
         except Exception as e:
-            print(f"Erreur dans la commande /myprofil pour {interaction.user.id}: {e}")
+            print(f"❌ Erreur dans la commande /myprofil pour {interaction.user.id}: {e}")
             await interaction.response.send_message("❌ Une erreur est survenue.", ephemeral=True)
 
     @app_commands.command(name="profil", description="Voir le profil d'un membre")
@@ -112,15 +114,18 @@ class Profil(commands.Cog):
             await interaction.response.send_message(embed=embed)
 
         except Exception as e:
-            print(f"Erreur dans la commande /profil pour {user.id}: {e}")
+            print(f"❌ Erreur dans la commande /profil pour {user.id}: {e}")
             await interaction.response.send_message("❌ Une erreur est survenue.", ephemeral=True)
 
     @commands.Cog.listener()
     async def on_interaction(self, interaction: discord.Interaction):
         if interaction.type == discord.InteractionType.component:
             if interaction.data.get("custom_id", "").startswith("copy_"):
-                type_info, text = interaction.data["custom_id"].split(":", 1)
-                await interaction.response.send_message(content=f"📝 Voici le texte copié :\n```{text}```", ephemeral=True)
+                try:
+                    type_info, text = interaction.data["custom_id"].split(":", 1)
+                    await interaction.response.send_message(content=f"📝 Voici le texte copié :\n```{text}```", ephemeral=True)
+                except Exception as e:
+                    print(f"❌ Erreur dans on_interaction (copy texte) : {e}")
 
 async def setup(bot):
     await bot.add_cog(Profil(bot))
