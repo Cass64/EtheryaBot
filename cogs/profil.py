@@ -146,7 +146,7 @@ class Profil(commands.Cog):
             )
 
             # Bannière personnalisée (image de fond)
-            embed.set_image(url="https://example.com/banner_image.jpg")
+            embed.set_image(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/banniere_profil.png?raw=true")
 
             # Avatar circulaire avec bordure
             embed.set_author(name=f"📋 Profil de {profil.get('pseudo', 'Inconnu')}", icon_url=user.display_avatar.url)
