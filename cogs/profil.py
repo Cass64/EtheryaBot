@@ -4,7 +4,6 @@ from discord import app_commands
 from discord.ui import View, Button
 from utils.database import get_profiles_collection
 
-# Thèmes disponibles
 THEMES = {
     "Bleu Ciel": "#3498db",
     "Vert Forêt": "#2ecc71",
@@ -18,9 +17,8 @@ class Profil(commands.Cog):
         self.bot = bot
 
     async def cog_load(self):
-        # Ajouter les commandes à l'arbre du bot
-        self.bot.tree.add_command(self.myprofil)
-        self.bot.tree.add_command(self.profil)
+        # Les commandes sont automatiquement ajoutées
+        print("[Profil] Cog chargé, commandes prêtes.")
 
     @app_commands.command(name="myprofil", description="Créer ou modifier ton profil personnel")
     @app_commands.describe(
@@ -53,12 +51,11 @@ class Profil(commands.Cog):
                        sexe: str = None,
                        situation: str = None,
                        theme: app_commands.Choice[str] = None):
-        """Créer ou modifier son profil utilisateur."""
 
         try:
             user_id = str(interaction.user.id)
             selected_theme = theme.value if theme else None
-            color_code = THEMES.get(selected_theme, None)
+            color_code = THEMES.get(selected_theme)
 
             profil_data = {
                 "user_id": user_id,
@@ -86,12 +83,11 @@ class Profil(commands.Cog):
 
         except Exception as e:
             print(f"Erreur dans la commande /myprofil pour {interaction.user.id}: {e}")
-            await interaction.response.send_message("❌ Une erreur s'est produite lors de l'enregistrement de ton profil.", ephemeral=True)
+            await interaction.response.send_message("❌ Une erreur est survenue.", ephemeral=True)
 
     @app_commands.command(name="profil", description="Voir le profil d'un membre")
     @app_commands.describe(user="Choisis un membre")
     async def profil(self, interaction: discord.Interaction, user: discord.User):
-        """Afficher le profil d'un utilisateur."""
 
         try:
             user_id = str(user.id)
@@ -105,12 +101,12 @@ class Profil(commands.Cog):
             if profil.get("couleur_code"):
                 try:
                     color = discord.Color(int(profil["couleur_code"].replace("#", ""), 16))
-                except Exception:
+                except ValueError:
                     pass
 
             embed = discord.Embed(
                 title=f"📋 Profil de {profil['pseudo']}",
-                description="Voici toutes ses informations personnelles 👇",
+                description="Voici toutes ses informations 👇",
                 color=color
             )
 
@@ -134,7 +130,6 @@ class Profil(commands.Cog):
 
             view = View()
 
-            # Ajouter des boutons pour copier certaines infos
             if profil.get("hobby"):
                 view.add_item(Button(label="📋 Copier Hobby", style=discord.ButtonStyle.primary, custom_id=f"copy_hobby:{profil['hobby']}"))
             if profil.get("aime"):
@@ -146,7 +141,7 @@ class Profil(commands.Cog):
 
         except Exception as e:
             print(f"Erreur dans la commande /profil pour {user.id}: {e}")
-            await interaction.response.send_message("❌ Une erreur s'est produite lors de l'affichage du profil.", ephemeral=True)
+            await interaction.response.send_message("❌ Une erreur est survenue.", ephemeral=True)
 
     @commands.Cog.listener()
     async def on_interaction(self, interaction: discord.Interaction):
