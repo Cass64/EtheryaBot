@@ -12,13 +12,33 @@ THEMES = {
     "Noir Élégant": "#2c3e50"
 }
 
+class ThemeSelect(Select):
+    def __init__(self, user_id):
+        options = [
+            discord.SelectOption(label=theme, description=f"Choisir le thème {theme}", value=theme)
+            for theme in THEMES.keys()
+        ]
+        super().__init__(placeholder="🎨 Choisis ton thème de profil", min_values=1, max_values=1, options=options)
+        self.user_id = user_id
+
+    async def callback(self, interaction: discord.Interaction):
+        if str(interaction.user.id) != self.user_id:
+            await interaction.response.send_message("❌ Tu ne peux pas modifier le profil d'un autre utilisateur.", ephemeral=True)
+            return
+
+        selected_theme = self.values[0]
+        color_code = THEMES[selected_theme]
+
+        await get_profiles_collection().update_one(
+            {"user_id": str(interaction.user.id)},
+            {"$set": {"theme": selected_theme, "couleur_code": color_code}}
+        )
+
+        await interaction.response.edit_message(content=f"✅ Thème mis à jour : **{selected_theme}**", view=None)
+
 class Profil(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
-    async def cog_load(self):
-        # Les commandes sont automatiquement ajoutées
-        print("[Profil] Cog chargé, commandes prêtes.")
 
     @app_commands.command(name="myprofil", description="Créer ou modifier ton profil personnel")
     @app_commands.describe(
@@ -30,16 +50,8 @@ class Profil(commands.Cog):
         lieu="Où tu habites",
         metier="Ton métier ou activité",
         sexe="Ton sexe",
-        situation="Ta situation amoureuse",
-        theme="Choisir un thème de couleur"
+        situation="Ta situation amoureuse"
     )
-    @app_commands.choices(theme=[
-        app_commands.Choice(name="Bleu Ciel", value="Bleu Ciel"),
-        app_commands.Choice(name="Vert Forêt", value="Vert Forêt"),
-        app_commands.Choice(name="Rouge Passion", value="Rouge Passion"),
-        app_commands.Choice(name="Violet Mystère", value="Violet Mystère"),
-        app_commands.Choice(name="Noir Élégant", value="Noir Élégant"),
-    ])
     async def myprofil(self, interaction: discord.Interaction,
                        surnom: str = None,
                        photo: str = None,
@@ -49,13 +61,10 @@ class Profil(commands.Cog):
                        lieu: str = None,
                        metier: str = None,
                        sexe: str = None,
-                       situation: str = None,
-                       theme: app_commands.Choice[str] = None):
+                       situation: str = None):
 
         try:
             user_id = str(interaction.user.id)
-            selected_theme = theme.value if theme else None
-            color_code = THEMES.get(selected_theme)
 
             profil_data = {
                 "user_id": user_id,
@@ -69,8 +78,8 @@ class Profil(commands.Cog):
                 "metier": metier,
                 "sexe": sexe,
                 "situation": situation,
-                "theme": selected_theme,
-                "couleur_code": color_code
+                "theme": None,
+                "couleur_code": None
             }
 
             await get_profiles_collection().update_one(
@@ -79,11 +88,19 @@ class Profil(commands.Cog):
                 upsert=True
             )
 
-            await interaction.response.send_message("✅ Ton profil a été enregistré/modifié avec succès !", ephemeral=True)
+            view = View(timeout=60)
+            view.add_item(ThemeSelect(user_id=user_id))
+
+            await interaction.response.send_message(
+                "✅ Tes informations de profil ont été enregistrées !\n\n🎨 Maintenant choisis ton thème de couleur ci-dessous 👇",
+                view=view,
+                ephemeral=True
+            )
 
         except Exception as e:
             print(f"Erreur dans la commande /myprofil pour {interaction.user.id}: {e}")
             await interaction.response.send_message("❌ Une erreur est survenue.", ephemeral=True)
+
 
     @app_commands.command(name="profil", description="Voir le profil d'un membre")
     @app_commands.describe(user="Choisis un membre")
