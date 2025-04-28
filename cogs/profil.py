@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from discord.ui import View, Select
 from utils.database import get_user_profile, save_user_profile
 
 THEMES = {
@@ -16,35 +15,6 @@ class Profil(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    # Sélection du thème avec custom_id
-    class ThemeSelect(Select):
-        def __init__(self, user_id):
-            options = [
-                discord.SelectOption(label=theme, description=f"Choisir le thème {theme}", value=theme)
-                for theme in THEMES.keys()
-            ]
-            super().__init__(placeholder="🎨 Choisis ton thème de profil", min_values=1, max_values=1, options=options, custom_id=f"theme_select:{user_id}")
-            self.user_id = user_id
-
-        async def callback(self, interaction: discord.Interaction):
-            if str(interaction.user.id) != str(self.user_id):
-                await interaction.response.send_message("❌ Tu ne peux pas modifier le profil d'un autre utilisateur.", ephemeral=True)
-                return
-
-            selected_theme = self.values[0]
-            color_code = THEMES[selected_theme]
-
-            try:
-                await save_user_profile(interaction.user.id, {
-                    "theme": selected_theme,
-                    "couleur_code": color_code
-                })
-                await interaction.response.edit_message(content=f"✅ Thème mis à jour : **{selected_theme}**", view=None)
-            except Exception as e:
-                print(f"❌ Erreur dans le callback ThemeSelect pour {interaction.user.id} : {e}")
-                await interaction.response.send_message("❌ Impossible de mettre à jour le thème.", ephemeral=True)
-
-    # Commande /myprofil pour modifier le profil
     @app_commands.command(name="myprofil", description="Créer ou modifier ton profil personnel")
     async def myprofil(self, interaction: discord.Interaction,
                        surnom: str = None,
@@ -55,8 +25,16 @@ class Profil(commands.Cog):
                        lieu: str = None,
                        metier: str = None,
                        sexe: str = None,
-                       situation: str = None):
+                       situation: str = None,
+                       anniversaire: str = None,
+                       citation: str = None,
+                       reseau_social: str = None,
+                       animal_prefere: str = None,
+                       couleur: str = None):
         try:
+            if couleur and not couleur.startswith("#"):
+                couleur = f"#{couleur}"
+
             profil_data = {
                 "pseudo": interaction.user.name,
                 "surnom": surnom,
@@ -67,34 +45,26 @@ class Profil(commands.Cog):
                 "lieu": lieu,
                 "metier": metier,
                 "sexe": sexe,
-                "situation": situation
+                "situation": situation,
+                "anniversaire": anniversaire,
+                "citation": citation,
+                "reseau_social": reseau_social,
+                "animal_prefere": animal_prefere,
+                "couleur_code": couleur if couleur else "#3498db"
             }
 
-            # Mise à jour ou création du profil
             await save_user_profile(interaction.user.id, profil_data)
 
-            # Afficher un récapitulatif des informations
             await interaction.response.send_message(
-                f"✅ Profil enregistré pour **{interaction.user.name}** ! Voici tes informations :\n"
-                f"**Surnom** : {surnom}\n"
-                f"**Hobby** : {hobby}\n"
-                f"**Aime** : {aime}\n"
-                f"**Aime pas** : {aime_pas}\n"
-                f"**Lieu** : {lieu}\n"
-                f"**Métier** : {metier}\n"
-                f"**Sexe** : {sexe}\n"
-                f"**Situation Amoureuse** : {situation}",
+                "✅ Ton profil a bien été enregistré !",
                 ephemeral=True
             )
         except Exception as e:
             print(f"❌ Erreur dans la commande /myprofil pour {interaction.user.id}: {e}")
             await interaction.response.send_message("❌ Une erreur est survenue.", ephemeral=True)
 
-    # Commande /profil pour voir le profil d'un autre membre
     @app_commands.command(name="profil", description="Voir le profil d'un membre")
-    async def profil(self, interaction: discord.Interaction, user: discord.User = None):
-        user = user or interaction.user  # Si aucun user n'est spécifié, prend l'utilisateur qui appelle la commande
-
+    async def profil(self, interaction: discord.Interaction, user: discord.User):
         try:
             profil = await get_user_profile(user.id)
 
@@ -102,13 +72,16 @@ class Profil(commands.Cog):
                 await interaction.response.send_message("❌ Ce membre n'a pas encore créé son profil avec /myprofil.", ephemeral=True)
                 return
 
-            # Utilisation de la couleur dynamique du profil
-            couleur = profil.get("couleur_code", "#3498db")  # Valeur par défaut
+            couleur_code = profil.get("couleur_code", "#3498db")
+            color = discord.Color(int(couleur_code.strip("#"), 16))
+
             embed = discord.Embed(
-                title=f"📋 Profil de {profil.get('pseudo', 'Inconnu')}",
-                description="Voici toutes ses informations 👇",
-                color=int(couleur.lstrip("#"), 16)  # Convertit "#3498db" en nombre hexadécimal
+                description="Voici son profil 👇",
+                color=color,
+                timestamp=discord.utils.utcnow()
             )
+
+            embed.set_author(name=f"📋 Profil de {profil.get('pseudo', 'Inconnu')}", icon_url=user.display_avatar.url)
 
             fields = [
                 ("📝 Surnom", profil.get("surnom")),
@@ -118,15 +91,21 @@ class Profil(commands.Cog):
                 ("📍 Lieu", profil.get("lieu")),
                 ("💼 Métier", profil.get("metier")),
                 ("⚧️ Sexe", profil.get("sexe")),
-                ("💞 Situation Amoureuse", profil.get("situation"))
+                ("💞 Situation amoureuse", profil.get("situation")),
+                ("🎂 Anniversaire", profil.get("anniversaire")),
+                ("🐾 Animal préféré", profil.get("animal_prefere")),
+                ("📜 Citation favorite", profil.get("citation")),
+                ("🔗 Réseaux sociaux", profil.get("reseau_social")),
             ]
 
             for name, value in fields:
                 if value:
-                    embed.add_field(name=name, value=value, inline=False)
+                    embed.add_field(name=name, value=f"*{value}*", inline=False)
 
             if profil.get("photo"):
                 embed.set_thumbnail(url=profil["photo"])
+
+            embed.set_footer(text=f"Profil généré par {interaction.client.user.name}", icon_url=interaction.client.user.display_avatar.url)
 
             await interaction.response.send_message(embed=embed)
 
@@ -134,17 +113,5 @@ class Profil(commands.Cog):
             print(f"❌ Erreur dans la commande /profil pour {user.id}: {e}")
             await interaction.response.send_message("❌ Une erreur est survenue.", ephemeral=True)
 
-    # Interaction pour copier un texte
-    @commands.Cog.listener()
-    async def on_interaction(self, interaction: discord.Interaction):
-        if interaction.type == discord.InteractionType.component:
-            if interaction.data.get("custom_id", "").startswith("copy_"):
-                try:
-                    type_info, text = interaction.data["custom_id"].split(":", 1)
-                    await interaction.response.send_message(content=f"📝 Voici le texte copié :\n```{text}```", ephemeral=True)
-                except Exception as e:
-                    print(f"❌ Erreur dans on_interaction (copy texte) : {e}")
-
-# Enregistrement du cog dans le bot
 async def setup(bot):
     await bot.add_cog(Profil(bot))
