@@ -40,6 +40,10 @@ async def load_cogs():
         except Exception as e:
             print(f"❌ Erreur lors du chargement du cog {extension} : {e}")
 
+    # Synchroniser les commandes après avoir chargé les cogs
+    await bot.tree.sync()
+    print("✅ Commandes slash synchronisées.")
+
 # Événement quand le bot est prêt
 @bot.event
 async def on_ready():
