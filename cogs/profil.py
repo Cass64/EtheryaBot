@@ -1,10 +1,9 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from discord.ui import View, Button, Select, select
-from utils.database import get_profiles_collection
+from discord.ui import View, Button, Select
+from utils.database import get_profiles_collection, get_user_profile, save_user_profile
 
-# Dictionnaire des thèmes
 THEMES = {
     "Bleu Ciel": "#3498db",
     "Vert Forêt": "#2ecc71",
@@ -13,7 +12,6 @@ THEMES = {
     "Noir Élégant": "#2c3e50"
 }
 
-# Classe pour la sélection du thème
 class ThemeSelect(Select):
     def __init__(self, user_id):
         options = [
@@ -24,25 +22,19 @@ class ThemeSelect(Select):
         self.user_id = user_id
 
     async def callback(self, interaction: discord.Interaction):
-        if str(interaction.user.id) != self.user_id:
+        if str(interaction.user.id) != str(self.user_id):
             await interaction.response.send_message("❌ Tu ne peux pas modifier le profil d'un autre utilisateur.", ephemeral=True)
             return
 
         selected_theme = self.values[0]
         color_code = THEMES[selected_theme]
 
-        await get_profiles_collection().update_one(
-            {"user_id": str(interaction.user.id)},
-            {"$set": {"theme": selected_theme, "couleur_code": color_code}}
-        )
+        save_user_profile(interaction.user.id, {
+            "theme": selected_theme,
+            "couleur_code": color_code
+        })
 
         await interaction.response.edit_message(content=f"✅ Thème mis à jour : **{selected_theme}**", view=None)
-
-# Classe pour la vue du thème
-class ThemeView(View):
-    def __init__(self, user_id):
-        super().__init__(timeout=60)
-        self.add_item(ThemeSelect(user_id))
 
 class Profil(commands.Cog):
     def __init__(self, bot):
@@ -70,12 +62,9 @@ class Profil(commands.Cog):
                        metier: str = None,
                        sexe: str = None,
                        situation: str = None):
-        """Créer ou mettre à jour ton profil personnel."""
-        try:
-            user_id = str(interaction.user.id)
 
+        try:
             profil_data = {
-                "user_id": user_id,
                 "pseudo": interaction.user.name,
                 "surnom": surnom,
                 "photo": photo,
@@ -85,34 +74,30 @@ class Profil(commands.Cog):
                 "lieu": lieu,
                 "metier": metier,
                 "sexe": sexe,
-                "situation": situation,
-                "theme": None,
-                "couleur_code": None
+                "situation": situation
             }
 
-            await get_profiles_collection().update_one(
-                {"user_id": user_id},
-                {"$set": profil_data},
-                upsert=True
-            )
+            save_user_profile(interaction.user.id, profil_data)
+
+            view = View(timeout=60)
+            view.add_item(ThemeSelect(user_id=interaction.user.id))
 
             await interaction.response.send_message(
                 "✅ Tes informations de profil ont été enregistrées !\n\n🎨 Maintenant choisis ton thème de couleur ci-dessous 👇",
-                view=ThemeView(user_id),
+                view=view,
                 ephemeral=True
             )
 
         except Exception as e:
-            print(f"Erreur dans /myprofil pour {interaction.user.id}: {e}")
+            print(f"Erreur dans la commande /myprofil pour {interaction.user.id}: {e}")
             await interaction.response.send_message("❌ Une erreur est survenue.", ephemeral=True)
 
     @app_commands.command(name="profil", description="Voir le profil d'un membre")
     @app_commands.describe(user="Choisis un membre")
     async def profil(self, interaction: discord.Interaction, user: discord.User):
-        """Voir le profil d'un membre."""
+
         try:
-            user_id = str(user.id)
-            profil = await get_profiles_collection().find_one({"user_id": user_id})
+            profil = get_user_profile(user.id)
 
             if not profil:
                 await interaction.response.send_message("❌ Ce membre n'a pas encore créé son profil avec /myprofil.", ephemeral=True)
@@ -122,11 +107,11 @@ class Profil(commands.Cog):
             if profil.get("couleur_code"):
                 try:
                     color = discord.Color(int(profil["couleur_code"].replace("#", ""), 16))
-                except ValueError:
+                except Exception:
                     pass
 
             embed = discord.Embed(
-                title=f"📋 Profil de {profil['pseudo']}",
+                title=f"📋 Profil de {profil.get('pseudo', 'Inconnu')}",
                 description="Voici toutes ses informations 👇",
                 color=color
             )
@@ -161,13 +146,13 @@ class Profil(commands.Cog):
             await interaction.response.send_message(embed=embed, view=view)
 
         except Exception as e:
-            print(f"Erreur dans /profil pour {user.id}: {e}")
+            print(f"Erreur dans la commande /profil pour {user.id}: {e}")
             await interaction.response.send_message("❌ Une erreur est survenue.", ephemeral=True)
 
     @commands.Cog.listener()
     async def on_interaction(self, interaction: discord.Interaction):
         if interaction.type == discord.InteractionType.component:
-            if interaction.data["custom_id"].startswith("copy_"):
+            if interaction.data.get("custom_id", "").startswith("copy_"):
                 type_info, text = interaction.data["custom_id"].split(":", 1)
                 await interaction.response.send_message(content=f"📝 Voici le texte copié :\n```{text}```", ephemeral=True)
 
