@@ -1,8 +1,8 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from utils.database import get_profiles_collection
 from discord.ui import View, Button
+from utils.database import get_profiles_collection
 
 # Thèmes disponibles
 THEMES = {
@@ -16,9 +16,11 @@ THEMES = {
 class Profil(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        
-         # Important : Lier les commandes app_commands à l'arbre
-        self.bot.tree.add_command(self.ping)
+
+    async def cog_load(self):
+        # Ajouter les commandes à l'arbre du bot
+        self.bot.tree.add_command(self.myprofil)
+        self.bot.tree.add_command(self.profil)
 
     @app_commands.command(name="myprofil", description="Créer ou modifier ton profil personnel")
     @app_commands.describe(
@@ -51,10 +53,10 @@ class Profil(commands.Cog):
                        sexe: str = None,
                        situation: str = None,
                        theme: app_commands.Choice[str] = None):
+        """Créer ou modifier son profil utilisateur."""
 
         try:
             user_id = str(interaction.user.id)
-
             selected_theme = theme.value if theme else None
             color_code = THEMES.get(selected_theme, None)
 
@@ -74,7 +76,6 @@ class Profil(commands.Cog):
                 "couleur_code": color_code
             }
 
-            # Utilisation de la fonction centralisée pour accéder à la collection user_profiles
             await get_profiles_collection().update_one(
                 {"user_id": user_id},
                 {"$set": profil_data},
@@ -82,6 +83,7 @@ class Profil(commands.Cog):
             )
 
             await interaction.response.send_message("✅ Ton profil a été enregistré/modifié avec succès !", ephemeral=True)
+
         except Exception as e:
             print(f"Erreur dans la commande /myprofil pour {interaction.user.id}: {e}")
             await interaction.response.send_message("❌ Une erreur s'est produite lors de l'enregistrement de ton profil.", ephemeral=True)
@@ -89,11 +91,10 @@ class Profil(commands.Cog):
     @app_commands.command(name="profil", description="Voir le profil d'un membre")
     @app_commands.describe(user="Choisis un membre")
     async def profil(self, interaction: discord.Interaction, user: discord.User):
+        """Afficher le profil d'un utilisateur."""
 
         try:
             user_id = str(user.id)
-
-            # Utilisation de la fonction centralisée pour accéder à la collection user_profiles
             profil = await get_profiles_collection().find_one({"user_id": user_id})
 
             if not profil:
@@ -113,28 +114,27 @@ class Profil(commands.Cog):
                 color=color
             )
 
-            if profil.get("surnom"):
-                embed.add_field(name="📝 Surnom", value=profil["surnom"], inline=False)
-            if profil.get("hobby"):
-                embed.add_field(name="🎯 Hobby", value=profil["hobby"], inline=False)
-            if profil.get("aime"):
-                embed.add_field(name="💖 Aime", value=profil["aime"], inline=False)
-            if profil.get("aime_pas"):
-                embed.add_field(name="💔 Aime pas", value=profil["aime_pas"], inline=False)
-            if profil.get("lieu"):
-                embed.add_field(name="📍 Lieu", value=profil["lieu"], inline=False)
-            if profil.get("metier"):
-                embed.add_field(name="💼 Métier", value=profil["metier"], inline=False)
-            if profil.get("sexe"):
-                embed.add_field(name="⚧️ Sexe", value=profil["sexe"], inline=True)
-            if profil.get("situation"):
-                embed.add_field(name="💞 Situation Amoureuse", value=profil["situation"], inline=True)
+            fields = [
+                ("📝 Surnom", profil.get("surnom")),
+                ("🎯 Hobby", profil.get("hobby")),
+                ("💖 Aime", profil.get("aime")),
+                ("💔 Aime pas", profil.get("aime_pas")),
+                ("📍 Lieu", profil.get("lieu")),
+                ("💼 Métier", profil.get("metier")),
+                ("⚧️ Sexe", profil.get("sexe")),
+                ("💞 Situation Amoureuse", profil.get("situation"))
+            ]
+
+            for name, value in fields:
+                if value:
+                    embed.add_field(name=name, value=value, inline=False)
 
             if profil.get("photo"):
                 embed.set_thumbnail(url=profil["photo"])
 
             view = View()
 
+            # Ajouter des boutons pour copier certaines infos
             if profil.get("hobby"):
                 view.add_item(Button(label="📋 Copier Hobby", style=discord.ButtonStyle.primary, custom_id=f"copy_hobby:{profil['hobby']}"))
             if profil.get("aime"):
