@@ -54,7 +54,7 @@ async def start_bot():
     print("🔗 Connexion à MongoDB...")
     await connect_to_mongo(MONGO_URI)  # Utilisation de await ici
     print("✅ Connexion à MongoDB réussie.")
-    
+
     await load_cogs()  # Chargement des cogs
     await bot.start(token)
 
