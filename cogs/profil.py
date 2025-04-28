@@ -153,5 +153,4 @@ class Profil(commands.Cog):
                 await interaction.response.send_message(content=f"📝 Voici le texte copié :\n```{text}```", ephemeral=True)
 
 async def setup(bot):
-    bot.tree.copy_global_to(guild=discord.Object(id=YOUR_GUILD_ID))  # Remplacez YOUR_GUILD_ID par l'ID de votre serveur
     await bot.add_cog(Profil(bot))
