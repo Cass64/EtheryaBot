@@ -43,12 +43,8 @@ async def load_cogs():
 # Événement quand le bot est prêt
 @bot.event
 async def on_ready():
-    try:
-        print(f"Synchronisation des commandes slash en cours...")
-        await bot.tree.sync()  # Synchroniser les commandes globalement
-        print(f'{bot.user} a bien été connecté à Discord !')
-    except Exception as e:
-        print(f"❌ Erreur lors de la synchronisation des commandes : {e}")
+    await bot.tree.sync()
+    print(f"Connecté en tant que {bot.user}")
 
 # Fonction principale asynchrone
 async def main():
