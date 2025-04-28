@@ -47,38 +47,74 @@ class Profil(commands.Cog):
                 await interaction.response.send_message("❌ Impossible de mettre à jour le thème.", ephemeral=True)
 
     @app_commands.command(name="myprofil", description="Créer ou modifier ton profil personnel")
-    async def myprofil(self, interaction: discord.Interaction):
+    async def myprofil(self, interaction: discord.Interaction,
+                       surnom: str = None,
+                       photo: str = None,
+                       hobby: str = None,
+                       aime: str = None,
+                       aime_pas: str = None,
+                       lieu: str = None,
+                       metier: str = None,
+                       sexe: str = None,
+                       situation: str = None,
+                       citation: str = None,
+                       anniversaire: str = None,
+                       animal_prefere: str = None,
+                       couleur: str = None):
+        """
+        Cette commande permet à un utilisateur de créer ou modifier son profil personnel.
+        Les descriptions permettent d'expliquer ce que chaque champ représente.
+        """
         try:
-            # Guide utilisateur avec des descriptions des champs à remplir
+            # Descriptions pour chaque option, utilisées dans la commande
             description_fields = {
-                "Surnom": "Ton surnom ou un autre nom que tes amis utilisent pour t'appeler.",
-                "Photo": "Lien vers une photo de toi (facultatif).",
-                "Hobby": "Ton hobby ou activité préférée.",
-                "Aime": "Les choses que tu aimes.",
-                "Aime Pas": "Les choses que tu n'aimes pas.",
-                "Lieu": "Où tu habites.",
-                "Métier": "Ton métier ou domaine d'activité.",
-                "Sexe": "Ton sexe (Homme, Femme, Autre).",
-                "Situation Amoureuse": "Ton état civil actuel.",
-                "Citation Favorite": "Ta citation préférée.",
-                "Anniversaire": "Ta date d'anniversaire (format: jj/mm).",
-                "Animal Préféré": "Ton animal préféré.",
+                "surnom": "Ton surnom ou un autre nom que tes amis utilisent pour t'appeler.",
+                "photo": "Lien vers une photo de toi (facultatif).",
+                "hobby": "Ton hobby ou activité préférée.",
+                "aime": "Les choses que tu aimes.",
+                "aime_pas": "Les choses que tu n'aimes pas.",
+                "lieu": "Où tu habites.",
+                "metier": "Ton métier ou domaine d'activité.",
+                "sexe": "Ton sexe (Homme, Femme, Autre).",
+                "situation": "Ton état civil actuel.",
+                "citation": "Ta citation préférée.",
+                "anniversaire": "Ta date d'anniversaire (format: jj/mm).",
+                "animal_prefere": "Ton animal préféré.",
             }
 
-            # Envoi des descriptions des champs pour guider l'utilisateur
-            for field, description in description_fields.items():
-                await interaction.response.send_message(f"**{field}** : {description}", ephemeral=True)
+            # On vérifie si un profil existe déjà
+            profil_data = await get_user_profile(interaction.user.id)
+            
+            if profil_data:
+                # Mettre à jour uniquement les champs modifiés
+                for field, value in locals().items():
+                    if value is not None and field in description_fields:
+                        profil_data[field] = value
+            else:
+                # Créer un nouveau profil si aucun n'existe
+                profil_data = {
+                    "pseudo": interaction.user.name,
+                    "surnom": surnom,
+                    "photo": photo,
+                    "hobby": hobby,
+                    "aime": aime,
+                    "aime_pas": aime_pas,
+                    "lieu": lieu,
+                    "metier": metier,
+                    "sexe": sexe,
+                    "situation": situation,
+                    "citation": citation,
+                    "anniversaire": anniversaire,
+                    "animal_prefere": animal_prefere
+                }
 
-            # Demande d'informations à l'utilisateur
-            await interaction.response.send_message("💬 Veuillez remplir les informations ci-dessus. Si vous ne souhaitez pas remplir un champ, laissez-le vide.", ephemeral=True)
+            # Enregistrer les données du profil avec la couleur sélectionnée
+            if couleur:
+                profil_data["couleur_debut"], profil_data["couleur_fin"] = COULEURS.get(couleur, ("#3498db", "#1abc9c"))
 
-            # Sélection de la couleur de l'embed via un menu déroulant
-            color_select = self.ThemeSelect(user_id=interaction.user.id)
-            view = View()
-            view.add_item(color_select)
-            await interaction.response.send_message("🎨 Choisis une couleur pour ton profil", view=view, ephemeral=True)
+            await save_user_profile(interaction.user.id, profil_data)
 
-            # Attendre la réponse de l'utilisateur
+            # Message de confirmation
             await interaction.response.send_message("✅ Tes informations de profil ont été enregistrées ou mises à jour !", ephemeral=True)
 
         except Exception as e:
@@ -133,4 +169,4 @@ class Profil(commands.Cog):
             await interaction.response.send_message("❌ Une erreur est survenue.", ephemeral=True)
 
 async def setup(bot):
-    await bot.add_cog(Profil(bot)) 
+    await bot.add_cog(Profil(bot))
