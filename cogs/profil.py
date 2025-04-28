@@ -146,7 +146,7 @@ class Profil(commands.Cog):
             )
 
             # Bannière personnalisée (image de fond)
-            embed.set_image(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/banniere_profil.png?raw=true")
+            embed.set_image(url="https://example.com/banner_image.jpg")
 
             # Avatar circulaire avec bordure
             embed.set_author(name=f"📋 Profil de {profil.get('pseudo', 'Inconnu')}", icon_url=user.display_avatar.url)
@@ -166,9 +166,9 @@ class Profil(commands.Cog):
                 ("🐶 **Animal Préféré**", profil.get("animal_prefere"))
             ]
 
-            # Ajouter les champs dans l'embed, répartis en deux colonnes
+            # Répartir les champs en deux colonnes
             inline = True
-            for name, value in fields:
+            for i, (name, value) in enumerate(fields):
                 if value:
                     embed.add_field(name=name, value=f"**{value}**", inline=inline)
                     inline = not inline  # Alterne entre True et False pour la disposition en colonnes
