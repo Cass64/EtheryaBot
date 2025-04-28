@@ -65,29 +65,29 @@ class Profil(commands.Cog):
 
             # Si un profil existe, on met à jour seulement les informations modifiées
             if profil_data:
-                if surnom:
+                if surnom is not None:
                     profil_data["surnom"] = surnom
-                if photo:
+                if photo is not None:
                     profil_data["photo"] = photo
-                if hobby:
+                if hobby is not None:
                     profil_data["hobby"] = hobby
-                if aime:
+                if aime is not None:
                     profil_data["aime"] = aime
-                if aime_pas:
+                if aime_pas is not None:
                     profil_data["aime_pas"] = aime_pas
-                if lieu:
+                if lieu is not None:
                     profil_data["lieu"] = lieu
-                if metier:
+                if metier is not None:
                     profil_data["metier"] = metier
-                if sexe:
+                if sexe is not None:
                     profil_data["sexe"] = sexe
-                if situation:
+                if situation is not None:
                     profil_data["situation"] = situation
-                if citation:
+                if citation is not None:
                     profil_data["citation"] = citation
-                if anniversaire:
+                if anniversaire is not None:
                     profil_data["anniversaire"] = anniversaire
-                if animal_prefere:
+                if animal_prefere is not None:
                     profil_data["animal_prefere"] = animal_prefere
             else:
                 profil_data = {
@@ -153,23 +153,23 @@ class Profil(commands.Cog):
 
             # Disposition améliorée des informations avec colonnes
             fields = [
-                ("📝 **Surnom**", profil.get("surnom")),
-                ("🎯 **Hobby**", profil.get("hobby")),
-                ("💖 **Aime**", profil.get("aime")),
-                ("💔 **Aime pas**", profil.get("aime_pas")),
-                ("📍 **Lieu**", profil.get("lieu")),
-                ("💼 **Métier**", profil.get("metier")),
-                ("⚧️ **Sexe**", profil.get("sexe")),
-                ("💞 **Situation Amoureuse**", profil.get("situation")),
-                ("📜 **Citation Favorite**", profil.get("citation")),
-                ("🎂 **Anniversaire**", profil.get("anniversaire")),
-                ("🐶 **Animal Préféré**", profil.get("animal_prefere"))
+                ("📝 **Surnom**", profil.get("surnom", "Non renseigné")),
+                ("🎯 **Hobby**", profil.get("hobby", "Non renseigné")),
+                ("💖 **Aime**", profil.get("aime", "Non renseigné")),
+                ("💔 **Aime pas**", profil.get("aime_pas", "Non renseigné")),
+                ("📍 **Lieu**", profil.get("lieu", "Non renseigné")),
+                ("💼 **Métier**", profil.get("metier", "Non renseigné")),
+                ("⚧️ **Sexe**", profil.get("sexe", "Non renseigné")),
+                ("💞 **Situation Amoureuse**", profil.get("situation", "Non renseigné")),
+                ("📜 **Citation Favorite**", profil.get("citation", "Non renseigné")),
+                ("🎂 **Anniversaire**", profil.get("anniversaire", "Non renseigné")),
+                ("🐶 **Animal Préféré**", profil.get("animal_prefere", "Non renseigné"))
             ]
 
             # Répartir les champs en deux colonnes
             inline = True
             for i, (name, value) in enumerate(fields):
-                if value:
+                if value != "Non renseigné":  # Seulement afficher les champs renseignés
                     embed.add_field(name=name, value=f"**{value}**", inline=inline)
                     inline = not inline  # Alterne entre True et False pour la disposition en colonnes
 
