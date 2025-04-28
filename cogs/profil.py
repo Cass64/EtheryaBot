@@ -29,7 +29,7 @@ class ThemeSelect(Select):
         selected_theme = self.values[0]
         color_code = THEMES[selected_theme]
 
-        save_user_profile(interaction.user.id, {
+        await save_user_profile(interaction.user.id, {
             "theme": selected_theme,
             "couleur_code": color_code
         })
@@ -51,7 +51,6 @@ class Profil(commands.Cog):
                        metier: str = None,
                        sexe: str = None,
                        situation: str = None):
-   
         try:
             profil_data = {
                 "pseudo": interaction.user.name,
@@ -66,7 +65,7 @@ class Profil(commands.Cog):
                 "situation": situation
             }
 
-            save_user_profile(interaction.user.id, profil_data)
+            await save_user_profile(interaction.user.id, profil_data)
 
             await interaction.response.send_message(
                 "✅ Tes informations de profil ont été enregistrées !",
@@ -80,7 +79,7 @@ class Profil(commands.Cog):
     @app_commands.command(name="profil", description="Voir le profil d'un membre")
     async def profil(self, interaction: discord.Interaction, user: discord.User):
         try:
-            profil = get_user_profile(user.id)
+            profil = await get_user_profile(user.id)
 
             if not profil:
                 await interaction.response.send_message("❌ Ce membre n'a pas encore créé son profil avec /myprofil.", ephemeral=True)
