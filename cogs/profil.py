@@ -21,13 +21,13 @@ class Profil(commands.Cog):
         msg = await self.bot.wait_for('message', check=lambda m: m.author == interaction.user, timeout=60.0)
         return msg.content if msg else None
 
-    class ColorSelect(Select):
+    class ThemeSelect(Select):
         def __init__(self, user_id):
             options = [
                 discord.SelectOption(label=theme, description=f"Choisir le thème {theme}", value=theme)
                 for theme in COULEURS.keys()
             ]
-            super().__init__(placeholder="🎨 Choisis ton thème de couleur", min_values=1, max_values=1, options=options)
+            super().__init__(placeholder="🎨 Choisis ton thème de profil", min_values=1, max_values=1, options=options)
             self.user_id = user_id
 
         async def callback(self, interaction: discord.Interaction):
@@ -44,17 +44,17 @@ class Profil(commands.Cog):
                     "couleur_debut": couleur_debut,
                     "couleur_fin": couleur_fin
                 })
-                await interaction.response.edit_message(content=f"✅ Thème de couleur mis à jour : **{selected_theme}**", view=None)
+                await interaction.response.edit_message(content=f"✅ Thème mis à jour : **{selected_theme}**", view=None)
             except Exception as e:
-                print(f"❌ Erreur dans le callback ColorSelect pour {interaction.user.id} : {e}")
-                await interaction.response.send_message("❌ Impossible de mettre à jour la couleur.", ephemeral=True)
+                print(f"❌ Erreur dans le callback ThemeSelect pour {interaction.user.id} : {e}")
+                await interaction.response.send_message("❌ Impossible de mettre à jour le thème.", ephemeral=True)
 
     @app_commands.command(name="myprofil", description="Créer ou modifier ton profil personnel")
     async def myprofil(self, interaction: discord.Interaction):
-        """Commande principale pour la création ou la modification du profil avec sélection de couleur"""
+        """Commande principale pour la création ou la modification du profil avec prompts pour chaque champ"""
 
         try:
-            # Demander les informations avec des prompts
+            # Demande des informations avec des prompts
             surnom = await self.ask_for_field(interaction, "Surnom", "Ton surnom ou un autre nom que tes amis utilisent pour t'appeler", "ex: John")
             photo = await self.ask_for_field(interaction, "Photo", "Lien vers une photo de toi (facultatif)", "ex: https://imageurl.com/photo.jpg")
             hobby = await self.ask_for_field(interaction, "Hobby", "Ton hobby ou activité préférée", "ex: Jouer au football")
@@ -68,17 +68,25 @@ class Profil(commands.Cog):
             anniversaire = await self.ask_for_field(interaction, "Anniversaire", "Ta date d'anniversaire (format: jj/mm)", "ex: 25/12")
             animal_prefere = await self.ask_for_field(interaction, "Animal Préféré", "Ton animal préféré", "ex: Chat")
 
-            # Sélection de la couleur de l'embed
-            color_select = self.ColorSelect(user_id=interaction.user.id)
-            view = View()
-            view.add_item(color_select)
-            await interaction.response.send_message("🎨 Choisis une couleur pour ton profil", view=view, ephemeral=True)
+            profil_data = {
+                "pseudo": interaction.user.name,
+                "surnom": surnom,
+                "photo": photo,
+                "hobby": hobby,
+                "aime": aime,
+                "aime_pas": aime_pas,
+                "lieu": lieu,
+                "metier": metier,
+                "sexe": sexe,
+                "situation": situation,
+                "citation": citation,
+                "anniversaire": anniversaire,
+                "animal_prefere": animal_prefere
+            }
 
-            # Attendre la réponse pour choisir la couleur
+            await save_user_profile(interaction.user.id, profil_data)
+
             await interaction.response.send_message("✅ Tes informations de profil ont été enregistrées !", ephemeral=True)
-
-            # On attend la confirmation ou autre interaction...
-            # En attendant, on peut sauvegarder le profil avec la couleur sélectionnée.
 
         except Exception as e:
             print(f"❌ Erreur dans la commande /myprofil pour {interaction.user.id}: {e}")
