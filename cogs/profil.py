@@ -135,6 +135,7 @@ class Profil(commands.Cog):
                 await interaction.response.send_message("❌ Ce membre n'a pas encore créé son profil avec /myprofil.", ephemeral=True)
                 return
 
+            # Récupérer les couleurs du profil, ou utiliser des couleurs par défaut si non renseignées
             couleur_debut = profil.get("couleur_debut", "#3498db")
             couleur_fin = profil.get("couleur_fin", "#1abc9c")
             gradient = f"linear-gradient(45deg, {couleur_debut}, {couleur_fin})"
@@ -144,6 +145,9 @@ class Profil(commands.Cog):
                 color=discord.Color.from_rgb(52, 152, 219),  # Fallback color
                 timestamp=discord.utils.utcnow()
             )
+
+            # Appliquer le dégradé de couleurs à l'embed (dans le champ "description")
+            embed.description = f"[Profil de {user.name}]({user.display_avatar.url}) - Thème : {profil.get('theme', 'Non défini')}"
 
             # Bannière personnalisée (image de fond)
             embed.set_image(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/banniere_profil.png?raw=true")
@@ -176,6 +180,9 @@ class Profil(commands.Cog):
             # Footer et Image d'avatar
             embed.set_footer(text=f"Profil généré par {interaction.client.user.name}", icon_url=interaction.client.user.display_avatar.url)
             embed.set_thumbnail(url=profil.get("photo", "https://example.com/default-avatar.jpg"))
+
+            # Appliquer le dégradé de couleurs comme fond
+            embed.color = discord.Color.from_rgb(int(couleur_debut[1:3], 16), int(couleur_debut[3:5], 16), int(couleur_debut[5:7], 16))
 
             await interaction.response.send_message(embed=embed)
 
