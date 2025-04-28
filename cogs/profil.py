@@ -121,7 +121,7 @@ class Profil(commands.Cog):
 
             embed.set_author(name=f"📋 Profil de {profil.get('pseudo', 'Inconnu')}", icon_url=user.display_avatar.url)
             embed.set_thumbnail(url=profil.get("photo", "https://example.com/default-avatar.jpg"))
-            embed.set_image(url="")  # à remplacer par ton image bannière par défaut
+            embed.set_image(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/banniere_profil.png?raw=true")  # à remplacer par ton image bannière par défaut
 
             champs = [
                 ("📝 Surnom", profil.get("surnom")),
