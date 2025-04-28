@@ -41,17 +41,6 @@ class Profil(commands.Cog):
         self.bot = bot
 
     @app_commands.command(name="myprofil", description="Créer ou modifier ton profil personnel")
-    @app_commands.describe(
-        surnom="Ton surnom",
-        photo="Lien URL de ta photo",
-        hobby="Tes hobbies",
-        aime="Ce que tu aimes",
-        aime_pas="Ce que tu n'aimes pas",
-        lieu="Où tu habites",
-        metier="Ton métier ou activité",
-        sexe="Ton sexe",
-        situation="Ta situation amoureuse"
-    )
     async def myprofil(self, interaction: discord.Interaction,
                        surnom: str = None,
                        photo: str = None,
@@ -62,7 +51,7 @@ class Profil(commands.Cog):
                        metier: str = None,
                        sexe: str = None,
                        situation: str = None):
-
+   
         try:
             profil_data = {
                 "pseudo": interaction.user.name,
@@ -79,12 +68,8 @@ class Profil(commands.Cog):
 
             save_user_profile(interaction.user.id, profil_data)
 
-            view = View(timeout=60)
-            view.add_item(ThemeSelect(user_id=interaction.user.id))
-
             await interaction.response.send_message(
-                "✅ Tes informations de profil ont été enregistrées !\n\n🎨 Maintenant choisis ton thème de couleur ci-dessous 👇",
-                view=view,
+                "✅ Tes informations de profil ont été enregistrées !",
                 ephemeral=True
             )
 
@@ -93,9 +78,7 @@ class Profil(commands.Cog):
             await interaction.response.send_message("❌ Une erreur est survenue.", ephemeral=True)
 
     @app_commands.command(name="profil", description="Voir le profil d'un membre")
-    @app_commands.describe(user="Choisis un membre")
     async def profil(self, interaction: discord.Interaction, user: discord.User):
-
         try:
             profil = get_user_profile(user.id)
 
@@ -103,17 +86,10 @@ class Profil(commands.Cog):
                 await interaction.response.send_message("❌ Ce membre n'a pas encore créé son profil avec /myprofil.", ephemeral=True)
                 return
 
-            color = discord.Color.blue()
-            if profil.get("couleur_code"):
-                try:
-                    color = discord.Color(int(profil["couleur_code"].replace("#", ""), 16))
-                except Exception:
-                    pass
-
             embed = discord.Embed(
                 title=f"📋 Profil de {profil.get('pseudo', 'Inconnu')}",
                 description="Voici toutes ses informations 👇",
-                color=color
+                color=discord.Color.blue()
             )
 
             fields = [
@@ -134,16 +110,7 @@ class Profil(commands.Cog):
             if profil.get("photo"):
                 embed.set_thumbnail(url=profil["photo"])
 
-            view = View()
-
-            if profil.get("hobby"):
-                view.add_item(Button(label="📋 Copier Hobby", style=discord.ButtonStyle.primary, custom_id=f"copy_hobby:{profil['hobby']}"))
-            if profil.get("aime"):
-                view.add_item(Button(label="📋 Copier Aime", style=discord.ButtonStyle.success, custom_id=f"copy_aime:{profil['aime']}"))
-            if profil.get("aime_pas"):
-                view.add_item(Button(label="📋 Copier Aime Pas", style=discord.ButtonStyle.danger, custom_id=f"copy_aime_pas:{profil['aime_pas']}"))
-
-            await interaction.response.send_message(embed=embed, view=view)
+            await interaction.response.send_message(embed=embed)
 
         except Exception as e:
             print(f"Erreur dans la commande /profil pour {user.id}: {e}")
