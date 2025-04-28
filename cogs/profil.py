@@ -16,6 +16,9 @@ THEMES = {
 class Profil(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        
+         # Important : Lier les commandes app_commands à l'arbre
+        self.bot.tree.add_command(self.ping)
 
     @app_commands.command(name="myprofil", description="Créer ou modifier ton profil personnel")
     @app_commands.describe(
