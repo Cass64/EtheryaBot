@@ -2,7 +2,7 @@ from discord.ext import tasks
 from datetime import datetime
 import discord
 
-from database import get_profiles_collection
+from utils.database import get_profiles_collection
 from bot import bot  # Assure-toi que `bot` est bien importé depuis ton instance principale
 
 @tasks.loop(time=datetime.strptime("08:00", "%H:%M").time())  # Tous les jours à 08h
