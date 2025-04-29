@@ -3,10 +3,15 @@ from datetime import datetime
 import discord
 
 from utils.database import get_profiles_collection
-from start import bot  # Assure-toi que `bot` est bien importé depuis ton instance principale
+
+bot_instance = None
 
 @tasks.loop(time=datetime.strptime("08:00", "%H:%M").time())  # Tous les jours à 08h
 async def check_birthdays():
+    if not bot_instance:
+        print("❌ Bot non initialisé dans check_birthdays")
+        return
+
     print("🔍 Vérification des anniversaires en cours...")
     collection = get_profiles_collection()
     today = datetime.utcnow()
@@ -23,7 +28,6 @@ async def check_birthdays():
             if not anniversaire or anniversaire.lower() == "non renseigné":
                 continue
 
-            # Format attendu : DD/MM/YYYY
             parts = anniversaire.split("/")
             if len(parts) != 3:
                 continue
@@ -31,11 +35,10 @@ async def check_birthdays():
             d, m, y = map(int, parts)
             if d == day and m == month and str(year) != str(last_check_year):
                 channel_id = 1355230266163204200
-                channel = bot.get_channel(channel_id)
+                channel = bot_instance.get_channel(channel_id)
                 if not channel:
                     continue
 
-                # Envoi de l'embed anniversaire
                 embed = discord.Embed(
                     title="🎉 Joyeux anniversaire ! 🎉",
                     description=f"Souhaitez un joyeux anniversaire à <@{user_id}> ! 🥳",
@@ -46,10 +49,14 @@ async def check_birthdays():
                 embed.set_footer(text="De la part de toute la communauté 🎁")
                 await channel.send(embed=embed)
 
-                # Marquer l'anniversaire comme célébré pour cette année
                 await collection.update_one(
                     {"_id": user_id},
                     {"$set": {"last_birthday_check": year}}
                 )
         except Exception as e:
             print(f"❌ Erreur lors de la vérification d'anniversaire pour l'utilisateur {user_id} : {e}")
+
+def init_birthdays(bot):
+    global bot_instance
+    bot_instance = bot
+    check_birthdays.start()
