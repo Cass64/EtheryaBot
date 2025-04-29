@@ -196,7 +196,7 @@ class Profil(commands.Cog):
             print(f"❌ Erreur dans la commande /info_profil : {e}")
             await interaction.response.send_message("❌ Une erreur est survenue lors de l'envoi des informations.", ephemeral=True)
 
-@app_commands.command(name="delete_profil", description="Supprimer une ou plusieurs informations de ton profil")
+    @app_commands.command(name="delete_profil", description="Supprimer une ou plusieurs informations de ton profil")
     async def delete_profil(self, interaction: discord.Interaction):
         profil = await get_user_profile(interaction.user.id)
         if not profil:
@@ -224,35 +224,23 @@ class Profil(commands.Cog):
 
             async def callback(self, interaction_select: discord.Interaction):
                 try:
+                    profil = await get_user_profile(interaction.user.id)
                     if "__ALL__" in self.values:
                         await save_user_profile(interaction.user.id, {})
-                        await interaction_select.response.edit_message(
-                            content="✅ Ton profil a été complètement supprimé.",
-                            embed=None,
-                            view=None
-                        )
+                        await interaction_select.response.edit_message(content="✅ Ton profil a été complètement supprimé.", embed=None, view=None)
                     else:
-                        await delete_user_fields(interaction.user.id, self.values)
-                        await interaction_select.response.edit_message(
-                            content=f"✅ Informations supprimées : {', '.join(self.values)}",
-                            embed=None,
-                            view=None
-                        )
+                        for key in self.values:
+                            profil.pop(key, None)
+                        await save_user_profile(interaction.user.id, profil)
+                        await interaction_select.response.edit_message(content=f"✅ Informations supprimées : {', '.join(self.values)}", embed=None, view=None)
                 except Exception as e:
                     print(f"❌ Erreur suppression profil : {e}")
-                    await interaction_select.response.send_message(
-                        "❌ Une erreur est survenue lors de la suppression.",
-                        ephemeral=True
-                    )
+                    await interaction_select.response.send_message("❌ Une erreur est survenue lors de la suppression.", ephemeral=True)
 
         view = discord.ui.View()
         view.add_item(DeleteSelect())
 
-        await interaction.response.send_message(
-            "🗑️ Choisis les informations de ton profil que tu veux supprimer :",
-            view=view,
-            ephemeral=True
-        )
+        await interaction.response.send_message("🗑️ Choisis les informations de ton profil que tu veux supprimer :", view=view, ephemeral=True)
 
     @app_commands.command(name="secret_profil", description="Cacher ton profil sur certains serveurs")
     async def secret_profil(self, interaction: discord.Interaction):
@@ -341,7 +329,6 @@ class Profil(commands.Cog):
         except Exception as e:
             print(f"❌ Erreur dans la commande /unhide_profil : {e}")
             await interaction.response.send_message("❌ Une erreur est survenue.", ephemeral=True)
-
 
 
 async def setup(bot):
