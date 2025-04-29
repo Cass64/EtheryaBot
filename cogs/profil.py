@@ -266,14 +266,15 @@ class Profil(commands.Cog):
                     ]
                     super().__init__(placeholder="Choisis les serveurs où cacher ton profil", min_values=1, max_values=len(options), options=options)
 
-    async def callback(self, interaction_select: discord.Interaction):
-        selected_servers = self.values
-        profil['hidden_on_servers'] = selected_servers  # Mettez à jour le profil avec les serveurs sélectionnés
-        await save_user_profile(user_id, profil)  # Sauvegardez le profil après la mise à jour
-        await interaction_select.response.edit_message(
-            content=f"✅ Ton profil est désormais caché sur les serveurs : {', '.join(selected_servers)}",
-            view=None
-        )
+                async def callback(self, interaction_select: discord.Interaction):
+                    # Cacher le profil sur les serveurs sélectionnés
+                    selected_servers = self.values
+                    profil['hidden_on_servers'] = selected_servers
+                    await save_user_profile(user_id, profil)
+                    await interaction_select.response.edit_message(
+                        content=f"✅ Ton profil est désormais caché sur les serveurs : {', '.join(selected_servers)}",
+                        view=None
+                    )
 
             view = discord.ui.View()
             view.add_item(SecretSelect(server_names))
