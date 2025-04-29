@@ -16,6 +16,14 @@ class Profil(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    async def cog_load(self):
+        self.bot.tree.add_command(self.myprofil)
+        self.bot.tree.add_command(self.profil)
+        self.bot.tree.add_command(self.info_profil)
+        self.bot.tree.add_command(self.delete_profil)
+        self.bot.tree.add_command(self.secret_profil)
+        self.bot.tree.add_command(self.unhide_profil)
+
     class ThemeSelect(Select):
         def __init__(self, user_id):
             options = [
@@ -96,6 +104,10 @@ class Profil(commands.Cog):
                 await interaction.response.send_message("❌ Ce membre n'a pas encore créé son profil avec /myprofil.", ephemeral=True)
                 return
 
+            if "hidden_on_servers" in profil and str(interaction.guild.id) in profil["hidden_on_servers"] and user.id != interaction.user.id:
+                await interaction.response.send_message("🔒 Ce membre a choisi de cacher son profil sur ce serveur.", ephemeral=True)
+                return
+
             couleur_hex = profil.get("couleur_debut", "#3498db")
             try:
                 couleur_rgb = discord.Color.from_rgb(
@@ -160,18 +172,7 @@ class Profil(commands.Cog):
         try:
             embed = discord.Embed(
                 title="📘 Informations sur le Profil Utilisateur",
-                description=(
-                    "Bienvenue dans le système de **profil utilisateur** d’Etherya Bot !\n\n"
-                    "🔹 Chaque membre peut créer un **profil personnalisé**, visible **publiquement** "
-                    "sur **tous les serveurs** où le bot est présent.\n\n"
-                    "🎨 Tu peux configurer ton thème de profil, ta photo, ton surnom, ton hobby, ce que tu aimes, "
-                    "et plein d'autres détails pour te représenter au mieux.\n\n"
-                    "🏷️ Des **badges dynamiques** sont ajoutés automatiquement selon ta présence ou ton rôle sur chaque serveur "
-                    "(comme `Staff`, `Ancien`, etc.).\n\n"
-                    "📌 Utilise la commande `/myprofil` pour personnaliser ton profil à tout moment.\n\n"
-                    "📂 Ensuite, consulte ton profil (ou celui d'un autre membre) avec `/profil`.\n\n"
-                    "**Ton profil te suit partout, sois fier de qui tu es ! ✨**"
-                ),
+                description=(...),
                 color=discord.Color.blurple(),
                 timestamp=discord.utils.utcnow()
             )
@@ -212,87 +213,69 @@ class Profil(commands.Cog):
         class DeleteSelect(discord.ui.Select):
             def __init__(self):
                 options = [
-                    discord.SelectOption(label="🗑️ Tout supprimer", value="__ALL__", description="Supprime tout ton profil"),
+                    discord.SelectOption(label="🗑️ Tout supprimer", value="__ALL__"),
+                ] + [
+                    discord.SelectOption(label=key.replace("_", " ").capitalize(), value=key)
+                    for key in [
+                        "surnom", "photo", "hobby", "aime", "aime_pas", "lieu", "metier",
+                        "sexe", "situation", "citation", "anniversaire", "animal_prefere", "theme"
+                    ]
                 ]
-                for key in [
-                    "surnom", "photo", "hobby", "aime", "aime_pas", "lieu", "metier",
-                    "sexe", "situation", "citation", "anniversaire", "animal_prefere", "theme"
-                ]:
-                    label = key.replace("_", " ").capitalize()
-                    options.append(discord.SelectOption(label=label, value=key))
-
-                super().__init__(
-                    placeholder="Sélectionne les informations à supprimer",
-                    min_values=1,
-                    max_values=len(options),
-                    options=options
-                )
+                super().__init__(placeholder="Sélectionne les infos à supprimer", min_values=1, max_values=len(options), options=options)
 
             async def callback(self, interaction_select: discord.Interaction):
-                try:
-                    profil = await get_user_profile(interaction.user.id)
-                    if "__ALL__" in self.values:
-                        await save_user_profile(interaction.user.id, {})
-                        await interaction_select.response.edit_message(content="✅ Ton profil a été complètement supprimé.", embed=None, view=None)
-                    else:
-                        for key in self.values:
-                            if key in profil:
-                                del profil[key]  # ou profil.pop(key, None)
-                        await save_user_profile(interaction.user.id, profil)
-                        await interaction_select.response.edit_message(
-                            content=f"✅ Informations supprimées : {', '.join(self.values)}",
-                            embed=None,
-                            view=None
-                        )
+                profil = await get_user_profile(interaction.user.id)
+                if "__ALL__" in self.values:
+                    await save_user_profile(interaction.user.id, {})
+                    await interaction_select.response.edit_message(content="✅ Ton profil a été complètement supprimé.", view=None)
+                else:
+                    for key in self.values:
+                        profil.pop(key, None)
+                    await save_user_profile(interaction.user.id, profil)
+                    await interaction_select.response.edit_message(
+                        content=f"✅ Infos supprimées : {', '.join(self.values)}", view=None
+                    )
 
         view = discord.ui.View()
         view.add_item(DeleteSelect())
-
-        await interaction.response.send_message("🗑️ Choisis les informations de ton profil que tu veux supprimer :", view=view, ephemeral=True)
+        await interaction.response.send_message("🗑️ Choisis les infos de ton profil à supprimer :", view=view, ephemeral=True)
 
     @app_commands.command(name="secret_profil", description="Cacher ton profil sur certains serveurs")
     async def secret_profil(self, interaction: discord.Interaction):
         try:
             user_id = interaction.user.id
             profil = await get_user_profile(user_id)
-
             if not profil:
-                await interaction.response.send_message("❌ Tu n'as pas encore de profil. Utilise `/myprofil` pour en créer un.", ephemeral=True)
+                await interaction.response.send_message("❌ Tu n'as pas encore de profil.", ephemeral=True)
                 return
 
-            # Liste des serveurs où l'utilisateur est présent
             server_ids = [str(guild.id) for guild in self.bot.guilds if guild.get_member(user_id)]
-            if not server_names:
-                await interaction.response.send_message("❌ Tu n'es membre d'aucun serveur où le bot est présent.", ephemeral=True)
+            if not server_ids:
+                await interaction.response.send_message("❌ Aucun serveur détecté.", ephemeral=True)
                 return
 
-            # Création du menu déroulant pour choisir les serveurs où cacher le profil
             class SecretSelect(discord.ui.Select):
-                def __init__(self, server_names):
+                def __init__(self):
                     options = [
-                        discord.SelectOption(label=self.bot.get_guild(int(server_id)).name, value=server_id) 
-                        for server_id in server_ids
+                        discord.SelectOption(label=self.bot.get_guild(int(sid)).name, value=sid)
+                        for sid in server_ids
                     ]
-                    super().__init__(placeholder="Choisis les serveurs où cacher ton profil", min_values=1, max_values=len(options), options=options)
+                    super().__init__(placeholder="Choisis les serveurs à cacher", min_values=1, max_values=len(options), options=options)
 
                 async def callback(self, interaction_select: discord.Interaction):
-                    # Cacher le profil sur les serveurs sélectionnés
-                    selected_servers = self.values
-                    profil['hidden_on_servers'] = selected_servers
+                    profil["hidden_on_servers"] = self.values
                     await save_user_profile(user_id, profil)
+                    noms = [self.bot.get_guild(int(i)).name for i in self.values]
                     await interaction_select.response.edit_message(
-                        content=f"✅ Ton profil est désormais caché sur les serveurs : {', '.join(selected_servers)}",
-                        view=None
+                        content=f"✅ Ton profil est caché sur : {', '.join(noms)}", view=None
                     )
 
             view = discord.ui.View()
-            view.add_item(SecretSelect(server_names))
-            await interaction.response.send_message(
-                "🔒 Sélectionne les serveurs où tu souhaites cacher ton profil.", view=view, ephemeral=True
-            )
+            view.add_item(SecretSelect())
+            await interaction.response.send_message("🔒 Sélectionne les serveurs :", view=view, ephemeral=True)
 
         except Exception as e:
-            print(f"❌ Erreur dans la commande /secret_profil : {e}")
+            print(f"❌ Erreur /secret_profil : {e}")
             await interaction.response.send_message("❌ Une erreur est survenue.", ephemeral=True)
 
     @app_commands.command(name="unhide_profil", description="Rendre ton profil visible à nouveau sur certains serveurs")
@@ -300,45 +283,34 @@ class Profil(commands.Cog):
         try:
             user_id = interaction.user.id
             profil = await get_user_profile(user_id)
+            hidden = profil.get("hidden_on_servers", [])
 
-            if not profil or 'hidden_on_servers' not in profil:
-                await interaction.response.send_message("❌ Tu n'as pas de profil caché. Utilise `/secret_profil` pour le cacher.", ephemeral=True)
+            if not hidden:
+                await interaction.response.send_message("❌ Aucun serveur caché détecté.", ephemeral=True)
                 return
 
-            # Liste des serveurs où l'utilisateur peut rendre son profil visible
-            hidden_servers = profil['hidden_on_servers']
-            if not hidden_servers:
-                await interaction.response.send_message("❌ Il n'y a aucun serveur où ton profil est caché.", ephemeral=True)
-                return
-
-            # Création du menu déroulant pour choisir les serveurs où rendre visible le profil
             class UnhideSelect(discord.ui.Select):
-                def __init__(self, hidden_servers):
+                def __init__(self):
                     options = [
-                        discord.SelectOption(label=self.bot.get_guild(int(server_id)).name, value=server_id)
-                        for server_id in hidden_servers
+                        discord.SelectOption(label=self.bot.get_guild(int(sid)).name, value=sid)
+                        for sid in hidden
                     ]
-                    
-                    super().__init__(placeholder="Choisis les serveurs où rendre ton profil visible", min_values=1, max_values=len(options), options=options)
+                    super().__init__(placeholder="Choisis les serveurs à afficher", min_values=1, max_values=len(options), options=options)
 
                 async def callback(self, interaction_select: discord.Interaction):
-                    # Rendre visible le profil sur les serveurs sélectionnés
-                    selected_servers = self.values
-                    profil['hidden_on_servers'] = [server_id for server_id in profil['hidden_on_servers'] if server_id not in selected_server]
+                    profil["hidden_on_servers"] = [sid for sid in hidden if sid not in self.values]
                     await save_user_profile(user_id, profil)
+                    noms = [self.bot.get_guild(int(i)).name for i in self.values]
                     await interaction_select.response.edit_message(
-                        content=f"✅ Ton profil est maintenant visible sur les serveurs : {', '.join(selected_servers)}",
-                        view=None
+                        content=f"✅ Ton profil est visible sur : {', '.join(noms)}", view=None
                     )
 
             view = discord.ui.View()
-            view.add_item(UnhideSelect(hidden_servers))
-            await interaction.response.send_message(
-                "👀 Sélectionne les serveurs où tu souhaites rendre ton profil visible.", view=view, ephemeral=True
-            )
+            view.add_item(UnhideSelect())
+            await interaction.response.send_message("👀 Choisis les serveurs :", view=view, ephemeral=True)
 
         except Exception as e:
-            print(f"❌ Erreur dans la commande /unhide_profil : {e}")
+            print(f"❌ Erreur /unhide_profil : {e}")
             await interaction.response.send_message("❌ Une erreur est survenue.", ephemeral=True)
 
 
