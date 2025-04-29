@@ -99,6 +99,11 @@ class Profil(commands.Cog):
                 await interaction.response.send_message("❌ Ce membre n'a pas encore créé son profil avec /myprofil.", ephemeral=True)
                 return
     
+            # Vérification si le profil est caché sur ce serveur
+            if str(interaction.guild.id) in profil.get("hidden_on_servers", []):
+                await interaction.response.send_message("❌ Ton profil est caché sur ce serveur.", ephemeral=True)
+                return
+    
             couleur_debut = profil.get("couleur_debut", "#3498db")
             couleur_rgb = discord.Color.from_rgb(int(couleur_debut[1:3], 16),
                                                  int(couleur_debut[3:5], 16),
