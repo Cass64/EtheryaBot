@@ -4,7 +4,6 @@ from discord import app_commands
 from discord.ui import Select, View, Button
 from utils.database import get_user_profile, save_user_profile
 from datetime import datetime
-from discord.ui import Button
 
 COULEURS = {
     "Bleu Ciel": ("#3498db", "#1abc9c"),
@@ -112,7 +111,6 @@ class Profil(commands.Cog):
             embed.set_thumbnail(url=profil.get("photo", user.display_avatar.url))
             embed.set_image(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/banniere_profil.png?raw=true")
 
-            # Champs personnels
             personnels = [
                 ("📝 Surnom", profil.get("surnom", "Non renseigné")),
                 ("🎯 Hobby", profil.get("hobby", "Non renseigné")),
@@ -131,7 +129,6 @@ class Profil(commands.Cog):
                 if value and value != "Non renseigné":
                     embed.add_field(name=name, value=value, inline=True)
 
-            # Champs liés au serveur
             member = interaction.guild.get_member(user.id)
             badges = []
 
@@ -144,20 +141,9 @@ class Profil(commands.Cog):
             badge_text = " | ".join(badges) if badges else "Aucun badge"
 
             embed.add_field(name="📌 Badges liés au serveur", value=badge_text, inline=False)
-
             embed.set_footer(text=f"Thème : {profil.get('theme', 'Non défini')}", icon_url=interaction.client.user.display_avatar.url)
 
-            view = View()
-            bouton = Button(label="Modifier mon profil", style=discord.ButtonStyle.blurple, custom_id="edit_profil")
-            view.add_item(bouton)
-
-            # 🎉 Notification anniversaire
-            today = datetime.utcnow().strftime("%d/%m")
-            anniv = profil.get("anniversaire")
-            if anniv and anniv == today:
-                embed.add_field(name="🎉 C'est son anniversaire !", value="Souhaitez-lui plein de bonheur ! 🥳", inline=False)
-
-            await interaction.response.send_message(embed=embed, view=view)
+            await interaction.response.send_message(embed=embed)
 
         except Exception as e:
             print(f"❌ Erreur /profil : {e}")
@@ -189,7 +175,6 @@ class Profil(commands.Cog):
             embed.set_footer(text="Système de Profil Etherya", icon_url=interaction.client.user.display_avatar.url)
             embed.set_author(name="🧾 Système de Profil Global")
 
-            # Créer le bouton
             bouton = Button(label="✏️ Modifier mon profil", style=discord.ButtonStyle.primary)
 
             async def bouton_callback(bouton_interaction: discord.Interaction):
@@ -210,6 +195,52 @@ class Profil(commands.Cog):
         except Exception as e:
             print(f"❌ Erreur dans la commande /info_profil : {e}")
             await interaction.response.send_message("❌ Une erreur est survenue lors de l'envoi des informations.", ephemeral=True)
+
+    @app_commands.command(name="delete_profil", description="Supprimer une ou plusieurs informations de ton profil")
+    async def delete_profil(self, interaction: discord.Interaction):
+        profil = await get_user_profile(interaction.user.id)
+        if not profil:
+            await interaction.response.send_message("❌ Tu n'as pas encore de profil à modifier.", ephemeral=True)
+            return
+
+        class DeleteSelect(discord.ui.Select):
+            def __init__(self):
+                options = [
+                    discord.SelectOption(label="🗑️ Tout supprimer", value="__ALL__", description="Supprime tout ton profil"),
+                ]
+                for key in [
+                    "surnom", "photo", "hobby", "aime", "aime_pas", "lieu", "metier",
+                    "sexe", "situation", "citation", "anniversaire", "animal_prefere", "theme"
+                ]:
+                    label = key.replace("_", " ").capitalize()
+                    options.append(discord.SelectOption(label=label, value=key))
+
+                super().__init__(
+                    placeholder="Sélectionne les informations à supprimer",
+                    min_values=1,
+                    max_values=len(options),
+                    options=options
+                )
+
+            async def callback(self, interaction_select: discord.Interaction):
+                try:
+                    profil = await get_user_profile(interaction.user.id)
+                    if "__ALL__" in self.values:
+                        await save_user_profile(interaction.user.id, {})
+                        await interaction_select.response.edit_message(content="✅ Ton profil a été complètement supprimé.", embed=None, view=None)
+                    else:
+                        for key in self.values:
+                            profil.pop(key, None)
+                        await save_user_profile(interaction.user.id, profil)
+                        await interaction_select.response.edit_message(content=f"✅ Informations supprimées : {', '.join(self.values)}", embed=None, view=None)
+                except Exception as e:
+                    print(f"❌ Erreur suppression profil : {e}")
+                    await interaction_select.response.send_message("❌ Une erreur est survenue lors de la suppression.", ephemeral=True)
+
+        view = discord.ui.View()
+        view.add_item(DeleteSelect())
+
+        await interaction.response.send_message("🗑️ Choisis les informations de ton profil que tu veux supprimer :", view=view, ephemeral=True)
 
 
 async def setup(bot):
