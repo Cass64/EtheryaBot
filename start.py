@@ -4,7 +4,7 @@ from discord.ext import commands
 from utils.database import connect_to_mongo
 from keep_alive import keep_alive
 import asyncio
-from birthday_tasks import check_birthdays  # Importe la fonction des anniversaires
+from birthday_tasks import init_birthday_task
 
 # Charger les variables d'environnement
 token = os.getenv('TOKEN_BOT_DISCORD')
@@ -46,7 +46,7 @@ async def on_ready():
     print(f"🔗 Synchronisation des commandes...")
     await bot.tree.sync()
     print(f"✅ Connecté en tant que {bot.user}")
-    check_birthdays.start()  # Lancer la tâche dès le démarrage du bot
+    init_birthday_task(bot)
 
 def main():
     # Démarrer l'asynchrone proprement
