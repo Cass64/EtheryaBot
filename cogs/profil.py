@@ -93,6 +93,13 @@ class Profil(commands.Cog):
     async def profil(self, interaction: discord.Interaction, user: discord.User = None):
         try:
             user = user or interaction.user
+            # Vérifie que l'utilisateur ciblé est bien dans le serveur
+            if user.id != interaction.user.id and not interaction.guild.get_member(user.id):
+                await interaction.response.send_message(
+                    "❌ Tu ne peux consulter le profil d'un utilisateur qui n'est pas présent sur ce serveur.",
+                    ephemeral=True
+                )
+                return
             profil = await get_user_profile(user.id)
     
             if not profil:
