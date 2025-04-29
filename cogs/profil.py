@@ -224,21 +224,23 @@ class Profil(commands.Cog):
 
             async def callback(self, interaction_select: discord.Interaction):
                 try:
+                    profil = await get_user_profile(interaction.user.id)
                     if "__ALL__" in self.values:
-                        # Suppression totale
-                        await save_user_profile(interaction.user.id, {})  # Assure que ça écrase ou supprime tout
+                        await save_user_profile(interaction.user.id, {})
                         await interaction_select.response.edit_message(content="✅ Ton profil a été complètement supprimé.", embed=None, view=None)
                     else:
-                        # Suppression partielle
-                        unset_fields = {key: "" for key in self.values}
-                        from utils.database import unset_user_profile_fields
-                        await unset_user_profile_fields(interaction.user.id, unset_fields)
-                        await interaction_select.response.edit_message(
-                            content=f"✅ Informations supprimées : {', '.join(self.values)}", embed=None, view=None
-                        )
-            except Exception as e:
-                print(f"❌ Erreur suppression profil : {e}")
-                await interaction_select.response.send_message("❌ Une erreur est survenue lors de la suppression.", ephemeral=True)
+                        for key in self.values:
+                            profil.pop(key, None)
+                        await save_user_profile(interaction.user.id, profil)
+                        await interaction_select.response.edit_message(content=f"✅ Informations supprimées : {', '.join(self.values)}", embed=None, view=None)
+                except Exception as e:
+                    print(f"❌ Erreur suppression profil : {e}")
+                    await interaction_select.response.send_message("❌ Une erreur est survenue lors de la suppression.", ephemeral=True)
+
+        view = discord.ui.View()
+        view.add_item(DeleteSelect())
+
+        await interaction.response.send_message("🗑️ Choisis les informations de ton profil que tu veux supprimer :", view=view, ephemeral=True) 
 
     @app_commands.command(name="secret_profil", description="Cacher ton profil sur certains serveurs")
     async def secret_profil(self, interaction: discord.Interaction):
