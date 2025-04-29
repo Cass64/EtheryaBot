@@ -20,7 +20,7 @@ async def connect_to_mongo(uri: str):
         # FORCER une requête pour s'assurer que Mongo est bien connecté
         await mongo_client.server_info()
         db = mongo_client["F-Taciturne"]
-        print("✅ Connecté à MongoDB (base de données 'CassBot')")
+        print("✅ Connecté à MongoDB (base de données 'F-Taciturne')")
     except Exception as e:
         print(f"❌ Erreur lors de la connexion à MongoDB : {e}")
         raise e
