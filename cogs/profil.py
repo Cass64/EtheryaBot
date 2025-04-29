@@ -1,11 +1,15 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from discord.ui import Select, View, Button
-from utils.database import get_user_profile, save_user_profile, delete_user_fields
-from datetime import datetime
-# main.py (ou le fichier où tu as ta commande Discord)
+from discord.ui import Select, View
+from utils.database import get_user_profile, save_user_profile
+import re  # Pour utiliser la validation du format de la date
 
+# Fonction de validation du format d'anniversaire
+def validate_birthday(birthday: str) -> bool:
+    """Valide si la date de naissance est au format DD/MM/YYYY."""
+    pattern = r"^(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/\d{4}$"
+    return re.match(pattern, birthday) is not None
 
 COULEURS = {
     "Bleu Ciel": ("#3498db", "#1abc9c"),
@@ -58,6 +62,13 @@ class Profil(commands.Cog):
                        situation: str = None, citation: str = None, anniversaire: str = None,
                        animal_prefere: str = None):
         try:
+            # Validation de l'anniversaire avant d'enregistrer
+            if anniversaire:
+                if not validate_birthday(anniversaire):
+                    await interaction.response.send_message("❌ Le format de l'anniversaire est invalide. Utilise le format DD/MM/YYYY.", ephemeral=True)
+                    return  # Arrêter ici si le format est invalide
+
+            # Récupérer le profil existant ou créer un profil vide
             profil = await get_user_profile(interaction.user.id) or {}
             profil.update({
                 "pseudo": interaction.user.name,
@@ -75,8 +86,10 @@ class Profil(commands.Cog):
                 "animal_prefere": animal_prefere or profil.get("animal_prefere"),
             })
 
+            # Sauvegarder ou mettre à jour le profil
             await save_user_profile(interaction.user.id, profil)
 
+            # Créer une vue pour permettre à l'utilisateur de choisir un thème
             view = View()
             view.add_item(self.ThemeSelect(interaction.user.id))
 
