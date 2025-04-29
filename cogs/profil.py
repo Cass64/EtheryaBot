@@ -94,25 +94,26 @@ class Profil(commands.Cog):
         try:
             user = user or interaction.user
             profil = await get_user_profile(user.id)
+    
             if not profil:
                 await interaction.response.send_message("❌ Ce membre n'a pas encore créé son profil avec /myprofil.", ephemeral=True)
                 return
-
+    
             couleur_debut = profil.get("couleur_debut", "#3498db")
             couleur_rgb = discord.Color.from_rgb(int(couleur_debut[1:3], 16),
                                                  int(couleur_debut[3:5], 16),
                                                  int(couleur_debut[5:7], 16))
-
+    
             embed = discord.Embed(
                 title=f"📋 Profil de {profil.get('pseudo', user.name)}",
                 description="Voici les informations personnelles et celles liées à ce serveur 👇",
                 color=couleur_rgb,
                 timestamp=discord.utils.utcnow()
             )
-
+    
             embed.set_thumbnail(url=profil.get("photo", user.display_avatar.url))
             embed.set_image(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/banniere_profil.png?raw=true")
-
+    
             personnels = [
                 ("📝 Surnom", profil.get("surnom", "Non renseigné")),
                 ("🎯 Hobby", profil.get("hobby", "Non renseigné")),
@@ -126,27 +127,31 @@ class Profil(commands.Cog):
                 ("🎂 Anniversaire", profil.get("anniversaire", "Non renseigné")),
                 ("🐶 Animal préféré", profil.get("animal_prefere", "Non renseigné")),
             ]
-
+    
             for name, value in personnels:
                 if value and value != "Non renseigné":
                     embed.add_field(name=name, value=value, inline=True)
-
+    
             member = interaction.guild.get_member(user.id)
             badges = []
-
+    
             if member:
                 if any(role.permissions.administrator for role in member.roles):
                     badges.append("👑 Staff")
                 if (datetime.utcnow() - member.joined_at.replace(tzinfo=None)).days >= 90:
                     badges.append("📅 Ancien membre")
-
+    
+                # Vérifier si le profil est caché sur ce serveur (par ID)
+                if str(interaction.guild.id) in profil.get("hidden_on_servers", []):
+                    badges.append("🚫 Profil caché sur ce serveur")
+    
             badge_text = " | ".join(badges) if badges else "Aucun badge"
-
+    
             embed.add_field(name="📌 Badges liés au serveur", value=badge_text, inline=False)
             embed.set_footer(text=f"Thème : {profil.get('theme', 'Non défini')}", icon_url=interaction.client.user.display_avatar.url)
-
+    
             await interaction.response.send_message(embed=embed)
-
+    
         except Exception as e:
             print(f"❌ Erreur /profil : {e}")
             await interaction.response.send_message("❌ Une erreur est survenue lors de l'affichage du profil.", ephemeral=True)
@@ -249,69 +254,71 @@ class Profil(commands.Cog):
         try:
             user_id = interaction.user.id
             profil = await get_user_profile(user_id)
-
+    
             if not profil:
                 await interaction.response.send_message("❌ Tu n'as pas encore de profil. Utilise `/myprofil` pour en créer un.", ephemeral=True)
                 return
-
-            # Liste des serveurs où l'utilisateur est présent
+    
+            # Liste des serveurs où l'utilisateur est présent (en utilisant les IDs)
+            server_ids = [str(guild.id) for guild in self.bot.guilds if guild.get_member(user_id)]
             server_names = [guild.name for guild in self.bot.guilds if guild.get_member(user_id)]
-            if not server_names:
+            if not server_ids:
                 await interaction.response.send_message("❌ Tu n'es membre d'aucun serveur où le bot est présent.", ephemeral=True)
                 return
-
+    
             # Création du menu déroulant pour choisir les serveurs où cacher le profil
             class SecretSelect(discord.ui.Select):
-                def __init__(self, server_names):
+                def __init__(self, server_ids, server_names):
                     options = [
-                        discord.SelectOption(label=server, value=server) for server in server_names
+                        discord.SelectOption(label=server, value=server_id) for server_id, server in zip(server_ids, server_names)
                     ]
                     super().__init__(placeholder="Choisis les serveurs où cacher ton profil", min_values=1, max_values=len(options), options=options)
-
+    
                 async def callback(self, interaction_select: discord.Interaction):
                     # Cacher le profil sur les serveurs sélectionnés
                     selected_servers = self.values
-                    profil['hidden_on_servers'] = selected_servers
+                    profil['hidden_on_servers'] = selected_servers  # Stocke les IDs des serveurs
                     await save_user_profile(user_id, profil)
                     await interaction_select.response.edit_message(
                         content=f"✅ Ton profil est désormais caché sur les serveurs : {', '.join(selected_servers)}",
                         view=None
                     )
-
+    
             view = discord.ui.View()
-            view.add_item(SecretSelect(server_names))
+            view.add_item(SecretSelect(server_ids, server_names))
             await interaction.response.send_message(
                 "🔒 Sélectionne les serveurs où tu souhaites cacher ton profil.", view=view, ephemeral=True
             )
-
+    
         except Exception as e:
             print(f"❌ Erreur dans la commande /secret_profil : {e}")
             await interaction.response.send_message("❌ Une erreur est survenue.", ephemeral=True)
+
 
     @app_commands.command(name="unhide_profil", description="Rendre ton profil visible à nouveau sur certains serveurs")
     async def unhide_profil(self, interaction: discord.Interaction):
         try:
             user_id = interaction.user.id
             profil = await get_user_profile(user_id)
-
+    
             if not profil or 'hidden_on_servers' not in profil:
                 await interaction.response.send_message("❌ Tu n'as pas de profil caché. Utilise `/secret_profil` pour le cacher.", ephemeral=True)
                 return
-
-            # Liste des serveurs où l'utilisateur peut rendre son profil visible
+    
+            # Liste des serveurs où l'utilisateur peut rendre son profil visible (en utilisant les IDs)
             hidden_servers = profil['hidden_on_servers']
             if not hidden_servers:
                 await interaction.response.send_message("❌ Il n'y a aucun serveur où ton profil est caché.", ephemeral=True)
                 return
-
+    
             # Création du menu déroulant pour choisir les serveurs où rendre visible le profil
             class UnhideSelect(discord.ui.Select):
                 def __init__(self, hidden_servers):
                     options = [
-                        discord.SelectOption(label=server, value=server) for server in hidden_servers
+                        discord.SelectOption(label=server_id, value=server_id) for server_id in hidden_servers
                     ]
                     super().__init__(placeholder="Choisis les serveurs où rendre ton profil visible", min_values=1, max_values=len(options), options=options)
-
+    
                 async def callback(self, interaction_select: discord.Interaction):
                     # Rendre visible le profil sur les serveurs sélectionnés
                     selected_servers = self.values
@@ -321,13 +328,13 @@ class Profil(commands.Cog):
                         content=f"✅ Ton profil est maintenant visible sur les serveurs : {', '.join(selected_servers)}",
                         view=None
                     )
-
+    
             view = discord.ui.View()
             view.add_item(UnhideSelect(hidden_servers))
             await interaction.response.send_message(
                 "👀 Sélectionne les serveurs où tu souhaites rendre ton profil visible.", view=view, ephemeral=True
             )
-
+    
         except Exception as e:
             print(f"❌ Erreur dans la commande /unhide_profil : {e}")
             await interaction.response.send_message("❌ Une erreur est survenue.", ephemeral=True)
