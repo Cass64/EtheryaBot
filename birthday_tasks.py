@@ -3,7 +3,7 @@ from datetime import datetime
 import discord
 
 from utils.database import get_profiles_collection
-from bot import bot  # Assure-toi que `bot` est bien importé depuis ton instance principale
+from start import bot  # Assure-toi que `bot` est bien importé depuis ton instance principale
 
 @tasks.loop(time=datetime.strptime("08:00", "%H:%M").time())  # Tous les jours à 08h
 async def check_birthdays():
