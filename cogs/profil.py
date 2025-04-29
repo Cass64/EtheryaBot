@@ -96,51 +96,57 @@ class Profil(commands.Cog):
                 await interaction.response.send_message("❌ Ce membre n'a pas encore créé son profil avec /myprofil.", ephemeral=True)
                 return
 
-            couleur_debut = profil.get("couleur_debut", "#3498db")
-            couleur_rgb = discord.Color.from_rgb(int(couleur_debut[1:3], 16),
-                                                 int(couleur_debut[3:5], 16),
-                                                 int(couleur_debut[5:7], 16))
+            couleur_hex = profil.get("couleur_debut", "#3498db")
+            try:
+                couleur_rgb = discord.Color.from_rgb(
+                    int(couleur_hex[1:3], 16),
+                    int(couleur_hex[3:5], 16),
+                    int(couleur_hex[5:7], 16)
+                )
+            except:
+                couleur_rgb = discord.Color.blue()
 
             embed = discord.Embed(
-                title=f"📋 Profil de {profil.get('pseudo', user.name)}",
+                title=f"📋 Profil de {profil.get('pseudo') or user.name}",
                 description="Voici les informations personnelles et celles liées à ce serveur 👇",
                 color=couleur_rgb,
-                timestamp=discord.utils.utcnow()
+                timestamp=datetime.utcnow()
             )
 
-            embed.set_thumbnail(url=profil.get("photo", user.display_avatar.url))
+            embed.set_thumbnail(url=profil.get("photo") or user.display_avatar.url)
             embed.set_image(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/banniere_profil.png?raw=true")
 
-            personnels = [
-                ("📝 Surnom", profil.get("surnom", "Non renseigné")),
-                ("🎯 Hobby", profil.get("hobby", "Non renseigné")),
-                ("💖 Aime", profil.get("aime", "Non renseigné")),
-                ("💔 Aime pas", profil.get("aime_pas", "Non renseigné")),
-                ("📍 Lieu", profil.get("lieu", "Non renseigné")),
-                ("💼 Métier", profil.get("metier", "Non renseigné")),
-                ("⚧️ Sexe", profil.get("sexe", "Non renseigné")),
-                ("💞 Situation", profil.get("situation", "Non renseigné")),
-                ("📜 Citation", profil.get("citation", "Non renseigné")),
-                ("🎂 Anniversaire", profil.get("anniversaire", "Non renseigné")),
-                ("🐶 Animal préféré", profil.get("animal_prefere", "Non renseigné")),
-            ]
+            personnels = {
+                "📝 Surnom": "surnom",
+                "🎯 Hobby": "hobby",
+                "💖 Aime": "aime",
+                "💔 Aime pas": "aime_pas",
+                "📍 Lieu": "lieu",
+                "💼 Métier": "metier",
+                "⚧️ Sexe": "sexe",
+                "💞 Situation": "situation",
+                "📜 Citation": "citation",
+                "🎂 Anniversaire": "anniversaire",
+                "🐶 Animal préféré": "animal_prefere",
+            }
 
-            for name, value in personnels:
-                if value and value != "Non renseigné":
+            for name, key in personnels.items():
+                value = profil.get(key)
+                if value and value.strip().lower() != "non renseigné":
                     embed.add_field(name=name, value=value, inline=True)
 
             member = interaction.guild.get_member(user.id)
             badges = []
 
             if member:
-                if any(role.permissions.administrator for role in member.roles):
+                if any(role.permissions.administrator for role in member.roles if role.name != "@everyone"):
                     badges.append("👑 Staff")
-                if (datetime.utcnow() - member.joined_at.replace(tzinfo=None)).days >= 90:
+                if member.joined_at and (datetime.utcnow() - member.joined_at.replace(tzinfo=None)).days >= 90:
                     badges.append("📅 Ancien membre")
 
             badge_text = " | ".join(badges) if badges else "Aucun badge"
-
             embed.add_field(name="📌 Badges liés au serveur", value=badge_text, inline=False)
+
             embed.set_footer(text=f"Thème : {profil.get('theme', 'Non défini')}", icon_url=interaction.client.user.display_avatar.url)
 
             await interaction.response.send_message(embed=embed)
@@ -230,12 +236,14 @@ class Profil(commands.Cog):
                         await interaction_select.response.edit_message(content="✅ Ton profil a été complètement supprimé.", embed=None, view=None)
                     else:
                         for key in self.values:
-                            profil.pop(key, None)
+                            if key in profil:
+                                del profil[key]  # ou profil.pop(key, None)
                         await save_user_profile(interaction.user.id, profil)
-                        await interaction_select.response.edit_message(content=f"✅ Informations supprimées : {', '.join(self.values)}", embed=None, view=None)
-                except Exception as e:
-                    print(f"❌ Erreur suppression profil : {e}")
-                    await interaction_select.response.send_message("❌ Une erreur est survenue lors de la suppression.", ephemeral=True)
+                        await interaction_select.response.edit_message(
+                            content=f"✅ Informations supprimées : {', '.join(self.values)}",
+                            embed=None,
+                            view=None
+                        )
 
         view = discord.ui.View()
         view.add_item(DeleteSelect())
@@ -253,7 +261,7 @@ class Profil(commands.Cog):
                 return
 
             # Liste des serveurs où l'utilisateur est présent
-            server_names = [guild.name for guild in self.bot.guilds if guild.get_member(user_id)]
+            server_ids = [str(guild.id) for guild in self.bot.guilds if guild.get_member(user_id)]
             if not server_names:
                 await interaction.response.send_message("❌ Tu n'es membre d'aucun serveur où le bot est présent.", ephemeral=True)
                 return
@@ -262,7 +270,8 @@ class Profil(commands.Cog):
             class SecretSelect(discord.ui.Select):
                 def __init__(self, server_names):
                     options = [
-                        discord.SelectOption(label=server, value=server) for server in server_names
+                        discord.SelectOption(label=self.bot.get_guild(int(server_id)).name, value=server_id) 
+                        for server_id in server_ids
                     ]
                     super().__init__(placeholder="Choisis les serveurs où cacher ton profil", min_values=1, max_values=len(options), options=options)
 
@@ -306,14 +315,16 @@ class Profil(commands.Cog):
             class UnhideSelect(discord.ui.Select):
                 def __init__(self, hidden_servers):
                     options = [
-                        discord.SelectOption(label=server, value=server) for server in hidden_servers
+                        discord.SelectOption(label=self.bot.get_guild(int(server_id)).name, value=server_id)
+                        for server_id in hidden_servers
                     ]
+                    
                     super().__init__(placeholder="Choisis les serveurs où rendre ton profil visible", min_values=1, max_values=len(options), options=options)
 
                 async def callback(self, interaction_select: discord.Interaction):
                     # Rendre visible le profil sur les serveurs sélectionnés
                     selected_servers = self.values
-                    profil['hidden_on_servers'] = [server for server in profil['hidden_on_servers'] if server not in selected_servers]
+                    profil['hidden_on_servers'] = [server_id for server_id in profil['hidden_on_servers'] if server_id not in selected_server]
                     await save_user_profile(user_id, profil)
                     await interaction_select.response.edit_message(
                         content=f"✅ Ton profil est maintenant visible sur les serveurs : {', '.join(selected_servers)}",
