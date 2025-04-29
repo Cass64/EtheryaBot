@@ -4,6 +4,9 @@ from discord import app_commands
 from discord.ui import Select, View
 from utils.database import get_user_profile, save_user_profile
 import re  # Pour utiliser la validation du format de la date
+from datetime import datetime
+import traceback
+
 
 # Fonction de validation du format d'anniversaire
 def validate_birthday(birthday: str) -> bool:
@@ -163,7 +166,7 @@ class Profil(commands.Cog):
             if member:
                 if any(role.permissions.administrator for role in member.roles):
                     badges.append("👑 Staff")
-                if (datetime.utcnow() - member.joined_at.replace(tzinfo=None)).days >= 90:
+                if member.joined_at and (datetime.utcnow() - member.joined_at.replace(tzinfo=None)).days >= 90:
                     badges.append("📅 Ancien membre")
     
                 # Vérifier si le profil est caché sur ce serveur (par ID)
