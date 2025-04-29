@@ -40,3 +40,10 @@ async def save_user_profile(user_id: int, data: dict):
     """Sauvegarde ou met à jour un profil utilisateur (async)."""
     collection = get_profiles_collection()
     await collection.update_one({"_id": user_id}, {"$set": data}, upsert=True)
+
+async def delete_user_fields(user_id: int, fields: list[str]):
+    """Supprime des champs spécifiques du profil utilisateur (async)."""
+    collection = get_profiles_collection()
+    unset_fields = {field: "" for field in fields}
+    await collection.update_one({"_id": user_id}, {"$unset": unset_fields})
+
