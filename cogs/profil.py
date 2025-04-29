@@ -14,7 +14,8 @@ COULEURS = {
 
 class Profil(commands.Cog):
     def __init__(self, bot):
-        self.bot = bot
+        self.bot = bot    
+        self.tree = bot.tree
 
     async def cog_load(self):
         self.bot.tree.add_command(self.myprofil)
