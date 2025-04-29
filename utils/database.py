@@ -41,9 +41,17 @@ async def save_user_profile(user_id: int, data: dict):
     collection = get_profiles_collection()
     await collection.update_one({"_id": user_id}, {"$set": data}, upsert=True)
 
+# database.py
+
 async def delete_user_fields(user_id: int, fields: list[str]):
     """Supprime des champs spécifiques du profil utilisateur (async)."""
-    collection = get_profiles_collection()
-    unset_fields = {field: "" for field in fields}
-    await collection.update_one({"_id": user_id}, {"$unset": unset_fields})
+    try:
+        collection = get_profiles_collection()
+        unset_fields = {field: "" for field in fields}
+        result = await collection.update_one({"_id": user_id}, {"$unset": unset_fields})
+        return result.modified_count
+    except Exception as e:
+        print(f"❌ Erreur dans la fonction de suppression des champs : {e}")
+        raise e
+
 
