@@ -58,6 +58,25 @@ class Profil(commands.Cog):
                 print(f"❌ Erreur ThemeSelect pour {interaction.user.id}: {e}")
                 await interaction.response.send_message("❌ Impossible de mettre à jour le thème.", ephemeral=True)
 
+
+    @app_commands.command(name="myprofil_jeux", description="Définis ton top 3 jeux vidéo avec détails")
+    async def myprofil_jeux(self, interaction: discord.Interaction,
+        jeu1: str, pseudo1: str, heures1: int, rank1: str, mate1: str,
+        jeu2: str = None, pseudo2: str = None, heures2: int = None, rank2: str = None, mate2: str = None,
+        jeu3: str = None, pseudo3: str = None, heures3: int = None, rank3: str = None, mate3: str = None):
+
+        profil = await get_user_profile(interaction.user.id) or {}
+        profil["jeux_video"] = [
+            {"jeu": jeu1, "pseudo": pseudo1, "heures": heures1, "rank": rank1, "mate": mate1},
+            {"jeu": jeu2, "pseudo": pseudo2, "heures": heures2, "rank": rank2, "mate": mate2} if jeu2 else None,
+            {"jeu": jeu3, "pseudo": pseudo3, "heures": heures3, "rank": rank3, "mate": mate3} if jeu3 else None
+        ]
+        profil["jeux_video"] = [j for j in profil["jeux_video"] if j]  # filtre None
+
+        await save_user_profile(interaction.user.id, profil)
+        await interaction.response.send_message("✅ Tes jeux préférés ont été enregistrés avec succès !", ephemeral=True)
+
+
     @app_commands.command(name="myprofil", description="Créer ou modifier ton profil personnel")
     async def myprofil(self, interaction: discord.Interaction,
                        surnom: str = None, photo: str = None, hobby: str = None, aime: str = None,
@@ -107,82 +126,97 @@ class Profil(commands.Cog):
 
     @app_commands.command(name="profil", description="Voir le profil d'un membre")
     async def profil(self, interaction: discord.Interaction, user: discord.User = None):
-        try:
-            user = user or interaction.user
-            # Vérifie que l'utilisateur ciblé est bien dans le serveur
-            if user.id != interaction.user.id and not interaction.guild.get_member(user.id):
-                await interaction.response.send_message(
-                    "❌ Tu ne peux consulter le profil d'un utilisateur qui n'est pas présent sur ce serveur.",
-                    ephemeral=True
+        user = user or interaction.user
+        profil = await get_user_profile(user.id)
+
+        if not profil:
+            await interaction.response.send_message("❌ Ce membre n'a pas encore créé son profil.", ephemeral=True)
+            return
+
+        class SectionSelect(discord.ui.Select):
+            def __init__(self):
+                options = [
+                    discord.SelectOption(label="🎭 Profil personnel", value="personnel"),
+                    discord.SelectOption(label="🎮 Profil jeux vidéo", value="jeux"),
+                ]
+                super().__init__(placeholder="🔽 Choisis une section du profil", options=options)
+
+            async def callback(self, interaction_select: discord.Interaction):
+                await interaction_select.response.edit_message(embed=create_embed(self.values[0]), view=self.view)
+
+        def create_embed(section):
+            couleur = profil.get("couleur_debut", "#7289DA")
+            rgb = discord.Color.from_rgb(int(couleur[1:3], 16), int(couleur[3:5], 16), int(couleur[5:7], 16))
+
+            if section == "personnel":
+                embed = discord.Embed(
+                    title=f"📋 Profil de {profil.get('pseudo', user.name)}",
+                    description="Voici les informations personnelles et celles liées au serveur 👇",
+                    color=rgb,
+                    timestamp=discord.utils.utcnow()
                 )
-                return
-            profil = await get_user_profile(user.id)
-    
-            if not profil:
-                await interaction.response.send_message("❌ Ce membre n'a pas encore créé son profil avec /myprofil.", ephemeral=True)
-                return
-    
-            # Vérification si le profil est caché sur ce serveur
-            if str(interaction.guild.id) in profil.get("hidden_on_servers", []):
-                await interaction.response.send_message("❌ Ce membre a choisi de ne pas rendre son profil visible ici.", ephemeral=True)
-                return
-    
-            couleur_debut = profil.get("couleur_debut", "#3498db")
-            couleur_rgb = discord.Color.from_rgb(int(couleur_debut[1:3], 16),
-                                                 int(couleur_debut[3:5], 16),
-                                                 int(couleur_debut[5:7], 16))
-    
-            embed = discord.Embed(
-                title=f"📋 Profil de {profil.get('pseudo', user.name)}",
-                description="Voici les informations personnelles et celles liées à ce serveur 👇",
-                color=couleur_rgb,
-                timestamp=discord.utils.utcnow()
-            )
-    
-            embed.set_thumbnail(url=profil.get("photo", user.display_avatar.url))
-            embed.set_image(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/banniere_profil.png?raw=true")
-    
-            personnels = [
-                ("📝 Surnom", profil.get("surnom", "Non renseigné")),
-                ("🎯 Hobby", profil.get("hobby", "Non renseigné")),
-                ("💖 Aime", profil.get("aime", "Non renseigné")),
-                ("💔 Aime pas", profil.get("aime_pas", "Non renseigné")),
-                ("📍 Lieu", profil.get("lieu", "Non renseigné")),
-                ("💼 Métier", profil.get("metier", "Non renseigné")),
-                ("⚧️ Sexe", profil.get("sexe", "Non renseigné")),
-                ("💞 Situation", profil.get("situation", "Non renseigné")),
-                ("📜 Citation", profil.get("citation", "Non renseigné")),
-                ("🎂 Anniversaire", profil.get("anniversaire", "Non renseigné")),
-                ("🐶 Animal préféré", profil.get("animal_prefere", "Non renseigné")),
-            ]
-    
-            for name, value in personnels:
-                if value and value != "Non renseigné":
-                    embed.add_field(name=name, value=value, inline=True)
-    
-            member = interaction.guild.get_member(user.id)
-            badges = []
-    
-            if member:
-                if any(role.permissions.administrator for role in member.roles):
-                    badges.append("👑 Staff")
-                if member.joined_at and (datetime.utcnow() - member.joined_at.replace(tzinfo=None)).days >= 90:
-                    badges.append("📅 Ancien membre")
-    
-                # Vérifier si le profil est caché sur ce serveur (par ID)
-                if str(interaction.guild.id) in profil.get("hidden_on_servers", []):
-                    badges.append("🚫 Profil caché sur ce serveur")
-    
-            badge_text = " | ".join(badges) if badges else "Aucun badge"
-    
-            embed.add_field(name="📌 Badges liés au serveur", value=badge_text, inline=False)
-            embed.set_footer(text=f"Thème : {profil.get('theme', 'Non défini')}", icon_url=interaction.client.user.display_avatar.url)
-    
-            await interaction.response.send_message(embed=embed)
-    
-        except Exception as e:
-            print(f"❌ Erreur /profil : {e}")
-            await interaction.response.send_message("❌ Une erreur est survenue lors de l'affichage du profil.", ephemeral=True)
+                embed.set_thumbnail(url=profil.get("photo", user.display_avatar.url))
+                embed.set_image(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/banniere_profil.png?raw=true")
+
+                infos = [
+                    ("📝 Surnom", profil.get("surnom")),
+                    ("🎯 Hobby", profil.get("hobby")),
+                    ("💖 Aime", profil.get("aime")),
+                    ("💔 Aime pas", profil.get("aime_pas")),
+                    ("📍 Lieu", profil.get("lieu")),
+                    ("💼 Métier", profil.get("metier")),
+                    ("⚧️ Sexe", profil.get("sexe")),
+                    ("💞 Situation", profil.get("situation")),
+                    ("📜 Citation", profil.get("citation")),
+                    ("🎂 Anniversaire", profil.get("anniversaire")),
+                    ("🐶 Animal préféré", profil.get("animal_prefere")),
+                ]
+                for name, value in infos:
+                    if value:
+                        embed.add_field(name=name, value=value, inline=True)
+
+                badges = []
+                member = interaction.guild.get_member(user.id)
+                if member:
+                    if any(r.permissions.administrator for r in member.roles):
+                        badges.append("👑 Staff")
+                    if member.joined_at and (datetime.utcnow() - member.joined_at.replace(tzinfo=None)).days >= 90:
+                        badges.append("📅 Ancien membre")
+
+                embed.add_field(name="📌 Badges liés au serveur", value=" | ".join(badges) if badges else "Aucun badge", inline=False)
+                embed.set_footer(text=f"Thème : {profil.get('theme', 'Non défini')}", icon_url=interaction.client.user.display_avatar.url)
+                return embed
+
+            elif section == "jeux":
+                embed = discord.Embed(
+                    title=f"🎮 Profil Gaming de {profil.get('pseudo', user.name)}",
+                    description="Voici ses 3 jeux favoris, avec stats & infos 👇",
+                    color=rgb
+                )
+                jeux = profil.get("jeux_video", [])
+                for i, jeu in enumerate(jeux, start=1):
+                    nom = jeu.get("jeu", "Jeu inconnu")
+                    pseudo = jeu.get("pseudo", "N/A")
+                    heures = jeu.get("heures", 0)
+                    rank = jeu.get("rank", "Non classé")
+                    mate = jeu.get("mate", "Non précisé")
+
+                    embed.add_field(
+                        name=f"🎮 Top {i} - {nom}",
+                        value=f"**🎮 Pseudo** : `{pseudo}`\n"
+                              f"🕒 **Heures jouées** : `{heures}h`\n"
+                              f"🏆 **Rank** : `{rank}`\n"
+                              f"🔍 **Cherche mate** : `{mate}`",
+                        inline=False
+                    )
+                embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/6460/6460951.png")
+                return embed
+
+        view = View()
+        select = SectionSelect()
+        view.add_item(select)
+
+        await interaction.response.send_message(embed=create_embed("personnel"), view=view)
 
 
     @app_commands.command(name="info_profil", description="Informations détaillées sur le système de profil")
