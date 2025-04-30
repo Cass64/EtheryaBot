@@ -59,7 +59,6 @@ class Profil(commands.Cog):
                 await interaction.response.send_message("❌ Impossible de mettre à jour le thème.", ephemeral=True)
 
 
-
     class InfoProfilView(View):
         def __init__(self, user: discord.User):
             super().__init__(timeout=120)
