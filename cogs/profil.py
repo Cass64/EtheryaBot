@@ -58,6 +58,75 @@ class Profil(commands.Cog):
                 print(f"❌ Erreur ThemeSelect pour {interaction.user.id}: {e}")
                 await interaction.response.send_message("❌ Impossible de mettre à jour le thème.", ephemeral=True)
 
+
+
+    class InfoProfilView(View):
+    def __init__(self, user: discord.User):
+        super().__init__(timeout=120)
+        self.user = user
+        self.page = 0
+        self.embeds = self.create_embeds()
+
+        self.commandes_button = Button(label="📘 Commandes", style=ButtonStyle.primary)
+        self.fonctionnalites_button = Button(label="🌟 Fonctionnalités", style=ButtonStyle.secondary)
+
+        self.commandes_button.callback = self.show_commandes
+        self.fonctionnalites_button.callback = self.show_fonctionnalites
+
+        self.add_item(self.commandes_button)
+        self.add_item(self.fonctionnalites_button)
+
+    def create_embeds(self):
+        commandes_embed = Embed(
+            title="📘 Commandes du Système de Profil",
+            description=(
+                "Voici les commandes disponibles :\n\n"
+                "• `/myprofil` : crée ou modifie ton profil\n"
+                "• `/profil` : affiche ton profil ou celui d’un autre membre\n"
+                "• `/delete_profil` : supprime une ou plusieurs infos de ton profil\n"
+                "• `/secret_profil` : masque ton profil sur certains serveurs\n"
+                "• `/unhide_profil` : rend ton profil à nouveau visible\n"
+                "• `/info_profil` : affiche ces informations\n\n"
+                "**Toutes ces commandes sont utilisables sur tous les serveurs où Etherya est présent.**"
+            ),
+            color=discord.Color.blurple()
+        )
+        commandes_embed.set_thumbnail(url=self.user.display_avatar.url)
+        commandes_embed.set_footer(text="Etherya — Page 1/2")
+
+        fonctionnalites_embed = Embed(
+            title="🌟 Fonctionnalités du Profil Etherya",
+            description=(
+                "Voici ce que propose le système de profil :\n\n"
+                "🎨 **Thème visuel** : Personnalise l'apparence de ton profil\n"
+                "🎂 **Anniversaire** : Etherya te le souhaite dans un salon dédié !\n"
+                "🏷️ **Badges dynamiques** :\n"
+                "• 👑 Staff : pour les admins/mods\n"
+                "• 📅 Ancien : membre depuis > 3 mois\n"
+                "• 🚫 Profil caché : si tu l’as masqué sur ce serveur\n"
+                "👥 **Visibilité serveur** : rends ton profil visible ou non selon les serveurs"
+            ),
+            color=discord.Color.green()
+        )
+        fonctionnalites_embed.set_thumbnail(url=self.user.display_avatar.url)
+        fonctionnalites_embed.set_image(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/banniere_profil.png?raw=true")
+        fonctionnalites_embed.set_footer(text="Etherya — Page 2/2")
+
+        return [commandes_embed, fonctionnalites_embed]
+
+    async def show_commandes(self, interaction: Interaction):
+        self.page = 0
+        self.commandes_button.style = ButtonStyle.primary
+        self.fonctionnalites_button.style = ButtonStyle.secondary
+        await interaction.response.edit_message(embed=self.embeds[self.page], view=self)
+
+    async def show_fonctionnalites(self, interaction: Interaction):
+        self.page = 1
+        self.commandes_button.style = ButtonStyle.secondary
+        self.fonctionnalites_button.style = ButtonStyle.primary
+        await interaction.response.edit_message(embed=self.embeds[self.page], view=self)
+
+
     @app_commands.command(name="myprofil", description="Créer ou modifier ton profil personnel")
     async def myprofil(self, interaction: discord.Interaction,
                        surnom: str = None, photo: str = None, hobby: str = None, aime: str = None,
@@ -124,7 +193,7 @@ class Profil(commands.Cog):
     
             # Vérification si le profil est caché sur ce serveur
             if str(interaction.guild.id) in profil.get("hidden_on_servers", []):
-                await interaction.response.send_message("❌ Ton profil est caché sur ce serveur.", ephemeral=True)
+                await interaction.response.send_message("❌ Ce membre a choisi de ne pas rendre son profil visible ici.", ephemeral=True)
                 return
     
             couleur_debut = profil.get("couleur_debut", "#3498db")
@@ -184,52 +253,10 @@ class Profil(commands.Cog):
             print(f"❌ Erreur /profil : {e}")
             await interaction.response.send_message("❌ Une erreur est survenue lors de l'affichage du profil.", ephemeral=True)
 
-    @app_commands.command(name="info_profil", description="Informations sur le système de profil")
-    async def info_profil(self, interaction: discord.Interaction):
-        try:
-            embed = discord.Embed(
-                title="📘 Informations sur le Profil Utilisateur",
-                description=(
-                    "Bienvenue dans le système de **profil utilisateur** d’Etherya Bot !\n\n"
-                    "🔹 Chaque membre peut créer un **profil personnalisé**, visible **publiquement** "
-                    "sur **tous les serveurs** où le bot est présent.\n\n"
-                    "🎨 Tu peux configurer ton thème de profil, ta photo, ton surnom, ton hobby, ce que tu aimes, "
-                    "et plein d'autres détails pour te représenter au mieux.\n\n"
-                    "🏷️ Des **badges dynamiques** sont ajoutés automatiquement selon ta présence ou ton rôle sur chaque serveur "
-                    "(comme `Staff`, `Ancien`, etc.).\n\n"
-                    "📌 Utilise la commande `/myprofil` pour personnaliser ton profil à tout moment.\n\n"
-                    "📂 Ensuite, consulte ton profil (ou celui d'un autre membre) avec `/profil`.\n\n"
-                    "**Ton profil te suit partout, sois fier de qui tu es ! ✨**"
-                ),
-                color=discord.Color.blurple(),
-                timestamp=discord.utils.utcnow()
-            )
-
-            embed.set_thumbnail(url=interaction.user.display_avatar.url)
-            embed.set_image(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/banniere_profil.png?raw=true")
-            embed.set_footer(text="Système de Profil Etherya", icon_url=interaction.client.user.display_avatar.url)
-            embed.set_author(name="🧾 Système de Profil Global")
-
-            bouton = Button(label="✏️ Modifier mon profil", style=discord.ButtonStyle.primary)
-
-            async def bouton_callback(bouton_interaction: discord.Interaction):
-                if bouton_interaction.user.id != interaction.user.id:
-                    await bouton_interaction.response.send_message("❌ Ce bouton ne t'est pas destiné.", ephemeral=True)
-                    return
-                await bouton_interaction.response.send_message(
-                    "🛠️ Utilise simplement la commande `/myprofil` pour personnaliser ton profil !",
-                    ephemeral=True
-                )
-
-            bouton.callback = bouton_callback
-            view = View()
-            view.add_item(bouton)
-
-            await interaction.response.send_message(embed=embed, view=view)
-
-        except Exception as e:
-            print(f"❌ Erreur dans la commande /info_profil : {e}")
-            await interaction.response.send_message("❌ Une erreur est survenue lors de l'envoi des informations.", ephemeral=True)
+    @app_commands.command(name="info_profil", description="Affiche les infos sur le système de profil Etherya")
+    async def info_profil(self, interaction: Interaction):
+        view = InfoProfilView(interaction.user)
+        await interaction.response.send_message(embed=view.embeds[0], view=view)
 
     @app_commands.command(name="delete_profil", description="Supprimer une ou plusieurs informations de ton profil")
     async def delete_profil(self, interaction: discord.Interaction):
