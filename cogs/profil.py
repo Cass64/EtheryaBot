@@ -312,12 +312,26 @@ class Profil(commands.Cog):
                 options = [
                     discord.SelectOption(label="🗑️ Tout supprimer", value="__ALL__", description="Supprime tout ton profil"),
                 ]
-                for key in [
+    
+                # Champs du profil général
+                champs_generaux = [
                     "surnom", "photo", "hobby", "aime", "aime_pas", "lieu", "metier",
                     "sexe", "situation", "citation", "anniversaire", "animal_prefere", "theme"
-                ]:
+                ]
+                for key in champs_generaux:
                     label = key.replace("_", " ").capitalize()
                     options.append(discord.SelectOption(label=label, value=key))
+    
+                # Champs du profil jeux vidéo
+                champs_jeux = ["nom", "pseudo", "heures", "rank", "cherche_mate"]
+                for i in range(3):
+                    for champ in champs_jeux:
+                        value = f"jeux_video.{i}.{champ}"
+                        jeu_label = f"🎮 Jeu {i + 1} - {champ.replace('_', ' ').capitalize()}"
+                        options.append(discord.SelectOption(label=jeu_label, value=value))
+    
+                # Option pour supprimer tout le bloc jeux_video
+                options.append(discord.SelectOption(label="🎮 Supprimer tout le profil jeux vidéo", value="jeux_video"))
     
                 super().__init__(
                     placeholder="Sélectionne les informations à supprimer",
@@ -329,22 +343,36 @@ class Profil(commands.Cog):
             async def callback(self, interaction_select: discord.Interaction):
                 try:
                     if "__ALL__" in self.values:
-                        await delete_user_fields(interaction.user.id, [
+                        champs_a_supprimer = [
                             "surnom", "photo", "hobby", "aime", "aime_pas", "lieu", "metier",
-                            "sexe", "situation", "citation", "anniversaire", "animal_prefere", "theme"
-                        ])
-                        await interaction_select.response.edit_message(content="✅ Ton profil a été complètement supprimé.", embed=None, view=None)
+                            "sexe", "situation", "citation", "anniversaire", "animal_prefere", "theme", "jeux_video"
+                        ]
+                        await delete_user_fields(interaction.user.id, champs_a_supprimer)
+                        await interaction_select.response.edit_message(
+                            content="✅ Ton profil a été complètement supprimé.",
+                            embed=None, view=None
+                        )
                     else:
                         await delete_user_fields(interaction.user.id, self.values)
-                        await interaction_select.response.edit_message(content=f"✅ Informations supprimées : {', '.join(self.values)}", embed=None, view=None)
-    
+                        labels = [opt.label for opt in self.options if opt.value in self.values]
+                        await interaction_select.response.edit_message(
+                            content=f"✅ Informations supprimées : {', '.join(labels)}",
+                            embed=None, view=None
+                        )
                 except Exception as e:
-                    await interaction_select.response.send_message(f"❌ Une erreur est survenue lors de la suppression : {e}", ephemeral=True)
+                    await interaction_select.response.send_message(
+                        f"❌ Une erreur est survenue lors de la suppression : {e}",
+                        ephemeral=True
+                    )
     
         view = discord.ui.View()
         view.add_item(DeleteSelect())
     
-        await interaction.response.send_message("🗑️ Choisis les informations de ton profil que tu veux supprimer :", view=view, ephemeral=True)
+        await interaction.response.send_message(
+            "🗑️ Choisis les informations de ton profil que tu veux supprimer :",
+            view=view,
+            ephemeral=True
+        )
 
     @app_commands.command(name="secret_profil", description="Cacher ton profil sur certains serveurs")
     async def secret_profil(self, interaction: discord.Interaction):
