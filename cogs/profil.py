@@ -142,11 +142,11 @@ class Profil(commands.Cog):
     async def profil(self, interaction: discord.Interaction, user: discord.User = None):
         user = user or interaction.user
         profil = await get_user_profile(user.id)
-
+    
         if not profil:
             await interaction.response.send_message("❌ Ce membre n'a pas encore créé son profil.", ephemeral=True)
             return
-
+    
         class SectionSelect(discord.ui.Select):
             def __init__(self):
                 options = [
@@ -154,14 +154,14 @@ class Profil(commands.Cog):
                     discord.SelectOption(label="🎮 Profil jeux vidéo", value="jeux"),
                 ]
                 super().__init__(placeholder="🔽 Choisis une section du profil", options=options)
-
+    
             async def callback(self, interaction_select: discord.Interaction):
                 await interaction_select.response.edit_message(embed=create_embed(self.values[0]), view=self.view)
-
+    
         def create_embed(section):
             couleur = profil.get("couleur_debut", "#7289DA")
             rgb = discord.Color.from_rgb(int(couleur[1:3], 16), int(couleur[3:5], 16), int(couleur[5:7], 16))
-
+    
             if section == "personnel":
                 embed = discord.Embed(
                     title=f"📋 Profil de {profil.get('pseudo', user.name)}",
@@ -171,7 +171,7 @@ class Profil(commands.Cog):
                 )
                 embed.set_thumbnail(url=profil.get("photo", user.display_avatar.url))
                 embed.set_image(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/banniere_profil.png?raw=true")
-
+    
                 infos = [
                     ("📝 Surnom", profil.get("surnom")),
                     ("🎯 Hobby", profil.get("hobby")),
@@ -188,7 +188,7 @@ class Profil(commands.Cog):
                 for name, value in infos:
                     if value:
                         embed.add_field(name=name, value=value, inline=True)
-
+    
                 badges = []
                 member = interaction.guild.get_member(user.id)
                 if member:
@@ -196,11 +196,15 @@ class Profil(commands.Cog):
                         badges.append("👑 Staff")
                     if member.joined_at and (datetime.utcnow() - member.joined_at.replace(tzinfo=None)).days >= 90:
                         badges.append("📅 Ancien membre")
-
+    
                 embed.add_field(name="📌 Badges liés au serveur", value=" | ".join(badges) if badges else "Aucun badge", inline=False)
                 embed.set_footer(text=f"Thème : {profil.get('theme', 'Non défini')}", icon_url=interaction.client.user.display_avatar.url)
+    
+                # Bouton "Modifier mon profil"
+                embed.description += f"\n\n🛠️ Pour modifier ton profil : `/myprofil` ou `/myprofil_jeux`"
+    
                 return embed
-
+    
             elif section == "jeux":
                 embed = discord.Embed(
                     title=f"🎮 Profil Gaming de {profil.get('pseudo', user.name)}",
@@ -208,28 +212,31 @@ class Profil(commands.Cog):
                     color=rgb
                 )
                 jeux = profil.get("jeux_video", [])
-                for i, jeu in enumerate(jeux, start=1):
-                    nom = jeu.get("jeu", "Jeu inconnu")
-                    pseudo = jeu.get("pseudo", "N/A")
-                    heures = jeu.get("heures", 0)
-                    rank = jeu.get("rank", "Non classé")
-                    mate = jeu.get("mate", "Non précisé")
-
-                    embed.add_field(
-                        name=f"🎮 Top {i} - {nom}",
-                        value=f"**🎮 Pseudo** : `{pseudo}`\n"
-                              f"🕒 **Heures jouées** : `{heures}h`\n"
-                              f"🏆 **Rank** : `{rank}`\n"
-                              f"🔍 **Cherche mate** : `{mate}`",
-                        inline=False
-                    )
+                if not jeux:
+                    embed.description = "Aucune information de jeux vidéo n'a encore été ajoutée."
+                else:
+                    for i, jeu in enumerate(jeux, start=1):
+                        nom = jeu.get("jeu", "Jeu inconnu")
+                        pseudo = jeu.get("pseudo", "N/A")
+                        heures = jeu.get("heures", 0)
+                        rank = jeu.get("rank", "Non classé")
+                        mate = jeu.get("mate", "Non précisé")
+    
+                        embed.add_field(
+                            name=f"🎮 Top {i} - {nom}",
+                            value=f"**🎮 Pseudo** : `{pseudo}`\n"
+                                  f"🕒 **Heures jouées** : `{heures}h`\n"
+                                  f"🏆 **Rank** : `{rank}`\n"
+                                  f"🔍 **Cherche mate** : `{mate}`",
+                            inline=False
+                        )
                 embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/6460/6460951.png")
                 return embed
-
+    
         view = View()
         select = SectionSelect()
         view.add_item(select)
-
+    
         await interaction.response.send_message(embed=create_embed("personnel"), view=view)
 
 
@@ -427,7 +434,8 @@ class Profil(commands.Cog):
                 async def callback(self, interaction_select: discord.Interaction):
                     # Cacher le profil sur les serveurs sélectionnés
                     selected_servers = self.values
-                    profil['hidden_on_servers'] = selected_servers  # Stocke les IDs des serveurs
+                    existing_hidden = profil.get('hidden_on_servers', [])
+                    profil['hidden_on_servers'] = list(set(existing_hidden + selected_servers))
                     await save_user_profile(user_id, profil)
                     await interaction_select.response.edit_message(
                         content=f"✅ Ton profil est désormais caché sur les serveurs : {', '.join(selected_servers)}",
@@ -465,7 +473,8 @@ class Profil(commands.Cog):
             class UnhideSelect(discord.ui.Select):
                 def __init__(self, hidden_servers):
                     options = [
-                        discord.SelectOption(label=server_id, value=server_id) for server_id in hidden_servers
+                        discord.SelectOption(label=guild.name, value=str(guild.id))
+                        for guild in self.bot.guilds if guild.get_member(user_id)
                     ]
                     super().__init__(placeholder="Choisis les serveurs où rendre ton profil visible", min_values=1, max_values=len(options), options=options)
     
