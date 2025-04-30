@@ -240,17 +240,6 @@ class Profil(commands.Cog):
                 inline=False
             )
     
-            # Rappel de l'usage des commandes de gestion de visibilité
-            embed.add_field(
-                name="🔒 Gestion de la visibilité du profil",
-                value=(
-                    "De base, ton profil est visible sur tous les serveurs où le bot est présent. Si tu veux le cacher sur certains serveurs, "
-                    "tu peux utiliser `/secret_profil` pour le masquer, et `/unhide_profil` pour le rendre visible à nouveau. "
-                    "Cela te permet de contrôler où et quand ton profil est visible."
-                ),
-                inline=False
-            )
-    
             # Bannière de fin
             embed.set_footer(text="🎉 Profite de ton expérience avec le bot ! 🎉")
             embed.set_image(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/banniere_profil.png?raw=true")  # Remplace par l'URL de ta bannière de fin
