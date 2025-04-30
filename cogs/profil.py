@@ -184,6 +184,84 @@ class Profil(commands.Cog):
             print(f"❌ Erreur /profil : {e}")
             await interaction.response.send_message("❌ Une erreur est survenue lors de l'affichage du profil.", ephemeral=True)
 
+
+    @app_commands.command(name="info_profil", description="Informations détaillées sur le système de profil")
+    async def info_profil(self, interaction: discord.Interaction):
+        try:
+            embed = discord.Embed(
+                title="ℹ️ Système de Profil",
+                description="Voici une vue d'ensemble complète du système de profil, de ses fonctionnalités et des commandes disponibles.",
+                color=discord.Color.blue(),
+                timestamp=discord.utils.utcnow()
+            )
+    
+            # Introduction générale
+            embed.add_field(
+                name="Qu'est-ce que le système de profil ?",
+                value=(
+                    "Le système de profil permet à chaque utilisateur de personnaliser son profil avec "
+                    "des informations personnelles et des éléments visuels comme un thème de couleur. "
+                    "Cela crée une expérience plus personnelle et visuellement attrayante sur le serveur."
+                    "\n\n"
+                    "De base, ton profil sera visible sur tous les serveurs où le bot est présent, "
+                    "à moins que tu choisisses de le cacher spécifiquement sur certains serveurs."
+                ),
+                inline=False
+            )
+    
+            # Description des commandes
+            embed.add_field(
+                name="📜 Commandes disponibles",
+                value=(
+                    "`/myprofil` : Crée ou modifie ton profil personnel. Tu peux y ajouter des informations comme ton surnom, "
+                    "tes hobbies, ton métier, etc. Lors de la création, tu peux également choisir un thème de couleur pour ton profil.\n\n"
+                    "`/profil` : Permet de consulter le profil d'un autre utilisateur (ou le sien si aucune personne n'est spécifiée). "
+                    "Il affiche des informations sur l'utilisateur, y compris des badges comme 'Staff' ou 'Ancien membre' selon leur statut.\n\n"
+                    "`/delete_profil` : Supprime une ou plusieurs informations de ton profil. Tu peux choisir de tout supprimer ou bien de supprimer certaines informations spécifiques.\n\n"
+                    "`/secret_profil` : Cacher ton profil sur certains serveurs où tu es présent. Cela empêche ton profil d'être visible sur ces serveurs.\n\n"
+                    "`/unhide_profil` : Rendre ton profil visible à nouveau sur les serveurs où il est actuellement caché.\n\n"
+                    "`/info_profil` : Cette commande ! Elle permet de voir un résumé complet du système de profil et de ses fonctionnalités.\n"
+                ),
+                inline=False
+            )
+    
+            # Fonctionnalités spéciales
+            embed.add_field(
+                name="✨ Fonctionnalités spéciales",
+                value=(
+                    "1. **Anniversaires** : Lorsque ton anniversaire est enregistré et qu'il arrive, le bot enverra automatiquement "
+                    "un message de souhaits dans le salon prévu à cet effet.\n\n"
+                    "2. **Badges** : Le profil peut inclure des badges comme 'Staff' pour les administrateurs ou 'Ancien membre' "
+                    "pour les utilisateurs présents depuis plus de 3 mois. Ces badges sont affichés dans le profil et sont dynamiques en fonction de l'utilisateur.\n\n"
+                    "3. **Visibilité** : Par défaut, ton profil est visible sur tous les serveurs où le bot est présent, "
+                    "mais tu peux utiliser la commande `/secret_profil` pour le cacher sur des serveurs spécifiques et la commande `/unhide_profil` "
+                    "pour le rendre à nouveau visible."
+                ),
+                inline=False
+            )
+    
+            # Rappel de l'usage des commandes de gestion de visibilité
+            embed.add_field(
+                name="🔒 Gestion de la visibilité du profil",
+                value=(
+                    "De base, ton profil est visible sur tous les serveurs où le bot est présent. Si tu veux le cacher sur certains serveurs, "
+                    "tu peux utiliser `/secret_profil` pour le masquer, et `/unhide_profil` pour le rendre visible à nouveau. "
+                    "Cela te permet de contrôler où et quand ton profil est visible."
+                ),
+                inline=False
+            )
+    
+            # Footer et appel à l'action
+            embed.set_footer(text="Utilise les commandes pour gérer ton profil à ta convenance.")
+    
+            # Envoi de l'embed
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+    
+        except Exception as e:
+            print(f"❌ Erreur dans la commande /info_profil : {e}")
+            await interaction.response.send_message("❌ Une erreur est survenue lors de l'affichage des informations.", ephemeral=True)
+
+
     @app_commands.command(name="delete_profil", description="Supprimer une ou plusieurs informations de ton profil")
     async def delete_profil(self, interaction: discord.Interaction):
         profil = await get_user_profile(interaction.user.id)
