@@ -21,73 +21,6 @@ COULEURS = {
     "Noir Élégant": ("#2c3e50", "#34495e"),
 }
 
-class InfoProfilView(View):
-    def __init__(self, user: discord.User):
-        super().__init__(timeout=120)
-        self.user = user
-        self.page = 0
-        self.embeds = self.create_embeds()
-    
-        self.commandes_button = Button(label="📘 Commandes", style=ButtonStyle.primary)
-        self.fonctionnalites_button = Button(label="🌟 Fonctionnalités", style=ButtonStyle.secondary)
-    
-        self.commandes_button.callback = self.show_commandes
-        self.fonctionnalites_button.callback = self.show_fonctionnalites
-    
-        self.add_item(self.commandes_button)
-        self.add_item(self.fonctionnalites_button)
-    
-    def create_embeds(self):
-        commandes_embed = Embed(
-            title="📘 Commandes du Système de Profil",
-            description=(
-                "Voici les commandes disponibles :\n\n"
-                "• `/myprofil` : crée ou modifie ton profil\n"
-                "• `/profil` : affiche ton profil ou celui d’un autre membre\n"
-                "• `/delete_profil` : supprime une ou plusieurs infos de ton profil\n"
-                "• `/secret_profil` : masque ton profil sur certains serveurs\n"
-                "• `/unhide_profil` : rend ton profil à nouveau visible\n"
-                "• `/info_profil` : affiche ces informations\n\n"
-                "**Toutes ces commandes sont utilisables sur tous les serveurs où Etherya est présent.**"
-            ),
-            color=discord.Color.blurple()
-        )
-        commandes_embed.set_thumbnail(url=self.user.display_avatar.url)
-        commandes_embed.set_footer(text="Etherya — Page 1/2")
-    
-        fonctionnalites_embed = Embed(
-            title="🌟 Fonctionnalités du Profil Etherya",
-            description=(
-                "Voici ce que propose le système de profil :\n\n"
-                "🎨 **Thème visuel** : Personnalise l'apparence de ton profil\n"
-                "🎂 **Anniversaire** : Etherya te le souhaite dans un salon dédié !\n"
-                "🏷️ **Badges dynamiques** :\n"
-                "• 👑 Staff : pour les admins/mods\n"
-                "• 📅 Ancien : membre depuis > 3 mois\n"
-                "• 🚫 Profil caché : si tu l’as masqué sur ce serveur\n"
-                "👥 **Visibilité serveur** : rends ton profil visible ou non selon les serveurs"
-            ),
-            color=discord.Color.green()
-        )
-        fonctionnalites_embed.set_thumbnail(url=self.user.display_avatar.url)
-        fonctionnalites_embed.set_image(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/banniere_profil.png?raw=true")
-        fonctionnalites_embed.set_footer(text="Etherya — Page 2/2")
-    
-        return [commandes_embed, fonctionnalites_embed]
-    
-    async def show_commandes(self, interaction: Interaction):
-        self.page = 0
-        self.commandes_button.style = ButtonStyle.primary
-        self.fonctionnalites_button.style = ButtonStyle.secondary
-        await interaction.response.edit_message(embed=self.embeds[self.page], view=self)
-    
-    async def show_fonctionnalites(self, interaction: Interaction):
-        self.page = 1
-        self.commandes_button.style = ButtonStyle.secondary
-        self.fonctionnalites_button.style = ButtonStyle.primary
-        await interaction.response.edit_message(embed=self.embeds[self.page], view=self)
-
-
 class Profil(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -250,11 +183,6 @@ class Profil(commands.Cog):
         except Exception as e:
             print(f"❌ Erreur /profil : {e}")
             await interaction.response.send_message("❌ Une erreur est survenue lors de l'affichage du profil.", ephemeral=True)
-
-    @app_commands.command(name="info_profil", description="Affiche les infos sur le système de profil Etherya")
-    async def info_profil(self, interaction: Interaction):
-        view = InfoProfilView(interaction.user)
-        await interaction.response.send_message(embed=view.embeds[0], view=view)
 
     @app_commands.command(name="delete_profil", description="Supprimer une ou plusieurs informations de ton profil")
     async def delete_profil(self, interaction: discord.Interaction):
