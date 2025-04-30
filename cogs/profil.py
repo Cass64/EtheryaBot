@@ -59,22 +59,36 @@ class Profil(commands.Cog):
                 await interaction.response.send_message("❌ Impossible de mettre à jour le thème.", ephemeral=True)
 
 
-    @app_commands.command(name="myprofil_jeux", description="Définis ton top 3 jeux vidéo avec détails")
+    @app_commands.command(name="myprofil_jeux", description="Définis ou modifie ton top 3 jeux vidéo")
     async def myprofil_jeux(self, interaction: discord.Interaction,
-        jeu1: str, pseudo1: str, heures1: int, rank1: str, mate1: str,
+        jeu1: str = None, pseudo1: str = None, heures1: int = None, rank1: str = None, mate1: str = None,
         jeu2: str = None, pseudo2: str = None, heures2: int = None, rank2: str = None, mate2: str = None,
         jeu3: str = None, pseudo3: str = None, heures3: int = None, rank3: str = None, mate3: str = None):
-
+    
         profil = await get_user_profile(interaction.user.id) or {}
-        profil["jeux_video"] = [
-            {"jeu": jeu1, "pseudo": pseudo1, "heures": heures1, "rank": rank1, "mate": mate1},
-            {"jeu": jeu2, "pseudo": pseudo2, "heures": heures2, "rank": rank2, "mate": mate2} if jeu2 else None,
-            {"jeu": jeu3, "pseudo": pseudo3, "heures": heures3, "rank": rank3, "mate": mate3} if jeu3 else None
-        ]
-        profil["jeux_video"] = [j for j in profil["jeux_video"] if j]  # filtre None
-
+        anciens_jeux = profil.get("jeux_video", [{}, {}, {}])
+    
+        nouveaux_jeux = []
+        for i, infos in enumerate([
+            (jeu1, pseudo1, heures1, rank1, mate1),
+            (jeu2, pseudo2, heures2, rank2, mate2),
+            (jeu3, pseudo3, heures3, rank3, mate3),
+        ]):
+            jeu_data = anciens_jeux[i] if i < len(anciens_jeux) else {}
+    
+            keys = ["jeu", "pseudo", "heures", "rank", "mate"]
+            for k, v in zip(keys, infos):
+                if v is not None:
+                    jeu_data[k] = v  # Met à jour uniquement les valeurs fournies
+    
+            if any(jeu_data.values()):  # On garde uniquement s'il y a au moins une info
+                nouveaux_jeux.append(jeu_data)
+    
+        profil["jeux_video"] = nouveaux_jeux
         await save_user_profile(interaction.user.id, profil)
-        await interaction.response.send_message("✅ Tes jeux préférés ont été enregistrés avec succès !", ephemeral=True)
+    
+        await interaction.response.send_message("✅ Ton profil jeux vidéo a bien été mis à jour !", ephemeral=True)
+
 
 
     @app_commands.command(name="myprofil", description="Créer ou modifier ton profil personnel")
