@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
+from discord import app_commands, Interaction, SelectOption
 from discord.ui import Select, View
 from utils.database import get_user_profile, save_user_profile, delete_user_fields
 import re  # Pour utiliser la validation du format de la date
