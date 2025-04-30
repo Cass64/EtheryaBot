@@ -299,7 +299,6 @@ class Profil(commands.Cog):
             print(f"❌ Erreur dans la commande /info_profil : {e}")
             await interaction.response.send_message("❌ Une erreur est survenue lors de l'affichage des informations.", ephemeral=True)
 
-
     @app_commands.command(name="delete_profil", description="Supprime des parties de ton profil")
     async def delete_profil(self, interaction: Interaction):
         profil = await get_user_profile(interaction.user.id)
