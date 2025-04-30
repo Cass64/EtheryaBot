@@ -198,7 +198,7 @@ class Profil(commands.Cog):
             # Introduction générale
             embed.add_field(
                 name="Qu'est-ce que le système de profil ?",
-                value=(
+                value=( 
                     "Le système de profil permet à chaque utilisateur de personnaliser son profil avec "
                     "des informations personnelles et des éléments visuels comme un thème de couleur. "
                     "Cela crée une expérience plus personnelle et visuellement attrayante sur le serveur."
@@ -229,11 +229,11 @@ class Profil(commands.Cog):
             embed.add_field(
                 name="✨ Fonctionnalités spéciales",
                 value=(
-                    "1. **Anniversaires** : Lorsque ton anniversaire est enregistré et qu'il arrive, le bot enverra automatiquement "
+                    "1. **Anniversaires** 🎉 : Lorsque ton anniversaire est enregistré et qu'il arrive, le bot enverra automatiquement "
                     "un message de souhaits dans le salon prévu à cet effet.\n\n"
-                    "2. **Badges** : Le profil peut inclure des badges comme 'Staff' pour les administrateurs ou 'Ancien membre' "
+                    "2. **Badges** 🏅 : Le profil peut inclure des badges comme 'Staff' pour les administrateurs ou 'Ancien membre' "
                     "pour les utilisateurs présents depuis plus de 3 mois. Ces badges sont affichés dans le profil et sont dynamiques en fonction de l'utilisateur.\n\n"
-                    "3. **Visibilité** : Par défaut, ton profil est visible sur tous les serveurs où le bot est présent, "
+                    "3. **Visibilité** 👁️ : Par défaut, ton profil est visible sur tous les serveurs où le bot est présent, "
                     "mais tu peux utiliser la commande `/secret_profil` pour le cacher sur des serveurs spécifiques et la commande `/unhide_profil` "
                     "pour le rendre à nouveau visible."
                 ),
@@ -251,11 +251,12 @@ class Profil(commands.Cog):
                 inline=False
             )
     
-            # Footer et appel à l'action
-            embed.set_footer(text="Utilise les commandes pour gérer ton profil à ta convenance.")
+            # Bannière de fin
+            embed.set_footer(text="🎉 Profite de ton expérience avec le bot ! 🎉")
+            embed.set_image(url="https://github.com/Cass64/EtheryaBot/blob/main/images_etherya/banniere_profil.png?raw=true")  # Remplace par l'URL de ta bannière de fin
     
-            # Envoi de l'embed
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            # Envoi de l'embed visible pour tout le monde
+            await interaction.response.send_message(embed=embed)
     
         except Exception as e:
             print(f"❌ Erreur dans la commande /info_profil : {e}")
