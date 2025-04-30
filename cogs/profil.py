@@ -146,6 +146,11 @@ class Profil(commands.Cog):
         if not profil:
             await interaction.response.send_message("❌ Ce membre n'a pas encore créé son profil.", ephemeral=True)
             return
+
+        serveurs_caches = profil.get("serveurs_caches", [])
+        if interaction.guild.id in serveurs_caches and user.id != interaction.user.id:
+            await interaction.response.send_message("❌ Ce profil est privé sur ce serveur.", ephemeral=True)
+            return
     
         class SectionSelect(discord.ui.Select):
             def __init__(self):
